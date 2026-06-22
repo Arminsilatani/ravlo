@@ -4498,6 +4498,12 @@ async function cleanupOldCompletions() {
                 events.splice(i, 1); // از آرایه محلی هم حذف کن
             }
         }
+        // پاکسازی دعوت‌های ردشده که ۱ روز از ردشان گذشته (دلخواه)
+await sb.from('ravlo')
+    .delete()
+    .eq('user_id', currentUser.id)
+    .eq('invitation_status', 'declined')
+    .lt('updated_at', new Date(Date.now() - 24*60*60*1000).toISOString()); // اگر ستون updated_at داری
     }
 }
 
