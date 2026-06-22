@@ -3900,19 +3900,18 @@ function fallbackCopy(text) {
     document.body.removeChild(textarea);
 }
 
+/* =========================== INVITATION RESPONSE =========================== */
 function openInvitationResponse(ev) {
-    // ⬇️ دیگر عنوان رویداد را در بالای پنجره نمی‌گذاریم
     document.getElementById('invitation-response-title').textContent = 'Event Invitation';
     document.getElementById('invitation-response-message').textContent = 'You are invited to this event.';
 
     const container = document.getElementById('invitation-detail-container');
     container.innerHTML = '';
 
-    // ── هدر جزئیات (رنگ + آیکون + عنوان) ──
+    // هدر جزئیات (رنگ + آیکون + عنوان)
     const headerDiv = document.createElement('div');
     headerDiv.className = 'invitation-detail-header';
 
-    // رنگ (dot)
     if (ev.color) {
         const colorDot = document.createElement('span');
         colorDot.className = 'detail-color-dot';
@@ -3924,7 +3923,6 @@ function openInvitationResponse(ev) {
         headerDiv.appendChild(colorDot);
     }
 
-    // آیکون (در صورت وجود)
     if (ev.icon) {
         const iconSpan = document.createElement('span');
         iconSpan.className = 'detail-icon';
@@ -3934,7 +3932,6 @@ function openInvitationResponse(ev) {
         headerDiv.appendChild(iconSpan);
     }
 
-    // عنوان رویداد
     const titleEl = document.createElement('h3');
     titleEl.textContent = ev.title || 'Untitled';
     titleEl.style.margin = '0';
@@ -3942,7 +3939,7 @@ function openInvitationResponse(ev) {
 
     container.appendChild(headerDiv);
 
-    // ── تاریخ و زمان ──
+    // تاریخ و زمان
     const start = ev.start_date ? new Date(ev.start_date) : null;
     const end = ev.end_date ? new Date(ev.end_date) : null;
     let dateText = '', timeText = '';
@@ -3963,28 +3960,27 @@ function openInvitationResponse(ev) {
     timeP.innerHTML = `<strong>Time:</strong> ${timeText}`;
     container.appendChild(timeP);
 
-    // ── توضیحات ──
+    // توضیحات
     if (ev.description && ev.description.trim()) {
         const descP = document.createElement('p');
         descP.innerHTML = `<strong>Description:</strong> ${ev.description}`;
         container.appendChild(descP);
     }
 
-    // ── مهمان‌ها ──
+    // مهمان‌ها
     if (ev.invitees && ev.invitees.length > 0) {
         const inviteesP = document.createElement('p');
         inviteesP.innerHTML = `<strong>Invitees:</strong> ${ev.invitees.join(', ')}`;
         container.appendChild(inviteesP);
     }
 
-    // ── مکان ──
+    // مکان
     if (ev.location && ev.location.lat && ev.location.lng) {
         const locP = document.createElement('p');
         locP.innerHTML = `<strong>Location:</strong> ${ev.location.lat.toFixed(5)}, ${ev.location.lng.toFixed(5)}`;
         container.appendChild(locP);
     }
 
-    // باز کردن مودال
     openModal(document.getElementById('invitation-response-modal'));
 
     // دکمه Accept
@@ -4025,7 +4021,6 @@ function openInvitationResponse(ev) {
         renderCalendar();
     };
 
-    // بستن مودال
     document.getElementById('invitation-response-close').onclick = () => {
         closeModal(document.getElementById('invitation-response-modal'));
     };
