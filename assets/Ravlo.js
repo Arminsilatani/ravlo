@@ -2195,9 +2195,7 @@ async function saveEvent() {
                         const { error: invErr } = await sb
                             .rpc('insert_invited_event', { payload: invitePayload });
 
-                        if (invErr) {
-                            console.warn('Failed to insert invitee row:', invErr);
-                        }
+if (invErr) console.warn('Failed to insert invitee row:', JSON.stringify(invErr, null, 2));
                     }
                 }
 
