@@ -3903,6 +3903,127 @@ function fallbackCopy(text) {
     document.body.removeChild(textarea);
 }
 
+function openInvitationResponse(ev) {
+    document.getElementById('invitation-response-title').textContent = ev.title || 'Untitled Event';
+    document.getElementById('invitation-response-message').textContent = 'You are invited to this event.';
+
+    const container = document.getElementById('invitation-detail-container');
+    container.innerHTML = '';
+
+    // رنگ رویداد
+    const colorDot = document.createElement('span');
+    colorDot.className = 'detail-color-dot';
+    colorDot.style.backgroundColor = ev.color || '#f5f5f5';
+    container.appendChild(colorDot);
+
+    // آیکون
+    if (ev.icon) {
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'detail-icon';
+        iconSpan.innerHTML = ev.icon;
+        iconSpan.style.color = ev.color || 'var(--accent)';
+        container.appendChild(iconSpan);
+    }
+
+    // عنوان
+    const titleEl = document.createElement('h3');
+    titleEl.textContent = ev.title || 'Untitled';
+    container.appendChild(titleEl);
+
+    // تاریخ و زمان
+    const start = ev.start_date ? new Date(ev.start_date) : null;
+    const end = ev.end_date ? new Date(ev.end_date) : null;
+    let dateText = '', timeText = '';
+    if (start) {
+        dateText = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (ev.all_day) {
+            timeText = 'All day';
+        } else {
+            const fmtTime = d => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+            timeText = fmtTime(start);
+            if (end) timeText += ' - ' + fmtTime(end);
+        }
+    }
+    const dateP = document.createElement('p');
+    dateP.innerHTML = `<strong>Date:</strong> ${dateText}`;
+    container.appendChild(dateP);
+    const timeP = document.createElement('p');
+    timeP.innerHTML = `<strong>Time:</strong> ${timeText}`;
+    container.appendChild(timeP);
+
+    // توضیحات
+    if (ev.description && ev.description.trim()) {
+        const descP = document.createElement('p');
+        descP.innerHTML = `<strong>Description:</strong> ${ev.description}`;
+        container.appendChild(descP);
+    }
+
+    // مهمان‌ها
+    if (ev.invitees && ev.invitees.length > 0) {
+        const inviteesP = document.createElement('p');
+        inviteesP.innerHTML = `<strong>Invitees:</strong> ${ev.invitees.join(', ')}`;
+        container.appendChild(inviteesP);
+    }
+
+    // مکان (مختصات)
+    if (ev.location && ev.location.lat && ev.location.lng) {
+        const locP = document.createElement('p');
+        locP.innerHTML = `<strong>Location:</strong> ${ev.location.lat.toFixed(5)}, ${ev.location.lng.toFixed(5)}`;
+        container.appendChild(locP);
+    }
+
+    // باز کردن مودال
+    openModal(document.getElementById('invitation-response-modal'));
+
+    // دکمه Accept
+    document.getElementById('invitation-accept-btn').onclick = async () => {
+        showGlobalLoader();
+        await updateEventInDB(ev.id, { invitation_status: 'accepted' });
+        const localEv = events.find(e => e.id === ev.id);
+        if (localEv) localEv.invitation_status = 'accepted';
+        hideGlobalLoader();
+        closeModal(document.getElementById('invitation-response-modal'));
+        renderCalendar();
+    };
+
+    // دکمه Decline
+    document.getElementById('invitation-decline-btn').onclick = async () => {
+        showGlobalLoader();
+        await deleteEventFromDB(ev.id);
+        events = events.filter(e => e.id !== ev.id);
+
+        if (ev.parent_event_id) {
+            const { data: parentData } = await sb
+                .from('ravlo')
+                .select('user_id, title')
+                .eq('id', ev.parent_event_id)
+                .single();
+            if (parentData) {
+                await addNotificationToUser(
+                    parentData.user_id,
+                    'event',
+                    'Invitation declined',
+                    `${currentProfile?.first_name || 'Someone'} declined your invitation to "${parentData.title}"`,
+                    '#'
+                );
+            }
+        }
+        hideGlobalLoader();
+        closeModal(document.getElementById('invitation-response-modal'));
+        renderCalendar();
+    };
+
+    // بستن مودال
+    document.getElementById('invitation-response-close').onclick = () => {
+        closeModal(document.getElementById('invitation-response-modal'));
+    };
+    document.getElementById('invitation-response-modal').onclick = (e) => {
+        if (e.target === document.getElementById('invitation-response-modal')) {
+            closeModal(document.getElementById('invitation-response-modal'));
+        }
+    };
+}
+
 /* =========================== INITIALIZATION =========================== */
 
 async function initCalendar() {
