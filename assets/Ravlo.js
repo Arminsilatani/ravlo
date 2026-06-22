@@ -4036,17 +4036,6 @@ function openInvitationResponse(ev) {
     };
 }
 
-    // بستن مودال
-    document.getElementById('invitation-response-close').onclick = () => {
-        closeModal(document.getElementById('invitation-response-modal'));
-    };
-    document.getElementById('invitation-response-modal').onclick = (e) => {
-        if (e.target === document.getElementById('invitation-response-modal')) {
-            closeModal(document.getElementById('invitation-response-modal'));
-        }
-    };
-}
-
 /* =========================== INITIALIZATION =========================== */
 
 async function initCalendar() {
