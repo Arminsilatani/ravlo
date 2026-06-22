@@ -1708,7 +1708,7 @@ function renderDayView() {
         if (d.getFullYear() === vy && d.getMonth() === vm && d.getDate() === vd) return true;
         if (ev.recurrence_type !== 'none') {
             var dayStart = new Date(vy, vm, vd, 0, 0, 0);
-            var dayEnd = new Date(vy, vm, vd, 23, 59, 59);
+            var dayEnd   = new Date(vy, vm, vd, 23, 59, 59);
             var recDates = getRecurrenceDates(ev, dayStart, dayEnd);
             return recDates.some(rd => rd.getFullYear() === vy && rd.getMonth() === vm && rd.getDate() === vd);
         }
@@ -1720,7 +1720,7 @@ function renderDayView() {
         var start = new Date(ev.start_date);
         var end = ev.end_date ? new Date(ev.end_date) : new Date(start.getTime() + 60 * 60 * 1000);
         var startMin = start.getHours() * 60 + start.getMinutes();
-        var endMin = end.getHours() * 60 + end.getMinutes();
+        var endMin   = end.getHours() * 60 + end.getMinutes();
         if (endMin <= startMin) endMin = startMin + 15;
         var sh = Math.floor(startMin / 60);
         var eh = Math.ceil(endMin / 60);
@@ -1751,7 +1751,7 @@ function renderDayView() {
     calendarGrid.appendChild(timeLabels);
     calendarGrid.appendChild(slots);
 
-    // Hour lines (unchanged)
+    // Hour lines
     var cumulativeTop = 0;
     for (var h = 0; h < 24; h++) {
         var lineEl = document.createElement('div');
@@ -1767,7 +1767,6 @@ function renderDayView() {
         cumulativeTop += hourHeights[h];
     }
 
-    // Move event drawing inside requestAnimationFrame so that slots width is calculated
     requestAnimationFrame(function() {
         var eventsWithMinutes = dayEvents.map(ev => {
             var start = new Date(ev.start_date);
@@ -1838,10 +1837,9 @@ function renderDayView() {
                 var evEl = document.createElement('div');
                 evEl.className = 'time-slot-event';
 
-                // ----- شروع تغییرات برای دعوت‌ها -----
+                // وضعیت دعوت (pending) → چشمک‌زن با رنگ اصلی
                 if (item.ev.invitation_status === 'pending') {
-                    evEl.classList.add('event-invited'); // کلاس چشمک‌زن
-                    // رنگ‌ها را مطابق رنگ اصلی رویداد تنظیم کن (نه خاکستری)
+                    evEl.classList.add('event-invited');
                     if (item.ev.color) {
                         evEl.style.border = '2px solid ' + item.ev.color;
                         evEl.style.backgroundColor = item.ev.color + '26';
@@ -1850,7 +1848,7 @@ function renderDayView() {
                         evEl.style.backgroundColor = 'rgba(255, 111, 145, 0.15)';
                     }
                 } else {
-                    // رویدادهای معمولی (غیر دعوت)
+                    // رویدادهای معمولی
                     if (item.ev.status === 'completed' || item.ev.status === 'done') {
                         evEl.classList.add('event-completed');
                     }
@@ -1866,26 +1864,22 @@ function renderDayView() {
                         evEl.style.backgroundColor = 'rgba(255, 111, 145, 0.15)';
                     }
                 }
-                // ----- پایان تغییرات دعوت‌ها -----
 
                 evEl.style.top = topPx + 'px';
                 evEl.style.height = Math.max(heightPx, 28) + 'px';
                 evEl.style.left = leftPx + 'px';
                 evEl.style.width = laneWidthPx + 'px';
 
-                // Mini map background (only if Leaflet is loaded)
+                // Mini map (در صورت وجود)
                 if (item.ev.location && item.ev.location.lat && isLeafletReady()) {
                     evEl.style.position = 'relative';
-
                     var mapBg = document.createElement('div');
                     mapBg.className = 'event-map-bg';
                     evEl.appendChild(mapBg);
-
                     var overlay = document.createElement('div');
                     overlay.className = 'event-map-overlay';
                     overlay.style.backgroundColor = (item.ev.color || '#ff6f91') + '40';
                     evEl.appendChild(overlay);
-
                     (function(container, lat, lng) {
                         requestAnimationFrame(function() {
                             var miniMap = L.map(container, {
@@ -1909,7 +1903,6 @@ function renderDayView() {
 
                 var titleSpan = document.createElement('div');
                 titleSpan.className = 'event-title';
-
                 if (item.ev.icon) {
                     var iconWrapper = document.createElement('span');
                     iconWrapper.className = 'event-icon';
@@ -1919,10 +1912,9 @@ function renderDayView() {
                 } else {
                     titleSpan.textContent = item.ev.title || 'Event';
                 }
-
                 evEl.appendChild(titleSpan);
 
-                // برچسب "Invited" برای دعوت‌ها
+                // برچسب "Invited" برای دعوت‌های pending
                 if (item.ev.invitation_status === 'pending') {
                     var invitedBadge = document.createElement('span');
                     invitedBadge.className = 'invited-badge';
@@ -1930,139 +1922,135 @@ function renderDayView() {
                     evEl.appendChild(invitedBadge);
                 }
 
-                // Action buttons
-var actionsDiv = document.createElement('div');
-actionsDiv.className = 'event-actions';
+                // ─── Action Buttons (قسمت اصلی تغییر) ───
+                var actionsDiv = document.createElement('div');
+                actionsDiv.className = 'event-actions';
 
-// مهمان (invitee with accepted invitation) – فقط دکمه Leave
-if (item.ev.parent_event_id && item.ev.invitation_status === 'accepted') {
-    var leaveBtn = document.createElement('button');
-    leaveBtn.className = 'event-action-btn';
-    leaveBtn.textContent = 'Leave';
-    leaveBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        showConfirmModal('Leave this event? It will be removed from your calendar.', async function() {
-            await deleteEventFromDB(item.ev.id);
-            events = events.filter(e => e.id !== item.ev.id);
-            renderCalendar();
-        });
-    });
-    actionsDiv.appendChild(leaveBtn);
+                if (item.ev.parent_event_id && item.ev.invitation_status === 'accepted') {
+                    // مهمان: فقط دکمه Leave
+                    var leaveBtn = document.createElement('button');
+                    leaveBtn.className = 'event-action-btn';
+                    leaveBtn.textContent = 'Leave';
+                    leaveBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        showConfirmModal('Leave this event? It will be removed from your calendar.', async function() {
+                            await deleteEventFromDB(item.ev.id);
+                            events = events.filter(e => e.id !== item.ev.id);
+                            renderCalendar();
+                        });
+                    });
+                    actionsDiv.appendChild(leaveBtn);
 
-// دعوت‌های pending (هنوز جواب نداده) – بدون دکمه
-} else if (item.ev.invitation_status === 'pending') {
-    // هیچ دکمه‌ای اضافه نمی‌شود
+                } else if (item.ev.invitation_status === 'pending') {
+                    // دعوت‌های pending: بدون دکمه
 
-// سازنده (host) یا رویداد عادی – Cancel + End/Done
-} else {
-    var cancelBtn = document.createElement('button');
-    cancelBtn.className = 'event-action-btn';
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        showConfirmModal('Are you sure you want to delete this event?', function() {
-            deleteEventById(item.ev.id);
-        });
-    });
+                } else {
+                    // سازنده (host) یا رویداد عادی: Cancel + End/Done
+                    var cancelBtn = document.createElement('button');
+                    cancelBtn.className = 'event-action-btn';
+                    cancelBtn.textContent = 'Cancel';
+                    cancelBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        showConfirmModal('Are you sure you want to delete this event?', function() {
+                            deleteEventById(item.ev.id);
+                        });
+                    });
 
-    var endBtn = document.createElement('button');
-    endBtn.className = 'event-action-btn';
+                    var endBtn = document.createElement('button');
+                    endBtn.className = 'event-action-btn';
 
-    if (item.ev.type === 'task') {
-        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
-        var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
-                        ? item.ev.completed_occurrences.includes(occDate)
-                        : false;
+                    if (item.ev.type === 'task') {
+                        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
+                        var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
+                                        ? item.ev.completed_occurrences.includes(occDate)
+                                        : false;
+                        endBtn.textContent = isDone ? 'Undo' : 'Done';
+                        endBtn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            if (isDone) {
+                                var idx = item.ev.completed_occurrences.indexOf(occDate);
+                                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
+                                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
+                                    delete item.ev.completed_timestamps[occDate];
+                                }
+                                endBtn.textContent = 'Done';
+                                evEl.style.opacity = '1';
+                                evEl.style.textDecoration = 'none';
+                            } else {
+                                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
+                                item.ev.completed_occurrences.push(occDate);
+                                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
+                                item.ev.completed_timestamps[occDate] = new Date().toISOString();
+                                endBtn.textContent = 'Undo';
+                                evEl.style.opacity = '0.6';
+                                evEl.style.textDecoration = 'line-through';
+                                showToast('Occurrence marked done. It will be auto‑deleted in 28 days.');
+                            }
+                            updateEventInDB(item.ev.id, {
+                                completed_occurrences: item.ev.completed_occurrences,
+                                completed_timestamps: item.ev.completed_timestamps
+                            }).catch(function() {});
+                            isDone = !isDone;
+                        });
+                        if (isDone) {
+                            evEl.style.opacity = '0.6';
+                            evEl.style.textDecoration = 'line-through';
+                        }
+                    } else { // event
+                        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
+                        var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
+                                            ? item.ev.completed_occurrences.includes(occDate)
+                                            : false;
+                        endBtn.textContent = isCompleted ? 'Undo' : 'End';
+                        endBtn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            if (isCompleted) {
+                                var idx = item.ev.completed_occurrences.indexOf(occDate);
+                                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
+                                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
+                                    delete item.ev.completed_timestamps[occDate];
+                                }
+                                endBtn.textContent = 'End';
+                                evEl.classList.remove('event-completed');
+                            } else {
+                                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
+                                item.ev.completed_occurrences.push(occDate);
+                                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
+                                item.ev.completed_timestamps[occDate] = new Date().toISOString();
+                                endBtn.textContent = 'Undo';
+                                evEl.classList.add('event-completed');
+                                showToast('Event marked done. It will be auto‑deleted in 28 days.');
+                            }
+                            updateEventInDB(item.ev.id, {
+                                completed_occurrences: item.ev.completed_occurrences,
+                                completed_timestamps: item.ev.completed_timestamps
+                            }).catch(function() {});
+                            isCompleted = !isCompleted;
+                        });
+                        if (isCompleted) {
+                            evEl.classList.add('event-completed');
+                        }
+                    }
 
-        endBtn.textContent = isDone ? 'Undo' : 'Done';
-
-        endBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (isDone) {
-                var idx = item.ev.completed_occurrences.indexOf(occDate);
-                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
-                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
-                    delete item.ev.completed_timestamps[occDate];
+                    actionsDiv.appendChild(cancelBtn);
+                    actionsDiv.appendChild(endBtn);
                 }
-                endBtn.textContent = 'Done';
-                evEl.style.opacity = '1';
-                evEl.style.textDecoration = 'none';
-            } else {
-                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
-                item.ev.completed_occurrences.push(occDate);
-                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
-                item.ev.completed_timestamps[occDate] = new Date().toISOString();
-                endBtn.textContent = 'Undo';
-                evEl.style.opacity = '0.6';
-                evEl.style.textDecoration = 'line-through';
-                showToast('Occurrence marked done. It will be auto‑deleted in 28 days.');
-            }
-            updateEventInDB(item.ev.id, {
-                completed_occurrences: item.ev.completed_occurrences,
-                completed_timestamps: item.ev.completed_timestamps
-            }).catch(function() {});
-            isDone = !isDone;
+
+                evEl.appendChild(actionsDiv);
+
+                // کلیک روی رویداد
+                evEl.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (item.ev.invitation_status === 'pending') {
+                        openInvitationResponse(item.ev);
+                    } else {
+                        openEventDetail(item.ev, new Date(vy, vm, vd));
+                    }
+                });
+
+                slots.appendChild(evEl);
+            });
         });
-
-        if (isDone) {
-            evEl.style.opacity = '0.6';
-            evEl.style.textDecoration = 'line-through';
-        }
-    } else { // event
-        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
-        var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
-                            ? item.ev.completed_occurrences.includes(occDate)
-                            : false;
-
-        endBtn.textContent = isCompleted ? 'Undo' : 'End';
-
-        endBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (isCompleted) {
-                var idx = item.ev.completed_occurrences.indexOf(occDate);
-                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
-                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
-                    delete item.ev.completed_timestamps[occDate];
-                }
-                endBtn.textContent = 'End';
-                evEl.classList.remove('event-completed');
-            } else {
-                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
-                item.ev.completed_occurrences.push(occDate);
-                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
-                item.ev.completed_timestamps[occDate] = new Date().toISOString();
-                endBtn.textContent = 'Undo';
-                evEl.classList.add('event-completed');
-                showToast('Event marked done. It will be auto‑deleted in 28 days.');
-            }
-            updateEventInDB(item.ev.id, {
-                completed_occurrences: item.ev.completed_occurrences,
-                completed_timestamps: item.ev.completed_timestamps
-            }).catch(function() {});
-            isCompleted = !isCompleted;
-        });
-
-        if (isCompleted) {
-            evEl.classList.add('event-completed');
-        }
-    }
-
-    actionsDiv.appendChild(cancelBtn);
-    actionsDiv.appendChild(endBtn);
-}
-
-evEl.appendChild(actionsDiv);
-
-evEl.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (item.ev.invitation_status === 'pending') {
-        openInvitationResponse(item.ev);
-    } else {
-        openEventDetail(item.ev, new Date(vy, vm, vd));
-    }
-});
-
-slots.appendChild(evEl);
 
         // Current time line
         var now = new Date();
@@ -2089,8 +2077,7 @@ slots.appendChild(evEl);
             if (e.target !== slots) return;
             var rect = slots.getBoundingClientRect();
             var y = e.clientY - rect.top;
-            var acc = 0,
-                clickMin = 0;
+            var acc = 0, clickMin = 0;
             for (var h = 0; h < 24; h++) {
                 if (y < acc + hourHeights[h]) {
                     var offsetInHour = y - acc;
@@ -2102,10 +2089,7 @@ slots.appendChild(evEl);
             var hours = Math.floor(clickMin / 60);
             var minutes = Math.round(clickMin % 60);
             minutes = Math.round(minutes / 15) * 15;
-            if (minutes === 60) {
-                minutes = 0;
-                hours++;
-            }
+            if (minutes === 60) { minutes = 0; hours++; }
             if (hours >= 24) hours = 23;
 
             var clickDate = new Date(vy, vm, vd, hours, minutes, 0, 0);
@@ -2113,10 +2097,7 @@ slots.appendChild(evEl);
         });
 
         currentMonthYearEl.textContent = viewDate.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         });
     });
 }
