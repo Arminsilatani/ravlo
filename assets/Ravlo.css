@@ -3224,6 +3224,23 @@ a:hover {
     font-size: 14px;
     margin-bottom: 4px;
 }
+
+.ghost-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--text-light, #aaa);
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.ghost-btn:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: var(--accent, #ff6f91);
+    color: var(--accent, #ff6f91);
+}
+
+
 /* =========================== TASK TAB BUTTON LAYOUT ============================ */
 /* دکمه‌های دعوت و مکان در تب تسک کاملاً حذف شوند */
 #textarea-wrapper.task-tab-active .invite-toggle-btn,
