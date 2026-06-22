@@ -2985,13 +2985,12 @@ function openEventDetail(ev, occurrenceDate) {
         }
     }
 
-// ─── دکمه Postpone (فقط برای سازنده) ───
 const postponeBtn = document.getElementById('detail-postpone-btn');
 if (postponeBtn) {
     if (isInvitee) {
-        postponeBtn.style.display = 'none';          // مهمان: پنهان شود
+        postponeBtn.style.display = 'none';
     } else {
-        postponeBtn.style.display = '';              // سازنده: نمایش داده شود
+        postponeBtn.style.display = '';
         postponeBtn.onclick = () => openPostponeModal();
     }
 }
