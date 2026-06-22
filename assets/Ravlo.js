@@ -1650,17 +1650,14 @@ function renderDayView() {
                 }
                 evEl.appendChild(actionsDiv);
 
-                evEl.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    // اگر دعوت است، به جای جزئیات عادی، مودال پاسخ به دعوت را باز کن
-                    if (item.ev.invitation_status === 'pending') {
-                        // openInvitationResponse(item.ev); // بعد از ساخت این تابع، این خط را فعال کن
-                        // فعلاً همان جزئیات را نشان بده یا پیغام بده
-                        alert('You are invited to this event. Accept or decline? (Response modal coming soon)');
-                    } else {
-                        openEventDetail(item.ev, new Date(vy, vm, vd));
-                    }
-                });
+evEl.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (item.ev.invitation_status === 'pending') {
+        openInvitationResponse(item.ev);
+    } else {
+        openEventDetail(item.ev, new Date(vy, vm, vd));
+    }
+});
 
                 slots.appendChild(evEl);
             });
