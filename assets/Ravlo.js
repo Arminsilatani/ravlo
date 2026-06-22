@@ -106,7 +106,7 @@ var gregState = {
     selectedGd: null
 };
 var GREG_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
+var currentDetailEvent = null;
 /* :::::::::::::::::::::::::: LAZY PIN ICON :::::::::::::::::::::::::: */
 let accentPinIcon = null;
 
@@ -2662,6 +2662,7 @@ async function saveEvent() {
 /* =========================== EVENT DETAIL MODAL ============================ */
 function openEventDetail(ev, occurrenceDate) {
     currentDetailEventId = ev.id;
+    currentDetailEvent = ev;
 
     // Color & title
     document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
@@ -2972,16 +2973,10 @@ function openEventDetail(ev, occurrenceDate) {
     };
 
     // 2. Postpone button (hidden if completed)
-    const postponeBtn = document.getElementById('detail-postpone-btn');
-    if (isCompleted) {
-        postponeBtn.style.display = 'none';
-    } else {
-        postponeBtn.style.display = '';
-        postponeBtn.textContent = 'Postpone';
-        postponeBtn.onclick = () => {
-            alert('Postpone functionality coming soon!');
-        };
-    }
+const postponeBtn = document.getElementById('detail-postpone-btn');
+if (postponeBtn) {
+    postponeBtn.onclick = () => openPostponeModal();
+}
 
     // 4. Edit button
     document.getElementById('detail-edit-btn-top').onclick = () => {
@@ -4666,6 +4661,71 @@ function openInvitationResponse(ev) {
         }
     };
 }
+
+/* =========================== POSTPONE =========================== */
+function openPostponeModal() {
+    if (!currentDetailEvent) return;
+    document.getElementById('postpone-event-title').textContent =
+        currentDetailEvent.title || 'Untitled';
+    document.getElementById('postpone-custom-row').style.display = 'none';
+    openModal(document.getElementById('postpone-modal'));
+}
+
+function applyPostponeOffset(minutes) {
+    if (!currentDetailEvent) return;
+    const ev = currentDetailEvent;
+    const newStart = new Date(new Date(ev.start_date).getTime() + minutes * 60000);
+    const payload = { start_date: newStart.toISOString() };
+
+    if (ev.end_date) {
+        const oldStart = new Date(ev.start_date);
+        const oldEnd = new Date(ev.end_date);
+        const duration = oldEnd.getTime() - oldStart.getTime();
+        const newEnd = new Date(newStart.getTime() + duration);
+        payload.end_date = newEnd.toISOString();
+    }
+
+    updateEventInDB(ev.id, payload)
+        .then(() => {
+            // به‌روزرسانی در آرایه محلی
+            const localEv = events.find(e => e.id === ev.id);
+            if (localEv) {
+                if (payload.start_date) localEv.start_date = payload.start_date;
+                if (payload.end_date) localEv.end_date = payload.end_date;
+            }
+            closeModal(document.getElementById('postpone-modal'));
+            closeModal(document.getElementById('event-detail-modal'));
+            renderCalendar();
+        })
+        .catch(err => alert('Postpone failed: ' + err.message));
+}
+
+// گوش‌دهندگان دکمه‌ها
+document.getElementById('postpone-modal').addEventListener('click', function(e) {
+    const optionBtn = e.target.closest('.postpone-option');
+    if (!optionBtn) return;
+
+    if (optionBtn.id === 'postpone-custom-btn') {
+        document.getElementById('postpone-custom-row').style.display = 'block';
+        return;
+    }
+
+    const offset = parseInt(optionBtn.dataset.offset);
+    if (!isNaN(offset)) applyPostponeOffset(offset);
+});
+
+document.getElementById('postpone-custom-apply').addEventListener('click', function() {
+    const mins = parseInt(document.getElementById('postpone-custom-input').value);
+    if (isNaN(mins) || mins < 1) {
+        alert('Please enter a valid number of minutes.');
+        return;
+    }
+    applyPostponeOffset(mins);
+});
+
+document.getElementById('postpone-modal-close').addEventListener('click', () => {
+    closeModal(document.getElementById('postpone-modal'));
+});
 
 /* =========================== INITIALIZATION =========================== */
 
