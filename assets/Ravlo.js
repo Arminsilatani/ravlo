@@ -950,7 +950,6 @@ async function fetchEvents() {
         .from('ravlo')
         .select('*')
         .eq('user_id', currentUser.id)
-        .neq('invitation_status', 'declined')   // فقط رد‌شده‌ها را پنهان کن
         .order('start_date', { ascending: true });
     if (error) { console.warn('Fetch error:', error.message); return []; }
     return data || [];
