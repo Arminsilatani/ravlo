@@ -3240,7 +3240,22 @@ a:hover {
     color: var(--accent, #ff6f91);
 }
 
-
+.invitation-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.invitation-detail-header .detail-icon,
+.invitation-detail-header .detail-color-dot {
+    width: 24px;
+    height: 24px;
+    font-size: 20px;
+}
+.invitation-detail-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
 /* =========================== TASK TAB BUTTON LAYOUT ============================ */
 /* دکمه‌های دعوت و مکان در تب تسک کاملاً حذف شوند */
 #textarea-wrapper.task-tab-active .invite-toggle-btn,
