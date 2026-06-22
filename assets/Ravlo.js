@@ -1931,114 +1931,138 @@ function renderDayView() {
                 }
 
                 // Action buttons
-                var actionsDiv = document.createElement('div');
-                actionsDiv.className = 'event-actions';
+var actionsDiv = document.createElement('div');
+actionsDiv.className = 'event-actions';
 
-                // دکمه‌های Cancel و Done/End فقط برای رویدادهای غیر دعوت
-                if (item.ev.invitation_status !== 'pending') {
-                    var cancelBtn = document.createElement('button');
-                    cancelBtn.className = 'event-action-btn';
-                    cancelBtn.textContent = 'Cancel';
-                    cancelBtn.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        showConfirmModal('Are you sure you want to delete this event?', function() {
-                            deleteEventById(item.ev.id);
-                        });
-                    });
-
-                    var endBtn = document.createElement('button');
-                    endBtn.className = 'event-action-btn';
-
-                    if (item.ev.type === 'task') {
-                        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
-                        var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences) ?
-                            item.ev.completed_occurrences.includes(occDate) :
-                            false;
-                        endBtn.textContent = isDone ? 'Undo' : 'Done';
-                        endBtn.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            if (isDone) {
-                                var idx = item.ev.completed_occurrences.indexOf(occDate);
-                                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
-                                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
-                                    delete item.ev.completed_timestamps[occDate];
-                                }
-                                endBtn.textContent = 'Done';
-                                evEl.style.opacity = '1';
-                                evEl.style.textDecoration = 'none';
-                            } else {
-                                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
-                                item.ev.completed_occurrences.push(occDate);
-                                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
-                                item.ev.completed_timestamps[occDate] = new Date().toISOString();
-                                endBtn.textContent = 'Undo';
-                                evEl.style.opacity = '0.6';
-                                evEl.style.textDecoration = 'line-through';
-                                showToast('Occurrence marked done. It will be auto‑deleted in 28 days.');
-                            }
-                            updateEventInDB(item.ev.id, {
-                                completed_occurrences: item.ev.completed_occurrences,
-                                completed_timestamps: item.ev.completed_timestamps
-                            }).catch(function() {});
-                            isDone = !isDone;
-                        });
-                        if (isDone) {
-                            evEl.style.opacity = '0.6';
-                            evEl.style.textDecoration = 'line-through';
-                        }
-                    } else { // event
-                        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
-                        var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences) ?
-                            item.ev.completed_occurrences.includes(occDate) :
-                            false;
-                        endBtn.textContent = isCompleted ? 'Undo' : 'End';
-                        endBtn.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            if (isCompleted) {
-                                var idx = item.ev.completed_occurrences.indexOf(occDate);
-                                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
-                                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
-                                    delete item.ev.completed_timestamps[occDate];
-                                }
-                                endBtn.textContent = 'End';
-                                evEl.classList.remove('event-completed');
-                            } else {
-                                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
-                                item.ev.completed_occurrences.push(occDate);
-                                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
-                                item.ev.completed_timestamps[occDate] = new Date().toISOString();
-                                endBtn.textContent = 'Undo';
-                                evEl.classList.add('event-completed');
-                                showToast('Event marked done. It will be auto‑deleted in 28 days.');
-                            }
-                            updateEventInDB(item.ev.id, {
-                                completed_occurrences: item.ev.completed_occurrences,
-                                completed_timestamps: item.ev.completed_timestamps
-                            }).catch(function() {});
-                            isCompleted = !isCompleted;
-                        });
-                        if (isCompleted) {
-                            evEl.classList.add('event-completed');
-                        }
-                    }
-
-                    actionsDiv.appendChild(cancelBtn);
-                    actionsDiv.appendChild(endBtn);
-                }
-                evEl.appendChild(actionsDiv);
-
-                evEl.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    if (item.ev.invitation_status === 'pending') {
-                        openInvitationResponse(item.ev);
-                    } else {
-                        openEventDetail(item.ev, new Date(vy, vm, vd));
-                    }
-                });
-
-                slots.appendChild(evEl);
-            });
+// مهمان (invitee with accepted invitation) – فقط دکمه Leave
+if (item.ev.parent_event_id && item.ev.invitation_status === 'accepted') {
+    var leaveBtn = document.createElement('button');
+    leaveBtn.className = 'event-action-btn';
+    leaveBtn.textContent = 'Leave';
+    leaveBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        showConfirmModal('Leave this event? It will be removed from your calendar.', async function() {
+            await deleteEventFromDB(item.ev.id);
+            events = events.filter(e => e.id !== item.ev.id);
+            renderCalendar();
         });
+    });
+    actionsDiv.appendChild(leaveBtn);
+
+// دعوت‌های pending (هنوز جواب نداده) – بدون دکمه
+} else if (item.ev.invitation_status === 'pending') {
+    // هیچ دکمه‌ای اضافه نمی‌شود
+
+// سازنده (host) یا رویداد عادی – Cancel + End/Done
+} else {
+    var cancelBtn = document.createElement('button');
+    cancelBtn.className = 'event-action-btn';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        showConfirmModal('Are you sure you want to delete this event?', function() {
+            deleteEventById(item.ev.id);
+        });
+    });
+
+    var endBtn = document.createElement('button');
+    endBtn.className = 'event-action-btn';
+
+    if (item.ev.type === 'task') {
+        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
+        var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
+                        ? item.ev.completed_occurrences.includes(occDate)
+                        : false;
+
+        endBtn.textContent = isDone ? 'Undo' : 'Done';
+
+        endBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (isDone) {
+                var idx = item.ev.completed_occurrences.indexOf(occDate);
+                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
+                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
+                    delete item.ev.completed_timestamps[occDate];
+                }
+                endBtn.textContent = 'Done';
+                evEl.style.opacity = '1';
+                evEl.style.textDecoration = 'none';
+            } else {
+                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
+                item.ev.completed_occurrences.push(occDate);
+                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
+                item.ev.completed_timestamps[occDate] = new Date().toISOString();
+                endBtn.textContent = 'Undo';
+                evEl.style.opacity = '0.6';
+                evEl.style.textDecoration = 'line-through';
+                showToast('Occurrence marked done. It will be auto‑deleted in 28 days.');
+            }
+            updateEventInDB(item.ev.id, {
+                completed_occurrences: item.ev.completed_occurrences,
+                completed_timestamps: item.ev.completed_timestamps
+            }).catch(function() {});
+            isDone = !isDone;
+        });
+
+        if (isDone) {
+            evEl.style.opacity = '0.6';
+            evEl.style.textDecoration = 'line-through';
+        }
+    } else { // event
+        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
+        var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
+                            ? item.ev.completed_occurrences.includes(occDate)
+                            : false;
+
+        endBtn.textContent = isCompleted ? 'Undo' : 'End';
+
+        endBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (isCompleted) {
+                var idx = item.ev.completed_occurrences.indexOf(occDate);
+                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
+                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
+                    delete item.ev.completed_timestamps[occDate];
+                }
+                endBtn.textContent = 'End';
+                evEl.classList.remove('event-completed');
+            } else {
+                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
+                item.ev.completed_occurrences.push(occDate);
+                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
+                item.ev.completed_timestamps[occDate] = new Date().toISOString();
+                endBtn.textContent = 'Undo';
+                evEl.classList.add('event-completed');
+                showToast('Event marked done. It will be auto‑deleted in 28 days.');
+            }
+            updateEventInDB(item.ev.id, {
+                completed_occurrences: item.ev.completed_occurrences,
+                completed_timestamps: item.ev.completed_timestamps
+            }).catch(function() {});
+            isCompleted = !isCompleted;
+        });
+
+        if (isCompleted) {
+            evEl.classList.add('event-completed');
+        }
+    }
+
+    actionsDiv.appendChild(cancelBtn);
+    actionsDiv.appendChild(endBtn);
+}
+
+evEl.appendChild(actionsDiv);
+
+evEl.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (item.ev.invitation_status === 'pending') {
+        openInvitationResponse(item.ev);
+    } else {
+        openEventDetail(item.ev, new Date(vy, vm, vd));
+    }
+});
+
+slots.appendChild(evEl);
 
         // Current time line
         var now = new Date();
@@ -2974,16 +2998,58 @@ if (postponeBtn) {
     postponeBtn.onclick = () => openPostponeModal();
 }
 
-    // 4. Edit button
-    document.getElementById('detail-edit-btn-top').onclick = () => {
+// در openEventDetail، بعد از رنگ و عنوان...
+
+const isInvitee = !!ev.parent_event_id;   // اگر parent_event_id داشته باشد، مهمان است
+
+// دکمه Edit (فقط برای سازنده)
+const editBtn = document.getElementById('detail-edit-btn-top');
+if (editBtn) {
+    editBtn.style.display = isInvitee ? 'none' : '';
+    editBtn.onclick = () => {
         closeModal(eventDetailModal);
         const evToEdit = events.find(e => e.id == currentDetailEventId);
-        if (evToEdit) {
-            openEditModal(evToEdit);
-        } else {
-            console.warn('Event not found for editing');
-        }
+        if (evToEdit) openEditModal(evToEdit);
     };
+}
+
+// دکمه Complete/Undo (End/Done) – فقط برای سازنده
+const completeBtn = document.getElementById('detail-complete-btn');
+if (completeBtn) {
+    completeBtn.style.display = isInvitee ? 'none' : '';
+    // ... (کد قبلی برای تنظیم متن و عملکرد با توجه به وضعیت)
+}
+
+// دکمه Delete / Leave
+const cancelBtn = document.getElementById('detail-cancel-btn');
+if (cancelBtn) {
+    if (isInvitee) {
+        cancelBtn.textContent = 'Leave Event';
+        cancelBtn.onclick = () => {
+            showConfirmModal('Leave this event? It will be removed from your calendar.', async () => {
+                await deleteEventFromDB(ev.id);
+                events = events.filter(e => e.id !== ev.id);
+                closeModal(eventDetailModal);
+                renderCalendar();
+            });
+        };
+    } else {
+        cancelBtn.textContent = 'Delete';
+        cancelBtn.onclick = () => {
+            showConfirmModal('Are you sure you want to delete this event?', () => {
+                deleteEventById(ev.id).then(() => {
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                }).catch(() => alert('Failed to delete event.'));
+            });
+        };
+    }
+}
+
+const postponeBtn = document.getElementById('detail-postpone-btn');
+if (postponeBtn) {
+    postponeBtn.onclick = () => openPostponeModal(); 
+}
 
     openModal(eventDetailModal);
 }
