@@ -3212,6 +3212,18 @@ a:hover {
     border-radius: 8px;
     z-index: 2;
 }
+
+.invitation-response-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    justify-content: center;
+}
+#invitation-response-message {
+    color: var(--text-light);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
 /* =========================== TASK TAB BUTTON LAYOUT ============================ */
 /* دکمه‌های دعوت و مکان در تب تسک کاملاً حذف شوند */
 #textarea-wrapper.task-tab-active .invite-toggle-btn,
