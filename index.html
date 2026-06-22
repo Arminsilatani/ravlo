@@ -597,6 +597,29 @@
     </div>
 </div>
 
+<!-- Postpone Modal -->
+<div id="postpone-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" id="postpone-modal-close">&times;</span>
+        <h3>Postpone Event</h3>
+        <p id="postpone-event-title" style="margin-bottom:12px; color:var(--text-light);"></p>
+        <div class="postpone-options">
+            <button class="postpone-option" data-offset="5">5 minutes</button>
+            <button class="postpone-option" data-offset="15">15 minutes</button>
+            <button class="postpone-option" data-offset="30">30 minutes</button>
+            <button class="postpone-option" data-offset="60">1 hour</button>
+            <button class="postpone-option" data-offset="1440">1 day</button>
+            <button class="postpone-option" data-offset="10080">1 week</button>
+            <button class="postpone-option" id="postpone-custom-btn">Custom…</button>
+        </div>
+        <div id="postpone-custom-row" style="display:none; margin-top:12px;">
+            <label for="postpone-custom-input" style="color:var(--text-light);">Minutes:</label>
+            <input type="number" id="postpone-custom-input" min="1" value="30" style="width:80px; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px;">
+            <button id="postpone-custom-apply" class="accent-btn" style="margin-left:8px;">Apply</button>
+        </div>
+    </div>
+</div>
+
     <!-- ------------------------- FOOTER ------------------------- -->
     <footer class="footer">
         <div class="footer-signature">
