@@ -2679,7 +2679,6 @@ function openEventDetail(ev, occurrenceDate) {
         colorDot.after(iconSpan);
     }
 
-
     if (ev.icon) {
         iconSpan.innerHTML = ev.icon;
         iconSpan.style.color = ev.color || 'var(--accent)';
@@ -2695,35 +2694,24 @@ function openEventDetail(ev, occurrenceDate) {
     if (descIcon) {
         descIcon.style.color = ev.color || 'var(--accent)';
     }
-    // Calendar icon color
     const calIcon = document.getElementById('detail-calendar-icon');
     calIcon.style.color = ev.color || 'var(--accent)';
 
     // Date and time
     const start = ev.start_date ? new Date(ev.start_date) : null;
     const end = ev.end_date ? new Date(ev.end_date) : null;
-
     let dateText = '';
     let timeText = '';
     let durationParen = '';
 
     if (start) {
-        dateText = start.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        dateText = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
         if (ev.all_day) {
             timeText = 'All day';
         } else {
-            const fmtTime = d => d.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
+            const fmtTime = d => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
             timeText = fmtTime(start);
             if (end) {
-                // Duration calculation
                 const diffMs = end.getTime() - start.getTime();
                 if (diffMs > 0) {
                     const totalMinutes = Math.floor(diffMs / 60000);
@@ -2749,7 +2737,7 @@ function openEventDetail(ev, occurrenceDate) {
     if (ev.type === 'task') {
         dividers.forEach(hr => hr.style.display = 'none');
     } else {
-        dividers.forEach(hr => hr.style.display = ''); // restore for events
+        dividers.forEach(hr => hr.style.display = '');
     }
 
     // Description
@@ -2781,9 +2769,9 @@ function openEventDetail(ev, occurrenceDate) {
                         <span class="attendee-empty-text">Invite more people</span>
                     </div>`;
             } else if (invitees.length <= 3) {
-                const colors = ['#f97316', '#e11d48', '#8b5cf6', '#06b6d4', '#10b981'];
+                const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
                 invitees.forEach((name, i) => {
-                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || name[0].toUpperCase();
+                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
                     const item = document.createElement('div');
                     item.className = 'attendee-item';
                     item.innerHTML = `
@@ -2792,13 +2780,13 @@ function openEventDetail(ev, occurrenceDate) {
                     attendeesList.appendChild(item);
                 });
             } else {
-                const colors = ['#f97316', '#e11d48'];
-                const firstTwo = invitees.slice(0, 2);
+                const colors = ['#f97316','#e11d48'];
+                const firstTwo = invitees.slice(0,2);
                 const restCount = invitees.length - 2;
                 const overlapRow = document.createElement('div');
                 overlapRow.className = 'attendees-overlap-row';
                 firstTwo.forEach((name, i) => {
-                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || name[0].toUpperCase();
+                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
                     overlapRow.innerHTML += `
                         <div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
                 });
@@ -2859,9 +2847,7 @@ function openEventDetail(ev, occurrenceDate) {
                         maxZoom: 19
                     }).addTo(detailMap);
                     const icon = getAccentPinIcon();
-                    if (icon) L.marker([lat, lng], {
-                        icon
-                    }).addTo(detailMap);
+                    if (icon) L.marker([lat, lng], { icon }).addTo(detailMap);
                     else L.marker([lat, lng]).addTo(detailMap);
                     setTimeout(() => detailMap.invalidateSize(), 100);
                     const mapDivForClick = document.getElementById('detail-location-map');
@@ -2884,153 +2870,126 @@ function openEventDetail(ev, occurrenceDate) {
     const oldAddr = document.getElementById('detail-address-container');
     if (oldAddr) oldAddr.style.display = 'none';
 
-    // Completion status
+    // ─── تشخیص مهمان بودن ───
+    const isInvitee = !!ev.parent_event_id;
+
+    // ─── دکمه Edit (فقط سازنده) ───
+    const editBtn = document.getElementById('detail-edit-btn-top');
+    if (editBtn) {
+        editBtn.style.display = isInvitee ? 'none' : '';
+        editBtn.onclick = () => {
+            closeModal(eventDetailModal);
+            const evToEdit = events.find(e => e.id == currentDetailEventId);
+            if (evToEdit) openEditModal(evToEdit);
+        };
+    }
+
+    // ─── وضعیت تکمیل (Complete / Undo) ───
     var dateForCompletion = null;
     if (occurrenceDate) {
         dateForCompletion = occurrenceDate.toISOString().split('T')[0];
     }
-
     var isCompleted = false;
     if (dateForCompletion && ev.recurrence_type !== 'none') {
-        isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences) ?
-            ev.completed_occurrences.includes(dateForCompletion) :
-            false;
+        isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                        ? ev.completed_occurrences.includes(dateForCompletion)
+                        : false;
     } else {
         isCompleted = (ev.status === 'completed' || ev.status === 'done');
     }
 
     const completeBtn = document.getElementById('detail-complete-btn');
-    if (isCompleted) {
-        completeBtn.textContent = 'Undo';
-        completeBtn.onclick = () => {
-            if (dateForCompletion && ev.recurrence_type !== 'none') {
-                var idx = ev.completed_occurrences.indexOf(dateForCompletion);
-                if (idx > -1) ev.completed_occurrences.splice(idx, 1);
-                if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
-                    delete ev.completed_timestamps[dateForCompletion];
+    if (completeBtn) {
+        // فقط برای سازنده نمایش داده شود
+        completeBtn.style.display = isInvitee ? 'none' : '';
+
+        if (isCompleted) {
+            completeBtn.textContent = 'Undo';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    var idx = ev.completed_occurrences.indexOf(dateForCompletion);
+                    if (idx > -1) ev.completed_occurrences.splice(idx, 1);
+                    if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
+                        delete ev.completed_timestamps[dateForCompletion];
+                    }
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(() => {
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                    }).catch(() => alert('Error undoing.'));
+                } else {
+                    updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(() => {
+                        ev.status = 'pending';
+                        ev.completed_at = null;
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                    }).catch(() => alert('Error undoing.'));
                 }
-                updateEventInDB(ev.id, {
-                    completed_occurrences: ev.completed_occurrences,
-                    completed_timestamps: ev.completed_timestamps
-                }).then(() => {
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                }).catch(() => alert('Error undoing.'));
-            } else {
-                updateEventInDB(ev.id, {
-                    status: 'pending',
-                    completed_at: null
-                }).then(() => {
-                    ev.status = 'pending';
-                    ev.completed_at = null;
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                }).catch(() => alert('Error undoing.'));
-            }
-        };
-    } else {
-        completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
-        completeBtn.onclick = () => {
-            if (dateForCompletion && ev.recurrence_type !== 'none') {
-                if (!ev.completed_occurrences) ev.completed_occurrences = [];
-                ev.completed_occurrences.push(dateForCompletion);
-                if (!ev.completed_timestamps) ev.completed_timestamps = {};
-                ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
-                updateEventInDB(ev.id, {
-                    completed_occurrences: ev.completed_occurrences,
-                    completed_timestamps: ev.completed_timestamps
-                }).then(() => {
-                    alert('This occurrence will be automatically deleted after 28 days.');
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                }).catch(() => alert('Error completing.'));
-            } else {
-                var newStatus = ev.type === 'task' ? 'done' : 'completed';
-                var payload = {
-                    status: newStatus,
-                    completed_at: new Date().toISOString()
-                };
-                updateEventInDB(ev.id, payload).then(() => {
-                    ev.status = newStatus;
-                    ev.completed_at = payload.completed_at;
-                    alert('This item will be automatically deleted after 28 days.');
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                }).catch(() => alert('Error completing.'));
-            }
-        };
+            };
+        } else {
+            completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    if (!ev.completed_occurrences) ev.completed_occurrences = [];
+                    ev.completed_occurrences.push(dateForCompletion);
+                    if (!ev.completed_timestamps) ev.completed_timestamps = {};
+                    ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(() => {
+                        alert('This occurrence will be automatically deleted after 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                    }).catch(() => alert('Error completing.'));
+                } else {
+                    var newStatus = ev.type === 'task' ? 'done' : 'completed';
+                    var payload = { status: newStatus, completed_at: new Date().toISOString() };
+                    updateEventInDB(ev.id, payload).then(() => {
+                        ev.status = newStatus;
+                        ev.completed_at = payload.completed_at;
+                        alert('This item will be automatically deleted after 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                    }).catch(() => alert('Error completing.'));
+                }
+            };
+        }
     }
 
-    // 1. Cancel button → Delete (always)
+    // ─── دکمه Delete / Leave ───
     const cancelBtn = document.getElementById('detail-cancel-btn');
-    cancelBtn.textContent = 'Delete';
-    cancelBtn.onclick = () => {
-        showConfirmModal('Are you sure you want to delete this event?', () => {
-            deleteEventById(ev.id).then(() => {
-                closeModal(eventDetailModal);
-                renderCalendar();
-            }).catch(() => alert('Failed to delete event.'));
-        });
-    };
-
-    // 2. Postpone button (hidden if completed)
-const postponeBtn = document.getElementById('detail-postpone-btn');
-if (postponeBtn) {
-    postponeBtn.onclick = () => openPostponeModal();
-}
-
-// در openEventDetail، بعد از رنگ و عنوان...
-
-const isInvitee = !!ev.parent_event_id;   // اگر parent_event_id داشته باشد، مهمان است
-
-// دکمه Edit (فقط برای سازنده)
-const editBtn = document.getElementById('detail-edit-btn-top');
-if (editBtn) {
-    editBtn.style.display = isInvitee ? 'none' : '';
-    editBtn.onclick = () => {
-        closeModal(eventDetailModal);
-        const evToEdit = events.find(e => e.id == currentDetailEventId);
-        if (evToEdit) openEditModal(evToEdit);
-    };
-}
-
-// دکمه Complete/Undo (End/Done) – فقط برای سازنده
-const completeBtn = document.getElementById('detail-complete-btn');
-if (completeBtn) {
-    completeBtn.style.display = isInvitee ? 'none' : '';
-    // ... (کد قبلی برای تنظیم متن و عملکرد با توجه به وضعیت)
-}
-
-// دکمه Delete / Leave
-const cancelBtn = document.getElementById('detail-cancel-btn');
-if (cancelBtn) {
-    if (isInvitee) {
-        cancelBtn.textContent = 'Leave Event';
-        cancelBtn.onclick = () => {
-            showConfirmModal('Leave this event? It will be removed from your calendar.', async () => {
-                await deleteEventFromDB(ev.id);
-                events = events.filter(e => e.id !== ev.id);
-                closeModal(eventDetailModal);
-                renderCalendar();
-            });
-        };
-    } else {
-        cancelBtn.textContent = 'Delete';
-        cancelBtn.onclick = () => {
-            showConfirmModal('Are you sure you want to delete this event?', () => {
-                deleteEventById(ev.id).then(() => {
+    if (cancelBtn) {
+        if (isInvitee) {
+            cancelBtn.textContent = 'Leave Event';
+            cancelBtn.onclick = () => {
+                showConfirmModal('Leave this event? It will be removed from your calendar.', async () => {
+                    await deleteEventFromDB(ev.id);
+                    events = events.filter(e => e.id !== ev.id);
                     closeModal(eventDetailModal);
                     renderCalendar();
-                }).catch(() => alert('Failed to delete event.'));
-            });
-        };
+                });
+            };
+        } else {
+            cancelBtn.textContent = 'Delete';
+            cancelBtn.onclick = () => {
+                showConfirmModal('Are you sure you want to delete this event?', () => {
+                    deleteEventById(ev.id).then(() => {
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                    }).catch(() => alert('Failed to delete event.'));
+                });
+            };
+        }
     }
-}
 
-const postponeBtn = document.getElementById('detail-postpone-btn');
-if (postponeBtn) {
-    postponeBtn.onclick = () => openPostponeModal(); 
-}
+    // ─── دکمه Postpone (برای همه) ───
+    const postponeBtn = document.getElementById('detail-postpone-btn');
+    if (postponeBtn) {
+        postponeBtn.onclick = () => openPostponeModal();
+    }
 
     openModal(eventDetailModal);
 }
