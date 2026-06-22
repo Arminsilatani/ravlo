@@ -3256,6 +3256,27 @@ a:hover {
     margin: 0;
     font-size: 18px;
 }
+
+.postpone-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.postpone-option {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+    transition: 0.2s;
+}
+.postpone-option:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
 /* =========================== TASK TAB BUTTON LAYOUT ============================ */
 /* دکمه‌های دعوت و مکان در تب تسک کاملاً حذف شوند */
 #textarea-wrapper.task-tab-active .invite-toggle-btn,
