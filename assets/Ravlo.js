@@ -4461,32 +4461,41 @@ document.getElementById('location-coords-input')?.addEventListener('input', func
 async function cleanupOldCompletions() {
     if (!currentUser) return;
     const now = new Date();
-    const twentyEightDays = 28 * 24 * 60 * 60 * 1000;
+    const twentyEightDaysMs = 28 * 24 * 60 * 60 * 1000;
+    const twentyEightDaysAgo = new Date(now.getTime() - twentyEightDaysMs);
 
-    for (let ev of events) {
-        if (ev.recurrence_type !== 'none' && ev.completed_timestamps && Object.keys(ev.completed_timestamps).length > 0) {
-            let changed = false;
-            for (let dateStr in ev.completed_timestamps) {
-                const completedAt = new Date(ev.completed_timestamps[dateStr]);
-                if (now - completedAt > twentyEightDays) {
-                    if (ev.completed_occurrences) {
-                        ev.completed_occurrences = ev.completed_occurrences.filter(d => d !== dateStr);
+    for (let i = events.length - 1; i >= 0; i--) {
+        const ev = events[i];
+
+        // 1. رویدادهای تکرارشونده: فقط رکوردهای completion قدیمی را پاک کن
+        if (ev.recurrence_type !== 'none') {
+            if (ev.completed_timestamps && Object.keys(ev.completed_timestamps).length > 0) {
+                let changed = false;
+                for (let dateStr in ev.completed_timestamps) {
+                    const completedAt = new Date(ev.completed_timestamps[dateStr]);
+                    if (completedAt < twentyEightDaysAgo) {
+                        if (ev.completed_occurrences) {
+                            ev.completed_occurrences = ev.completed_occurrences.filter(d => d !== dateStr);
+                        }
+                        delete ev.completed_timestamps[dateStr];
+                        changed = true;
                     }
-                    delete ev.completed_timestamps[dateStr];
-                    changed = true;
+                }
+                if (changed) {
+                    await updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    });
                 }
             }
-            if (changed) {
-                await updateEventInDB(ev.id, {
-                    completed_occurrences: ev.completed_occurrences,
-                    completed_timestamps: ev.completed_timestamps
-                });
-            }
-        } else if (ev.recurrence_type === 'none' && ev.completed_at) {
-            const completedAt = new Date(ev.completed_at);
-            if (now - completedAt > twentyEightDays) {
+            continue; // به هیچ عنوان خود رویداد حذف نشود
+        }
+
+        if (ev.start_date) {
+            const startDate = new Date(ev.start_date);
+            if (startDate < twentyEightDaysAgo) {
                 await deleteEventFromDB(ev.id);
-                events = events.filter(e => e.id !== ev.id);
+                events.splice(i, 1); // از آرایه محلی هم حذف کن
             }
         }
     }
