@@ -3901,33 +3901,48 @@ function fallbackCopy(text) {
 }
 
 function openInvitationResponse(ev) {
-    document.getElementById('invitation-response-title').textContent = ev.title || 'Untitled Event';
+    // ⬇️ دیگر عنوان رویداد را در بالای پنجره نمی‌گذاریم
+    document.getElementById('invitation-response-title').textContent = 'Event Invitation';
     document.getElementById('invitation-response-message').textContent = 'You are invited to this event.';
 
     const container = document.getElementById('invitation-detail-container');
     container.innerHTML = '';
 
-    // رنگ رویداد
-    const colorDot = document.createElement('span');
-    colorDot.className = 'detail-color-dot';
-    colorDot.style.backgroundColor = ev.color || '#f5f5f5';
-    container.appendChild(colorDot);
+    // ── هدر جزئیات (رنگ + آیکون + عنوان) ──
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'invitation-detail-header';
 
-    // آیکون
+    // رنگ (dot)
+    if (ev.color) {
+        const colorDot = document.createElement('span');
+        colorDot.className = 'detail-color-dot';
+        colorDot.style.backgroundColor = ev.color;
+        colorDot.style.width = '12px';
+        colorDot.style.height = '12px';
+        colorDot.style.borderRadius = '50%';
+        colorDot.style.display = 'inline-block';
+        headerDiv.appendChild(colorDot);
+    }
+
+    // آیکون (در صورت وجود)
     if (ev.icon) {
         const iconSpan = document.createElement('span');
         iconSpan.className = 'detail-icon';
         iconSpan.innerHTML = ev.icon;
         iconSpan.style.color = ev.color || 'var(--accent)';
-        container.appendChild(iconSpan);
+        iconSpan.style.fontSize = '20px';
+        headerDiv.appendChild(iconSpan);
     }
 
-    // عنوان
+    // عنوان رویداد
     const titleEl = document.createElement('h3');
     titleEl.textContent = ev.title || 'Untitled';
-    container.appendChild(titleEl);
+    titleEl.style.margin = '0';
+    headerDiv.appendChild(titleEl);
 
-    // تاریخ و زمان
+    container.appendChild(headerDiv);
+
+    // ── تاریخ و زمان ──
     const start = ev.start_date ? new Date(ev.start_date) : null;
     const end = ev.end_date ? new Date(ev.end_date) : null;
     let dateText = '', timeText = '';
@@ -3948,21 +3963,21 @@ function openInvitationResponse(ev) {
     timeP.innerHTML = `<strong>Time:</strong> ${timeText}`;
     container.appendChild(timeP);
 
-    // توضیحات
+    // ── توضیحات ──
     if (ev.description && ev.description.trim()) {
         const descP = document.createElement('p');
         descP.innerHTML = `<strong>Description:</strong> ${ev.description}`;
         container.appendChild(descP);
     }
 
-    // مهمان‌ها
+    // ── مهمان‌ها ──
     if (ev.invitees && ev.invitees.length > 0) {
         const inviteesP = document.createElement('p');
         inviteesP.innerHTML = `<strong>Invitees:</strong> ${ev.invitees.join(', ')}`;
         container.appendChild(inviteesP);
     }
 
-    // مکان (مختصات)
+    // ── مکان ──
     if (ev.location && ev.location.lat && ev.location.lng) {
         const locP = document.createElement('p');
         locP.innerHTML = `<strong>Location:</strong> ${ev.location.lat.toFixed(5)}, ${ev.location.lng.toFixed(5)}`;
@@ -4009,6 +4024,17 @@ function openInvitationResponse(ev) {
         closeModal(document.getElementById('invitation-response-modal'));
         renderCalendar();
     };
+
+    // بستن مودال
+    document.getElementById('invitation-response-close').onclick = () => {
+        closeModal(document.getElementById('invitation-response-modal'));
+    };
+    document.getElementById('invitation-response-modal').onclick = (e) => {
+        if (e.target === document.getElementById('invitation-response-modal')) {
+            closeModal(document.getElementById('invitation-response-modal'));
+        }
+    };
+}
 
     // بستن مودال
     document.getElementById('invitation-response-close').onclick = () => {
