@@ -3310,7 +3310,7 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 30px;
     font-size: 14px;
     color: var(--text-secondary);
 }
