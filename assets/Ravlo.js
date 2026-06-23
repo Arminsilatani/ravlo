@@ -1796,7 +1796,6 @@ function renderView() {
         animateMonthYearChange(currentMonthYearEl.textContent);
         window.__lastMonthYearText = currentMonthYearEl.textContent;
     }
-    // ✅ به‌روزرسانی نوتیفیکیشن‌ها
     if (currentUser) {
         checkAndCreateTodayNotifications();
     }
