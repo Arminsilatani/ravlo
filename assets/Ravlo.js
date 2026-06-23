@@ -1,7 +1,7 @@
 /*
  ****************************************************
  *  Author: Armin Silatani
- *  Date: 2026-06-23
+ *  Date: 2026-06-18
  *  Version: 3.2.9
  ****************************************************
  */
@@ -11,7 +11,9 @@
 /* :::::::::::::::::::::::::: SUPABASE CLIENT :::::::::::::::::::::::::: */
 const SUPABASE_URL = 'https://vzqicidepdmraygulrey.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_kqRWgOmLISOE2EuLL1s8fw_WN6FJRTI';
-const { createClient } = supabase;
+const {
+    createClient
+} = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* :::::::::::::::::::::::::: GLOBAL STATE :::::::::::::::::::::::::: */
@@ -31,6 +33,7 @@ let recurrence = {
     days: [],
     smartInterval: 'weekly'
 };
+
 let viewMode = localStorage.getItem('ravlo-view-mode') || 'month';
 if (viewMode === 'week') {
     localStorage.setItem('ravlo-view-mode', 'day');
@@ -78,7 +81,7 @@ const tabIndicator = document.createElement('div');
 tabIndicator.className = 'indicator';
 if (viewTabsEl) viewTabsEl.appendChild(tabIndicator);
 
-/* ------------------------- GREGORIAN PICKER DOM ------------------------- */
+// Gregorian picker DOM references
 const gregPickerPopup = document.getElementById('greg-picker-popup');
 const gregPickerTrigger = document.getElementById('greg-picker-trigger');
 const gregTriggerText = document.getElementById('greg-trigger-text');
@@ -96,6 +99,7 @@ const gregMonthPopup = document.getElementById('greg-month-popup');
 const gregYearPopup = document.getElementById('greg-year-popup');
 const gregYearPanel = document.getElementById('greg-year-panel');
 
+// Additional picker state
 var gregState = {
     gy: 2026,
     gm: 0,
@@ -103,9 +107,9 @@ var gregState = {
 };
 var GREG_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 var currentDetailEvent = null;
-
 /* :::::::::::::::::::::::::: LAZY PIN ICON :::::::::::::::::::::::::: */
 let accentPinIcon = null;
+
 function getAccentPinIcon() {
     if (!accentPinIcon) {
         if (typeof L === 'undefined') return null;
@@ -172,7 +176,10 @@ function animateMonthYearChange(newText) {
         duration: 0.15,
         onComplete: () => {
             el.textContent = newText;
-            gsap.fromTo(el, { opacity: 0, y: 8 }, {
+            gsap.fromTo(el, {
+                opacity: 0,
+                y: 8
+            }, {
                 opacity: 1,
                 y: 0,
                 duration: 0.2,
@@ -194,22 +201,51 @@ function generateInviteLinkForNewUser() {
     return `${DASHBOARD_URL}?ref=${currentUser.id}`;
 }
 
-const ICON_OPTIONS = [
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0M3.124 7.5A8.969 8.969 0 0 1 5.292 3m13.416 0a8.969 8.969 0 0 1 2.168 4.5"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12M12.265 3.11a.375.375 0 1 1-.53 0L12 2.845l.265.265Zm-3 0a.375.375 0 1 1-.53 0L9 2.845l.265.265Zm6 0a.375.375 0 1 1-.53 0L15 2.845l.265.265Z"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"/></svg>` },
-    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0 1 18 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125m1.125 2.625h1.5m-1.5 0A1.125 1.125 0 0 1 18 7.125v-1.5m1.125 2.625c-.621 0-1.125.504-1.125 1.125v1.5m2.625-2.625c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125M18 5.625v5.25M7.125 12h9.75m-9.75 0A1.125 1.125 0 0 1 6 10.875M7.125 12C6.504 12 6 12.504 6 13.125m0-2.25C6 11.496 5.496 12 4.875 12M18 10.875c0 .621-.504 1.125-1.125 1.125M18 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m-12 5.25v-5.25m0 5.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125m-12 0v-1.5c0-.621-.504-1.125-1.125-1.125M18 18.375v-5.25m0 5.25v-1.5c0-.621.504-1.125 1.125-1.125M18 13.125v1.5c0 .621.504 1.125 1.125 1.125M18 13.125c0-.621.504-1.125 1.125-1.125M6 13.125v1.5c0 .621-.504 1.125-1.125 1.125M6 13.125C6 12.504 5.496 12 4.875 12m-1.5 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M19.125 12h1.5m0 0c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h1.5m14.25 0h1.5"/></svg>` }
+const ICON_OPTIONS = [{
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0M3.124 7.5A8.969 8.969 0 0 1 5.292 3m13.416 0a8.969 8.969 0 0 1 2.168 4.5"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12M12.265 3.11a.375.375 0 1 1-.53 0L12 2.845l.265.265Zm-3 0a.375.375 0 1 1-.53 0L9 2.845l.265.265Zm6 0a.375.375 0 1 1-.53 0L15 2.845l.265.265Z"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"/></svg>`
+    },
+    {
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0 1 18 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125m1.125 2.625h1.5m-1.5 0A1.125 1.125 0 0 1 18 7.125v-1.5m1.125 2.625c-.621 0-1.125.504-1.125 1.125v1.5m2.625-2.625c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125M18 5.625v5.25M7.125 12h9.75m-9.75 0A1.125 1.125 0 0 1 6 10.875M7.125 12C6.504 12 6 12.504 6 13.125m0-2.25C6 11.496 5.496 12 4.875 12M18 10.875c0 .621-.504 1.125-1.125 1.125M18 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m-12 5.25v-5.25m0 5.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125m-12 0v-1.5c0-.621-.504-1.125-1.125-1.125M18 18.375v-5.25m0 5.25v-1.5c0-.621.504-1.125 1.125-1.125M18 13.125v1.5c0 .621.504 1.125 1.125 1.125M18 13.125c0-.621.504-1.125 1.125-1.125M6 13.125v1.5c0 .621-.504 1.125-1.125 1.125M6 13.125C6 12.504 5.496 12 4.875 12m-1.5 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M19.125 12h1.5m0 0c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h1.5m14.25 0h1.5"/></svg>`
+    }
 ];
 
 /* ------------------------- INVITE LIST RENDERING ------------------------- */
@@ -256,8 +292,11 @@ function renderChecklistModalItems() {
 function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'ravlo-toast';
+
+    // SVG ring
     const r = 10;
     const circumference = 2 * Math.PI * r;
+
     toast.innerHTML = `
         <svg width="24" height="24" viewBox="0 0 24 24" class="toast-ring">
             <circle cx="12" cy="12" r="${r}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
@@ -268,15 +307,726 @@ function showToast(message) {
         </svg>
         <span>${message}</span>
     `;
+
     document.body.appendChild(toast);
+
+    // Start ring animation after a tiny delay to ensure transition triggers
     requestAnimationFrame(() => {
         const ring = toast.querySelector('.toast-ring circle:last-child');
         if (ring) ring.style.strokeDashoffset = circumference;
     });
+
+    // Remove after 4 seconds
     setTimeout(() => toast.remove(), 4000);
 }
 
-/* ====================== CONTINUED IN PART 2 ====================== */
+/* =========================== HOLIDAYS ============================ */
+const GREG_HOLIDAYS = {
+    '01-01': "New Year's Day",
+    '02-14': "Valentine's Day",
+    '03-08': "Int'l Women's Day",
+    '03-20': "Int'l Day of Happiness",
+    '03-21': "Nowruz (Spring Equinox)",
+    '04-01': "April Fools' Day",
+    '04-22': "Earth Day",
+    '05-01': "International Workers' Day",
+    '06-05': "World Environment Day",
+    '06-21': "World Music Day",
+    '07-04': "US Independence Day",
+    '08-12': "Int'l Youth Day",
+    '09-21': "Int'l Day of Peace",
+    '10-31': "Halloween",
+    '11-11': "Veterans Day",
+    '12-10': "Human Rights Day",
+    '12-25': "Christmas Day",
+    '12-31': "New Year's Eve"
+};
+
+function getGregHoliday(year, month, day) {
+    return GREG_HOLIDAYS[pad(month + 1) + '-' + pad(day)] || null;
+}
+
+/* =========================== SVG ICONS ============================ */
+const ICON_CALENDAR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+const ICON_SMILE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
+const ICON_EDIT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
+const ICON_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+
+/* =========================== PROFILE & AUTH ============================ */
+
+/* ------------------------- PROFILE BUILDER ------------------------- */
+async function buildCurrentProfile(user) {
+    if (!user) return null;
+    const {
+        data: profileRow,
+        error
+    } = await sb
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+    if (error && error.code !== 'PGRST116') {
+        console.warn('Profile fetch warning:', error.message);
+    }
+
+    const md = user.user_metadata || {};
+    const p = profileRow || {};
+
+    return {
+        id: user.id,
+        first_name: p.first_name ?? md.first_name ?? md.given_name ?? '',
+        last_name: p.last_name ?? md.last_name ?? md.family_name ?? '',
+        photo_url: p.photo_url ?? md.photo_url ?? md.picture ?? '',
+        username: p.username ?? md.username ?? '',
+        role: p.role ?? md.role ?? 'recruit'
+    };
+}
+
+/* ------------------------- ROLE HIERARCHY & ACCESS ------------------------- */
+const ROLE_HIERARCHY = ['recruit', 'sergeant', 'commander', 'general'];
+
+function normalizeRole(role) {
+    return String(role || '').trim().toLowerCase();
+}
+
+function hasAccess(userRole, minRole) {
+    const normalizedUserRole = normalizeRole(userRole);
+    const normalizedMinRole = normalizeRole(minRole || 'recruit');
+
+    const userIndex = ROLE_HIERARCHY.indexOf(normalizedUserRole);
+    const minIndex = ROLE_HIERARCHY.indexOf(normalizedMinRole);
+
+    if (minIndex === -1) {
+        console.warn('[RBAC] Invalid minRole:', minRole);
+        return false;
+    }
+
+    if (userIndex === -1) return false;
+
+    return userIndex >= minIndex;
+}
+
+/* =========================== SIDEBAR MENU & TODAY LIST ============================ */
+
+const MENU_TOOLS = [{
+        label: 'Codara Service Generator',
+        minRole: 'general',
+        link: 'https://codara.arminsilatani.com/',
+        iconURL: 'assets/logos/Co.svg'
+    },
+    {
+        label: 'Nolvo Sitemap Builder',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/No.svg'
+    },
+    {
+        label: 'Qerlo Shortener',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Qe.svg'
+    },
+    {
+        label: 'Tivra Minify',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ti.svg'
+    },
+    {
+        label: 'Semora Schema Generator',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Se.svg'
+    },
+    {
+        label: 'Brilo Speed Check',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Br.svg'
+    },
+    {
+        label: 'Sorbi Robots Builder',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/So.svg'
+    },
+    {
+        label: 'Velto Meta Inspector',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ve.svg'
+    },
+    {
+        label: 'Zorio Image Converter',
+        minRole: 'recruit',
+        link: 'https://zorio.arminsilatani.com/',
+        iconURL: 'assets/logos/Zo.svg'
+    },
+    {
+        label: 'Galvo Video Converter',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ga.svg'
+    },
+    {
+        label: 'Xelpo Pass Generator',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Xe.svg'
+    },
+    {
+        label: 'Dirmo DNS Checker',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Di.svg'
+    },
+    {
+        label: 'Lemro Keyword Research',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Le.svg'
+    },
+    {
+        label: 'Hirvo Density',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Hi.svg'
+    },
+    {
+        label: 'Jorvi Redirect',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Jo.svg'
+    },
+    {
+        label: 'Mirto CRM',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Mi.svg'
+    },
+    {
+        label: 'Ravlo Calendar',
+        minRole: 'sergeant',
+        link: '',
+        iconURL: 'assets/logos/Ra.svg',
+        isSelf: true
+    },
+    {
+        label: 'Rinvo Accounting',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ri.svg'
+    },
+    {
+        label: 'Yelmo Brand Namer',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ye.svg'
+    },
+    {
+        label: 'Cedro Flashcards',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ce.svg'
+    },
+    {
+        label: 'Fresca Colors Tool',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Fr.svg'
+    },
+    {
+        label: 'Ubiro Beer Cost',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ub.svg'
+    },
+    {
+        label: 'Refacto Code Beautifier',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Re.svg'
+    },
+    {
+        label: 'Pilvo Text Editor',
+        minRole: 'recruit',
+        link: 'https://pilvo.arminsilatani.com/',
+        iconURL: 'assets/logos/Pi.svg'
+    },
+    {
+        label: 'Tavio Prompt Library',
+        minRole: 'recruit',
+        link: 'https://tavio.arminsilatani.com/',
+        iconURL: 'assets/logos/Ta.svg'
+    },
+    {
+        label: 'Falco Favicon Generator',
+        minRole: 'recruit',
+        link: 'https://falco.arminsilatani.com/',
+        iconURL: 'assets/logos/Fa.svg'
+    },
+    {
+        label: 'Lume Epoch Converter',
+        minRole: 'recruit',
+        link: 'https://lume.arminsilatani.com/',
+        iconURL: 'assets/logos/Lu.svg'
+    },
+    {
+        label: 'Valeno Expiry Date Reminder',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Va.svg'
+    },
+    {
+        label: 'Alviano Recipe Manager',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Al.svg'
+    },
+    {
+        label: 'Mavero Workout Tracker',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ma.svg'
+    },
+    {
+        label: 'Tempozio Time Tracker',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Te.svg'
+    },
+    {
+        label: 'Belluno Wishlist',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Be.svg'
+    },
+    {
+        label: 'Nuvello Wallpaper App',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Nu.svg'
+    },
+    {
+        label: 'Fiora Period Tracker',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Fi.svg'
+    },
+];
+
+function renderSidebarMenu() {
+    const container = document.getElementById('sidebar-menu-items');
+    const newEventBtn = document.getElementById('sidebar-new-event');
+    if (newEventBtn) newEventBtn.classList.remove('hidden');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const role = normalizeRole(currentUserRole);
+
+    MENU_TOOLS.forEach(tool => {
+        if (tool.isSelf) return;
+
+        const allowed = hasAccess(role, tool.minRole);
+
+        const btn = document.createElement('button');
+        btn.className = 'sidebar-item' + (allowed ? '' : ' disabled');
+        btn.disabled = !allowed;
+
+        btn.innerHTML = `
+            <span class="sidebar-icon">
+                <img src="${tool.iconURL}" width="20" height="20" alt="${tool.label}">
+            </span>
+            <span>${tool.label}</span>
+            ${!tool.link ? '<span class="coming-soon-tooltip">Coming Soon</span>' : ''}
+        `;
+
+        btn.addEventListener('click', () => {
+            if (!currentUser) {
+                openModal(authOverlay);
+                authError.textContent = 'Please sign in to use this tool.';
+                return;
+            }
+            const canUseNow = hasAccess(currentUserRole, tool.minRole);
+            if (!canUseNow) {
+                alert('Your access level is too low to use this tool.');
+                return;
+            }
+            if (tool.link) {
+                window.open(tool.link, '_blank');
+            }
+            const closeRow = document.getElementById('sidebar-close-row');
+            if (closeRow) closeRow.click();
+        });
+
+        container.appendChild(btn);
+    });
+}
+
+function updateDashboardLink() {
+    const dashboard = document.getElementById('sidebar-dashboard');
+    if (!dashboard) return;
+
+    if (!currentProfile) {
+        dashboard.classList.add('hidden');
+        return;
+    }
+
+    dashboard.classList.remove('hidden');
+
+    const iconSpan = dashboard.querySelector('.sidebar-icon');
+    const textSpan = dashboard.querySelector('.sidebar-dashboard-text') || dashboard.querySelector('span:last-child');
+
+    const fullName = [currentProfile.first_name, currentProfile.last_name]
+        .filter(Boolean)
+        .join(' ') || 'Dashboard';
+
+    if (textSpan) textSpan.textContent = fullName;
+
+    const avatarContent = iconSpan?.querySelector('.avatar-content');
+    if (avatarContent) {
+        if (currentProfile.photo_url) {
+            avatarContent.innerHTML = `<img src="${currentProfile.photo_url}" alt="Profile"
+                width="20" height="20"
+                style="border-radius:50%; object-fit:cover;"
+                onerror="this.outerHTML='<span class=\\'avatar-initial\\'>${fullName.charAt(0)}</span>';">`;
+        } else {
+            const initial = fullName.charAt(0).toUpperCase();
+            avatarContent.innerHTML = `<span class="avatar-initial">${initial}</span>`;
+        }
+    }
+}
+
+function updateAuthUI() {
+    const loginBtn = document.getElementById('sidebar-login');
+    const logoutBtn = document.getElementById('sidebar-logout');
+    if (!loginBtn || !logoutBtn) return;
+    if (currentUser) {
+        loginBtn.classList.add('hidden');
+        logoutBtn.classList.remove('hidden');
+    } else {
+        loginBtn.classList.remove('hidden');
+        logoutBtn.classList.add('hidden');
+    }
+    renderSidebarMenu();
+    updateDashboardLink();
+    renderTodayList();
+    setTimeout(async () => {
+        await updateNotificationDot();
+    }, 300);
+}
+
+function renderTodayList() {
+    const container = document.getElementById('sidebar-today-list');
+    if (!container) return;
+
+    if (!currentUser || events.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const today = new Date();
+    const ty = today.getFullYear(),
+        tm = today.getMonth(),
+        td = today.getDate();
+
+    const todayEvents = events.filter(ev => {
+        if (!ev.start_date) return false;
+        const d = new Date(ev.start_date);
+        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) return true;
+        if (ev.recurrence_type !== 'none') {
+            const dayStart = new Date(ty, tm, td, 0, 0, 0);
+            const dayEnd = new Date(ty, tm, td, 23, 59, 59);
+            const recDates = getRecurrenceDates(ev, dayStart, dayEnd);
+            return recDates.some(rd => rd.getFullYear() === ty && rd.getMonth() === tm && rd.getDate() === td);
+        }
+        return false;
+    });
+
+    todayEvents.sort((a, b) => {
+        const at = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const bt = b.start_date ? new Date(b.start_date).getTime() : 0;
+        return at - bt;
+    });
+
+    if (todayEvents.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = todayEvents.map(ev => {
+        const color = ev.color || 'var(--accent)';
+        return `
+            <div class="sidebar-today-item" data-event-id="${ev.id}">
+                <span class="dot" style="background:${color}"></span>
+                <span class="title">${ev.title || 'Untitled'}</span>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.sidebar-today-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const id = item.dataset.eventId;
+            const event = events.find(e => e.id === id);
+            if (event) {
+                const closeRow = document.getElementById('sidebar-close-row');
+                if (closeRow) closeRow.click();
+                openEventDetail(event, new Date());
+            }
+        });
+    });
+}
+
+async function updateNotificationDot() {
+    const dot = document.getElementById('avatar-notif-dot');
+    if (!dot) return;
+    if (!currentUser) {
+        dot.style.display = 'none';
+        return;
+    }
+
+    try {
+        const {
+            data,
+            error
+        } = await sb
+            .from('notifications')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('is_read', false);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            dot.style.display = 'block';
+            return;
+        }
+    } catch (e) {
+        console.warn('Could not fetch notifications:', e);
+    }
+
+    const today = new Date();
+    const ty = today.getFullYear(),
+        tm = today.getMonth(),
+        td = today.getDate();
+    const hasTodayEvents = events.some(ev => {
+        if (!ev.start_date) return false;
+        const d = new Date(ev.start_date);
+        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) return true;
+        if (ev.recurrence_type !== 'none') {
+            const dayStart = new Date(ty, tm, td, 0, 0, 0);
+            const dayEnd = new Date(ty, tm, td, 23, 59, 59);
+            const recDates = getRecurrenceDates(ev, dayStart, dayEnd);
+            return recDates.some(rd => rd.getFullYear() === ty && rd.getMonth() === tm && rd.getDate() === td);
+        }
+        return false;
+    });
+    dot.style.display = hasTodayEvents ? 'block' : 'none';
+}
+
+/* =========================== MODAL HELPERS ============================ */
+
+function openModal(modal) {
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+}
+
+function closeModal(modal) {
+    modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+}
+
+/* ------------------------- LOADER HELPERS ------------------------- */
+function getLoaderHTML(type) {
+    switch (type) {
+        case 'dots':
+            return `<div class="ravlo-loader" data-loader="dots"><span></span><span></span><span></span></div>`;
+        case 'bar':
+            return `<div class="ravlo-loader" data-loader="bar"><div></div></div>`;
+        case 'grid':
+            return `<div class="lds-grid">${Array(9).fill('<div></div>').join('')}</div>`;
+        default:
+            return `<div class="ravlo-loader" data-loader="spinner"></div>`;
+    }
+}
+
+function showLoader(container, type = 'spinner') {
+    let target;
+    if (typeof container === 'string') {
+        target = document.getElementById(container);
+    } else if (container instanceof HTMLElement) {
+        target = container;
+    } else {
+        target = document.body;
+        const overlay = document.createElement('div');
+        overlay.id = 'ravlo-global-loader';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
+        overlay.innerHTML = getLoaderHTML(type);
+        target.appendChild(overlay);
+        return;
+    }
+
+    target.classList.add('ravlo-loading-container');
+    target.style.position = target.style.position || 'relative';
+    target.innerHTML = getLoaderHTML(type);
+}
+
+function hideLoader(container) {
+    if (!container) {
+        const globalLoader = document.getElementById('ravlo-global-loader');
+        if (globalLoader) globalLoader.remove();
+        return;
+    }
+    let target = typeof container === 'string' ? document.getElementById(container) : container;
+    if (target) {
+        target.classList.remove('ravlo-loading-container');
+        target.style.position = '';
+        const loader = target.querySelector('.ravlo-loader, .lds-grid');
+        if (loader) loader.remove();
+    }
+}
+
+function showGlobalLoader() {
+    const loader = document.getElementById('initial-loader');
+    if (loader) loader.classList.remove('hidden');
+}
+
+function hideGlobalLoader() {
+    const loader = document.getElementById('initial-loader');
+    if (loader) loader.classList.add('hidden');
+}
+
+function showConfirmModal(message, onConfirm) {
+    const modal = document.getElementById('confirm-modal');
+    const msgEl = document.getElementById('confirm-modal-message');
+    if (!modal || !msgEl) return;
+
+    msgEl.textContent = message;
+    openModal(modal);
+
+    const yesBtn = document.getElementById('confirm-modal-yes');
+    const noBtn = document.getElementById('confirm-modal-no');
+
+    function cleanup() {
+        closeModal(modal);
+        yesBtn.removeEventListener('click', handleYes);
+        noBtn.removeEventListener('click', handleNo);
+    }
+
+    function handleYes() {
+        cleanup();
+        if (typeof onConfirm === 'function') onConfirm();
+    }
+
+    function handleNo() {
+        cleanup();
+    }
+
+    yesBtn.addEventListener('click', handleYes);
+    noBtn.addEventListener('click', handleNo);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            cleanup();
+        }
+    });
+}
+
+/* =========================== DATABASE HELPERS ============================ */
+
+async function fetchEvents() {
+    if (!currentUser) return [];
+    const { data, error } = await sb
+        .from('ravlo')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('start_date', { ascending: true });
+    if (error) { console.warn('Fetch error:', error.message); return []; }
+    return data || [];
+}
+
+async function saveEventToDB(payload) {
+    if (!currentUser) {
+        alert('Not logged in');
+        return null;
+    }
+    payload.user_id = currentUser.id;
+    const {
+        data,
+        error
+    } = await sb.from('ravlo').insert([payload]).select();
+    if (error) {
+        alert('Save failed: ' + error.message);
+        return null;
+    }
+    return data?.[0];
+}
+
+async function updateEventInDB(id, payload) {
+    if (!currentUser) {
+        alert('Not logged in');
+        return null;
+    }
+    const {
+        error
+    } = await sb.from('ravlo').update(payload).eq('id', id).eq('user_id', currentUser.id);
+    if (error) {
+        alert('Update failed: ' + error.message);
+        return null;
+    }
+    return true;
+}
+
+async function deleteEventFromDB(id) {
+    if (!currentUser) {
+        alert('Not logged in');
+        return;
+    }
+    const {
+        error
+    } = await sb.from('ravlo').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) alert('Delete failed: ' + error.message);
+    return !error;
+}
+
+/* =========================== AUTH FLOW ============================ */
+
+async function showApp() {
+    showGlobalLoader();
+    closeModal(authOverlay);
+    appContainer.style.display = 'block';
+
+    if (currentUser) {
+        events = await fetchEvents();
+        await cleanupOldCompletions();
+        // ✅ اضافه کن این خط رو
+        await cleanupChecklistFromDescriptions();
+    }
+    renderCalendar();
+    animateTabIndicator();
+    renderTodayList();
+    updateNotificationDot();
+    hideGlobalLoader();
+    await updateNotificationDot();
+}
+
+async function logout() {
+    showGlobalLoader();
+    await sb.auth.signOut();
+    currentUser = null;
+    currentUserRole = 'public';
+    currentProfile = null;
+    events = [];
+    renderCalendar();
+    updateAuthUI();
+    closeModal(eventModal);
+    closeModal(eventDetailModal);
+    hideGlobalLoader();
+}
+
 /* =========================== LEAFLET MAP HELPERS ============================ */
 
 function isLeafletReady() {
