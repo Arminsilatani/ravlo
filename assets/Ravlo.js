@@ -4398,10 +4398,6 @@ document.getElementById('checklist-modal-add-btn')?.addEventListener('click', ()
 
 document.getElementById('checklist-done-btn')?.addEventListener('click', () => {
     currentChecklistItems = tempChecklistItems;
-    const lines = currentChecklistItems.map(item => (item.done ? '☑ ' : '☐ ') + item.text);
-    if (lines.length > 0) {
-        appendToDescription(lines.join('\n'));
-    }
     closeModal(document.getElementById('checklist-modal'));
     document.getElementById('toggle-checklist-mode-btn')?.classList.add('active');
 });
