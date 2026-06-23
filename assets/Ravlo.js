@@ -1002,6 +1002,8 @@ async function showApp() {
     if (currentUser) {
         events = await fetchEvents();
         await cleanupOldCompletions();
+        // ✅ اضافه کن این خط رو
+        await cleanupChecklistFromDescriptions();
     }
     renderCalendar();
     animateTabIndicator();
