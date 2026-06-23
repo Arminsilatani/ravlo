@@ -3466,14 +3466,14 @@ a:hover {
     width: 20px;
     height: 20px;
     min-width: 20px;
-    min-height: 20px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    outline: none !important;
-    background-color: transparent !important;
-    flex-shrink: 0 !important;
-    cursor: pointer !important;
+    min-height: 20px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    flex-shrink: 0;
+    cursor: pointer;
     --c-base: #555;
     --c-on: var(--accent, #ff6f91);
     --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
@@ -3493,17 +3493,17 @@ a:hover {
 .checklist-inline-row .neon-checkbox::before,
 .checklist-inline-row .neon-checkbox::after {
     content: "";
-    position: absolute !important;
-    inset: 0 !important;
+    position: absolute;
+    inset: 0;
     background-image:
         var(--on), var(--on), var(--on),
         var(--on), var(--on), var(--on),
         var(--on), var(--on), var(--on);
-    background-size: inherit !important;
-    background-position: inherit !important;
-    background-repeat: no-repeat !important;
-    pointer-events: none !important;
-    opacity: 0 !important;
+    background-size: inherit;
+    background-position: inherit;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    opacity: 0;
     filter: drop-shadow(0 0 2px var(--c-on));
 }
 
@@ -3512,12 +3512,12 @@ a:hover {
 }
 
 .checklist-inline-row .neon-checkbox:checked::before {
-    opacity: 1 !important;
+    opacity: 1;
 }
 
 .checklist-inline-row .neon-checkbox:checked::after {
     animation: pulseNeon 1.5s infinite ease-in-out;
-    opacity: 0.75 !important;
+    opacity: 0.75;
 }
 
 .checklist-inline-row .neon-checkbox:hover:not(:checked)::after {
