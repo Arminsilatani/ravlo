@@ -2660,12 +2660,11 @@ async function saveEvent() {
     }
 }
 
-/* =========================== EVENT DETAIL MODAL ============================ */
 function openEventDetail(ev, occurrenceDate) {
     currentDetailEventId = ev.id;
     currentDetailEvent = ev;
 
-    // Color & title
+    // ─── Color & title ───
     document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
     const colorDot = document.getElementById('detail-color-dot');
     colorDot.style.backgroundColor = ev.color || '#f5f5f5';
@@ -2697,7 +2696,7 @@ function openEventDetail(ev, occurrenceDate) {
     const calIcon = document.getElementById('detail-calendar-icon');
     calIcon.style.color = ev.color || 'var(--accent)';
 
-    // Date and time
+    // ─── Date and time ───
     const start = ev.start_date ? new Date(ev.start_date) : null;
     const end = ev.end_date ? new Date(ev.end_date) : null;
     let dateText = '';
@@ -2732,7 +2731,7 @@ function openEventDetail(ev, occurrenceDate) {
     document.getElementById('detail-time-text').textContent = timeText;
     document.getElementById('detail-duration-paren').textContent = durationParen;
 
-    // Hide horizontal dividers for tasks
+    // ─── Hide horizontal dividers for tasks ───
     const dividers = eventDetailModal.querySelectorAll('.detail-divider-h');
     if (ev.type === 'task') {
         dividers.forEach(hr => hr.style.display = 'none');
@@ -2740,7 +2739,7 @@ function openEventDetail(ev, occurrenceDate) {
         dividers.forEach(hr => hr.style.display = '');
     }
 
-    // Description
+    // ─── Description ───
     const descContainer = document.getElementById('detail-description-container');
     const descText = document.getElementById('detail-description-text');
     if (ev.description && ev.description.trim()) {
@@ -2750,7 +2749,46 @@ function openEventDetail(ev, occurrenceDate) {
         descContainer.style.display = 'none';
     }
 
-    // Attendees section (only events)
+    // ─── CHECKLIST SECTION (برای تسک‌ها) ───
+    // اطمینان از وجود container
+    let checklistContainer = document.getElementById('detail-checklist-container');
+    if (!checklistContainer) {
+        // اگر وجود نداشت، بعد از توضیحات ایجادش کن
+        const descContainer = document.getElementById('detail-description-container');
+        if (descContainer && descContainer.parentNode) {
+            checklistContainer = document.createElement('div');
+            checklistContainer.id = 'detail-checklist-container';
+            checklistContainer.className = 'detail-checklist-container';
+            checklistContainer.style.display = 'none';
+            
+            const header = document.createElement('div');
+            header.className = 'detail-checklist-header';
+            header.innerHTML = `
+                <span id="detail-checklist-icon" class="detail-icon" style="color:var(--accent);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </span>
+                <span style="font-weight:600;font-size:14px;">Checklist</span>
+            `;
+            checklistContainer.appendChild(header);
+            
+            const listItems = document.createElement('div');
+            listItems.id = 'detail-checklist-items';
+            listItems.className = 'detail-checklist-items';
+            checklistContainer.appendChild(listItems);
+            
+            descContainer.parentNode.insertBefore(checklistContainer, descContainer.nextSibling);
+        }
+    }
+
+    // رندر چک‌لیست
+    if (checklistContainer) {
+        renderChecklistInDetail(ev);
+    }
+
+    // ─── Attendees section (only events) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -2798,7 +2836,7 @@ function openEventDetail(ev, occurrenceDate) {
         }
     }
 
-    // Location map
+    // ─── Location map ───
     const mapContainer = document.getElementById('detail-location-container');
     if (ev.location && (ev.location.lat || ev.location.lng)) {
         const lat = ev.location.lat;
@@ -2985,15 +3023,15 @@ function openEventDetail(ev, occurrenceDate) {
         }
     }
 
-const postponeBtn = document.getElementById('detail-postpone-btn');
-if (postponeBtn) {
-    if (isInvitee) {
-        postponeBtn.style.display = 'none';
-    } else {
-        postponeBtn.style.display = '';
-        postponeBtn.onclick = () => openPostponeModal();
+    const postponeBtn = document.getElementById('detail-postpone-btn');
+    if (postponeBtn) {
+        if (isInvitee) {
+            postponeBtn.style.display = 'none';
+        } else {
+            postponeBtn.style.display = '';
+            postponeBtn.onclick = () => openPostponeModal();
+        }
     }
-}
 
     openModal(eventDetailModal);
 }
