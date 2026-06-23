@@ -4791,7 +4791,6 @@ function renderChecklistInDetail(ev) {
     const container = document.getElementById('detail-checklist-container');
     if (!container) return;
 
-    // اگر تسک نباشه یا چک‌لیست نداشته باشه، مخفی کن
     if (ev.type !== 'task' || !ev.checklist || ev.checklist.length === 0) {
         container.style.display = 'none';
         return;
@@ -4799,37 +4798,58 @@ function renderChecklistInDetail(ev) {
 
     container.style.display = 'block';
     
-    // آیکون چک‌لیست رو همرنگ با تسک کن
     const icon = document.getElementById('detail-checklist-icon');
     if (icon) icon.style.color = ev.color || 'var(--accent)';
 
     const listContainer = document.getElementById('detail-checklist-items');
+    if (!listContainer) return;
     listContainer.innerHTML = '';
 
     let allDone = true;
 
-    // تابع بازگشتی برای رندر کردن آیتم‌ها و زیرآیتم‌ها
     function renderItems(items, parentElement, depth = 0) {
         items.forEach((item, index) => {
             const row = document.createElement('div');
             row.className = 'detail-checklist-row';
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.gap = '10px';
+            row.style.padding = '4px 0';
+            row.style.minHeight = '28px';
+            
             if (depth > 0) {
                 row.style.paddingLeft = (depth * 20) + 'px';
                 row.classList.add('subtask-row');
             }
 
-            // فقط چک‌باکس (بدون دکمه حذف)
+            // چک‌باکس
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.className = 'neon-checkbox';
             cb.checked = item.done || false;
             cb.dataset.parentIndex = index;
             cb.dataset.depth = depth;
+            cb.style.width = '18px';
+            cb.style.height = '18px';
+            cb.style.minWidth = '18px';
+            cb.style.minHeight = '18px';
+            cb.style.margin = '0';
+            cb.style.padding = '0';
+            cb.style.cursor = 'pointer';
+            cb.style.accentColor = 'var(--accent)';
+            cb.style.flexShrink = '0';
 
             // متن
             const textSpan = document.createElement('span');
             textSpan.className = 'detail-checklist-text';
             textSpan.textContent = item.text || 'Untitled';
+            textSpan.style.flex = '1';
+            textSpan.style.fontSize = '14px';
+            textSpan.style.color = 'var(--text-primary)';
+            textSpan.style.wordBreak = 'break-word';
+            textSpan.style.padding = '2px 4px';
+            textSpan.style.lineHeight = '1.4';
+            
             if (item.done) {
                 textSpan.style.textDecoration = 'line-through';
                 textSpan.style.opacity = '0.6';
@@ -4837,30 +4857,27 @@ function renderChecklistInDetail(ev) {
                 allDone = false;
             }
 
-            // فقط چک‌باکس و متن (بدون دکمه حذف)
             row.appendChild(cb);
             row.appendChild(textSpan);
             parentElement.appendChild(row);
 
-            // اگر زیرآیتم‌ها داره
             if (item.subtasks && item.subtasks.length > 0) {
                 const subContainer = document.createElement('div');
                 subContainer.className = 'detail-checklist-subcontainer';
+                subContainer.style.paddingLeft = '24px';
                 renderItems(item.subtasks, subContainer, depth + 1);
                 parentElement.appendChild(subContainer);
             }
         });
     }
 
-    // رندر کردن آیتم‌ها
     renderItems(ev.checklist, listContainer, 0);
 
-    // اگر همه آیتم‌ها Done بودند، تسک رو هم Done کن
     if (allDone && ev.checklist.length > 0) {
         markTaskDone(ev);
     }
 
-    // رویدادهای چک‌باکس‌ها (بعد از رندر شدن)
+    // رویدادهای چک‌باکس
     listContainer.querySelectorAll('.neon-checkbox').forEach(cb => {
         cb.addEventListener('change', function() {
             const depth = parseInt(this.dataset.depth);
@@ -4872,7 +4889,6 @@ function renderChecklistInDetail(ev) {
                     item = ev.checklist[idx];
                 }
             } else {
-                // برای زیرآیتم‌ها: پیدا کردن آیتم
                 let flatIdx = 0;
                 let found = false;
                 for (let i = 0; i < ev.checklist.length; i++) {
@@ -4893,7 +4909,6 @@ function renderChecklistInDetail(ev) {
 
             if (item) {
                 item.done = this.checked;
-                // به‌روزرسانی ظاهر متن
                 const row = this.closest('.detail-checklist-row');
                 if (row) {
                     const text = row.querySelector('.detail-checklist-text');
@@ -4903,10 +4918,8 @@ function renderChecklistInDetail(ev) {
                     }
                 }
 
-                // ذخیره در دیتابیس
                 updateEventInDB(ev.id, { checklist: ev.checklist })
                     .then(() => {
-                        // بررسی همه آیتم‌ها
                         checkAllChecklistDone(ev);
                     })
                     .catch(() => alert('Error updating checklist.'));
