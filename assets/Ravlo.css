@@ -3309,7 +3309,7 @@ a:hover {
 .detail-checklist-header {
     display: flex;
     align-items: center;
-    gap: 88px;
+    gap: 8px;
     margin-bottom: 10px;
     font-size: 14px;
     color: var(--text-secondary);
