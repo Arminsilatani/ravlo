@@ -945,25 +945,39 @@ async function fetchEvents() {
         .eq('user_id', currentUser.id)
         .order('start_date', { ascending: true });
     if (error) { console.warn('Fetch error:', error.message); return []; }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (const ev of data) {
+        if (ev.type === 'task' && 
+            ev.recurrence_type === 'none' && 
+            ev.status !== 'done' && 
+            ev.status !== 'completed' &&
+            ev.start_date) {
+            
+            const startDate = new Date(ev.start_date);
+            startDate.setHours(0, 0, 0, 0);
+            
+            if (startDate < today) {
+                const newStart = new Date(today);
+                const oldHour = new Date(ev.start_date).getHours();
+                const oldMinute = new Date(ev.start_date).getMinutes();
+                newStart.setHours(oldHour, oldMinute, 0, 0);
+                
+                await updateEventInDB(ev.id, { 
+                    start_date: newStart.toISOString()
+                });
+                
+                ev.start_date = newStart.toISOString();
+                console.log(`🔄 Task "${ev.title}" moved to today (was before today)`);
+            }
+        }
+    }
+    
     return data || [];
 }
 
-async function saveEventToDB(payload) {
-    if (!currentUser) {
-        alert('Not logged in');
-        return null;
-    }
-    payload.user_id = currentUser.id;
-    const {
-        data,
-        error
-    } = await sb.from('ravlo').insert([payload]).select();
-    if (error) {
-        alert('Save failed: ' + error.message);
-        return null;
-    }
-    return data?.[0];
-}
 
 async function updateEventInDB(id, payload) {
     if (!currentUser) {
@@ -992,6 +1006,59 @@ async function deleteEventFromDB(id) {
     return !error;
 }
 
+// =========================== MOVE OVERDUE TASKS TO TODAY ============================
+async function moveOverdueTasksToToday() {
+    if (!currentUser) return;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    try {
+        // دریافت همه تسک‌های عادی Done نشده
+        const { data: tasks, error } = await sb
+            .from('ravlo')
+            .select('id, title, start_date, status, recurrence_type')
+            .eq('user_id', currentUser.id)
+            .eq('type', 'task')
+            .eq('recurrence_type', 'none')
+            .neq('status', 'done')
+            .neq('status', 'completed');
+        
+        if (error) throw error;
+        if (!tasks || tasks.length === 0) return;
+        
+        let movedCount = 0;
+        
+        for (const task of tasks) {
+            if (!task.start_date) continue;
+            const startDate = new Date(task.start_date);
+            startDate.setHours(0, 0, 0, 0);
+            
+            if (startDate < today) {
+                const newStart = new Date(today);
+                const oldHour = new Date(task.start_date).getHours();
+                const oldMinute = new Date(task.start_date).getMinutes();
+                newStart.setHours(oldHour, oldMinute, 0, 0);
+                
+                await updateEventInDB(task.id, { 
+                    start_date: newStart.toISOString()
+                });
+                movedCount++;
+                console.log(`🔄 Moved overdue task: "${task.title}"`);
+            }
+        }
+        
+        if (movedCount > 0) {
+            console.log(`✅ Moved ${movedCount} overdue tasks to today`);
+            // ریفرش رویدادها
+            events = await fetchEvents();
+            renderCalendar();
+        }
+    } catch (e) {
+        console.warn('Error moving overdue tasks:', e);
+    }
+}
+
 /* =========================== AUTH FLOW ============================ */
 
 async function showApp() {
@@ -1002,8 +1069,8 @@ async function showApp() {
     if (currentUser) {
         events = await fetchEvents();
         await cleanupOldCompletions();
-        // ✅ اضافه کن این خط رو
         await cleanupChecklistFromDescriptions();
+        await moveOverdueTasksToToday();
     }
     renderCalendar();
     animateTabIndicator();
@@ -1593,6 +1660,25 @@ function renderCalendar() {
     calendarGrid.className = 'calendar-grid';
     calendarGrid.removeAttribute('dir');
     calendarGrid.style.display = '';
+    
+    if (currentUser) {
+        moveOverdueTasksToToday().then(() => {
+            if (viewMode === 'month') {
+                renderGregorianMonth();
+            } else if (viewMode === 'day') {
+                renderDayView();
+            } else if (viewMode === 'year') {
+                renderYearView();
+            }
+            animateTabIndicator();
+            if (window.__lastMonthYearText !== currentMonthYearEl.textContent) {
+                animateMonthYearChange(currentMonthYearEl.textContent);
+                window.__lastMonthYearText = currentMonthYearEl.textContent;
+            }
+        });
+        return;
+    }
+    
     if (viewMode === 'month') {
         renderGregorianMonth();
     } else if (viewMode === 'day') {
@@ -4822,7 +4908,6 @@ function renderChecklistInDetail(ev) {
                 row.classList.add('subtask-row');
             }
 
-            // چک‌باکس
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.className = 'neon-checkbox';
@@ -4876,6 +4961,25 @@ function renderChecklistInDetail(ev) {
     if (allDone && ev.checklist.length > 0) {
         markTaskDone(ev);
     }
+
+    function markTaskDone(ev) {
+    if (ev.status === 'done') return;
+
+    ev.status = 'done';
+    ev.completed_at = new Date().toISOString();
+    
+    updateEventInDB(ev.id, { 
+        status: 'done', 
+        completed_at: ev.completed_at 
+    }).then(() => {
+        
+        showToast('🎉 All tasks completed! Event marked as Done.');
+        renderCalendar();
+        updateNotificationDot();
+        
+        moveOverdueTasksToToday();
+    }).catch(() => alert('Error marking task as done.'));
+}
 
     // رویدادهای چک‌باکس
     listContainer.querySelectorAll('.neon-checkbox').forEach(cb => {
