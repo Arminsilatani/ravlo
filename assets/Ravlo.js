@@ -2711,6 +2711,20 @@ async function saveEvent() {
     }
 }
 
+/* =========================== EVENT DETAIL MODAL ============================ */
+function openEventDetail(ev, date) {
+  currentDetailEventId = ev.id;
+
+  eventDetailTitle.textContent = ev.title || '(no title)';
+  eventDetailDate.textContent = date.toLocaleDateString('fa-IR', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  eventDetailAllDay.textContent = ev.allDay ? 'تمام روز' : (ev.time || '');
+
+  eventDetailModal.classList.remove('hidden');
+}
+
+
 /* =========================== DELETE CONFIRMATION ============================ */
 
 async function deleteEventById(id) {
