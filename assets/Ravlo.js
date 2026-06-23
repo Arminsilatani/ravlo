@@ -818,12 +818,10 @@ function renderTodayList() {
 
     const todayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
-        // اگر Done یا Completed باشد، نمایش نده
         if (ev.status === 'done' || ev.status === 'completed') return false;
         
         const d = new Date(ev.start_date);
         if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
-            // برای رویدادهای تکراری، چک کن که این occurrence Done نشده باشه
             if (ev.recurrence_type !== 'none') {
                 const dateStr = today.toISOString().split('T')[0];
                 const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
@@ -869,16 +867,13 @@ function renderTodayList() {
         `;
     }).join('');
 
-    // ─── رویداد کلیک ───
     container.querySelectorAll('.sidebar-today-item').forEach(item => {
         item.addEventListener('click', function(e) {
             const id = this.dataset.eventId;
             const event = events.find(ev => ev.id == id);
             if (event) {
-                // بستن سایدبار
                 const closeBtn = document.getElementById('sidebar-close-btn');
                 if (closeBtn) closeBtn.click();
-                // باز کردن جزئیات
                 openEventDetail(event, new Date());
             }
         });
@@ -894,7 +889,6 @@ async function updateNotificationDot() {
     }
 
     try {
-        // 1. نوتیفیکیشن‌های خوانده‌نشده دیتابیس
         const { data, error } = await sb
             .from('notifications')
             .select('id')
