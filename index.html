@@ -1,9 +1,9 @@
 <!--
-  ****************************************************
-  *  Author: Armin Silatani
-  *  Date: 2026-06-18
-  *  Version: 0.3.3
-  ****************************************************
+****************************************************
+* Author: Armin Silatani
+* Date: 2026-06-23
+* Version: 0.3.3
+****************************************************
 -->
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
@@ -28,12 +28,12 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Ravlo Calendar">
 
-    <!-- PWA Meta Tags -->
-<meta name="theme-color" content="#ff6f91">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Ravlo">
-<link rel="manifest" href="/assets/manifest.json">
+    <!-- :::::::::::::::::::::::::: PWA META :::::::::::::::::::::::::: -->
+    <meta name="theme-color" content="#ff6f91">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ravlo">
+    <link rel="manifest" href="/assets/manifest.json">
 
     <!-- :::::::::::::::::::::::::: CANONICAL & HREFLANG :::::::::::::::::::::::::: -->
     <link rel="canonical" href="https://ravlo.arminsilatani.com/">
@@ -164,7 +164,7 @@
 
     </main>
 
-    <!-- =========================== MODALS ============================ -->
+    <!-- ------------------------- MODALS ------------------------- -->
 
     <!-- ------------------------- EVENT MODAL ------------------------- -->
     <div id="event-modal" class="modal">
@@ -206,44 +206,44 @@
             <!-- Description + inline checklist + location -->
             <div id="description-container" class="desc-container">
                 <div id="textarea-wrapper" class="textarea-wrapper">
-    <textarea id="event-description" class="auth-field" placeholder="Add description..." rows="3"></textarea>
+                    <textarea id="event-description" class="auth-field" placeholder="Add description..." rows="3"></textarea>
 
-    <!-- Checklist -->
-    <button id="toggle-checklist-mode-btn" class="checklist-toggle-btn" title="Checklist" type="button">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-  </svg>
-</button>
+                    <!-- Checklist -->
+                    <button id="toggle-checklist-mode-btn" class="checklist-toggle-btn" title="Checklist" type="button">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                        </svg>
+                    </button>
 
-    <!-- Location -->
-<button id="toggle-location-btn" class="location-toggle-btn" title="Add Location" type="button">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-    <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
-  </svg>
-</button>
+                    <!-- Location -->
+                    <button id="toggle-location-btn" class="location-toggle-btn" title="Add Location" type="button">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                            <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                        </svg>
+                    </button>
 
-    <!-- Invite -->
-    <button id="toggle-invite-btn" class="invite-toggle-btn" title="Invite People" type="button">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"/>
-  </svg>
-</button>
+                    <!-- Invite -->
+                    <button id="toggle-invite-btn" class="invite-toggle-btn" title="Invite People" type="button">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"/>
+                        </svg>
+                    </button>
 
-    <!-- Color -->
-    <button id="toggle-color-btn" class="color-toggle-btn" title="Change Color" type="button">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/>
-  </svg>
-</button>
+                    <!-- Color -->
+                    <button id="toggle-color-btn" class="color-toggle-btn" title="Change Color" type="button">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/>
+                        </svg>
+                    </button>
 
-    <!-- Icon -->
-    <button id="toggle-icon-btn" class="icon-toggle-btn" title="Choose Icon" type="button">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z"/>
-  </svg>
-</button>
-</div>
+                    <!-- Icon -->
+                    <button id="toggle-icon-btn" class="icon-toggle-btn" title="Choose Icon" type="button">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z"/>
+                        </svg>
+                    </button>
+                </div>
 
                 <div id="checklist-inline-editor" class="checklist-inline-editor">
                     <div id="checklist-inline-items"></div>
@@ -311,108 +311,108 @@
     </div>
 
     <!-- ------------------------- EVENT DETAIL MODAL ------------------------- -->
-<div id="event-detail-modal" class="modal">
-    <div class="modal-content event-detail-content">
-        <div class="detail-top-actions">
-            <button id="detail-edit-btn-top" class="detail-icon-btn" title="Edit">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-                </svg>
-            </button>
-        </div>
-
-        <!-- Row 1: Color + Title -->
-        <div class="detail-header">
-            <span class="detail-color-dot" id="detail-color-dot"></span>
-            <h3 id="event-detail-title">Title</h3>
-        </div>
-
-        <!-- Row 2: Date and Time -->
-        <div class="detail-datetime-row" id="detail-datetime-row">
-            <svg class="detail-calendar-icon" id="detail-calendar-icon"
-                 width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <span id="detail-date-text"></span>
-            <span class="detail-divider-v">|</span>
-            <span id="detail-time-text"></span>
-            <span id="detail-duration-paren"></span>
-        </div>
-
-        <!-- Row 3: Description -->
-        <div class="detail-description" id="detail-description-container" style="display:none">
-            <div style="display: flex; align-items: flex-start; gap: 6px;">
-                <svg class="detail-desc-icon" id="detail-desc-icon"
-                     width="16" height="16" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     style="flex-shrink: 0; margin-top: 2px;">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10 9 9 9 8 9"/>
-                </svg>
-                <p id="detail-description-text"></p>
-            </div>
-        </div>
-
-        <!-- Row 4: CHECKLIST (برای تسک‌ها) -->
-        <div id="detail-checklist-container" class="detail-checklist-container" style="display:none;">
-            <div class="detail-checklist-header">
-                <span id="detail-checklist-icon" class="detail-icon" style="color:var(--accent);">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
+    <div id="event-detail-modal" class="modal">
+        <div class="modal-content event-detail-content">
+            <div class="detail-top-actions">
+                <button id="detail-edit-btn-top" class="detail-icon-btn" title="Edit">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
                     </svg>
-                </span>
-                <span style="font-weight:600;font-size:14px;">Checklist</span>
+                </button>
             </div>
-            <div id="detail-checklist-items" class="detail-checklist-items"></div>
-        </div>
 
-        <!-- Horizontal separator 1 -->
-        <hr class="detail-divider-h">
+            <!-- Row 1: Color + Title -->
+            <div class="detail-header">
+                <span class="detail-color-dot" id="detail-color-dot"></span>
+                <h3 id="event-detail-title">Title</h3>
+            </div>
 
-        <!-- Attendees section (only for event) -->
-        <div id="detail-invitees-section" style="display:none;">
-            <div class="attendees-header">
-                <svg class="detail-attendees-icon" id="detail-attendees-icon"
+            <!-- Row 2: Date and Time -->
+            <div class="detail-datetime-row" id="detail-datetime-row">
+                <svg class="detail-calendar-icon" id="detail-calendar-icon"
                      width="16" height="16" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <span>Attendees</span>
+                <span id="detail-date-text"></span>
+                <span class="detail-divider-v">|</span>
+                <span id="detail-time-text"></span>
+                <span id="detail-duration-paren"></span>
             </div>
-            <div class="attendees-list" id="detail-attendees-list">
-                <!-- Content filled by JavaScript -->
+
+            <!-- Row 3: Description -->
+            <div class="detail-description" id="detail-description-container" style="display:none">
+                <div style="display: flex; align-items: flex-start; gap: 6px;">
+                    <svg class="detail-desc-icon" id="detail-desc-icon"
+                         width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                         style="flex-shrink: 0; margin-top: 2px;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    <p id="detail-description-text"></p>
+                </div>
             </div>
-        </div>
 
-        <!-- Map -->
-        <div class="detail-location" id="detail-location-container" style="display:none">
-            <div id="detail-location-coords-text" style="display:none"></div>
-            <div id="detail-location-map" class="detail-map"></div>
-            <div id="detail-map-address-overlay" class="map-address-overlay"></div>
-        </div>
+            <!-- Row 4: CHECKLIST (for tasks) -->
+            <div id="detail-checklist-container" class="detail-checklist-container" style="display:none;">
+                <div class="detail-checklist-header">
+                    <span id="detail-checklist-icon" class="detail-icon" style="color:var(--accent);">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    </span>
+                    <span style="font-weight:600;font-size:14px;">Checklist</span>
+                </div>
+                <div id="detail-checklist-items" class="detail-checklist-items"></div>
+            </div>
 
-        <!-- Horizontal separator 2 -->
-        <hr class="detail-divider-h">
+            <!-- Horizontal separator 1 -->
+            <hr class="detail-divider-h">
 
-        <!-- Action buttons -->
-        <div class="detail-actions-row">
-            <button class="detail-action-btn" id="detail-cancel-btn">Cancel</button>
-            <button class="detail-action-btn" id="detail-postpone-btn">Postpone</button>
-            <button class="detail-action-btn" id="detail-complete-btn">Complete</button>
+            <!-- Attendees section (only for event) -->
+            <div id="detail-invitees-section" style="display:none;">
+                <div class="attendees-header">
+                    <svg class="detail-attendees-icon" id="detail-attendees-icon"
+                         width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span>Attendees</span>
+                </div>
+                <div class="attendees-list" id="detail-attendees-list">
+                    <!-- Content filled by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Map -->
+            <div class="detail-location" id="detail-location-container" style="display:none">
+                <div id="detail-location-coords-text" style="display:none"></div>
+                <div id="detail-location-map" class="detail-map"></div>
+                <div id="detail-map-address-overlay" class="map-address-overlay"></div>
+            </div>
+
+            <!-- Horizontal separator 2 -->
+            <hr class="detail-divider-h">
+
+            <!-- Action buttons -->
+            <div class="detail-actions-row">
+                <button class="detail-action-btn" id="detail-cancel-btn">Cancel</button>
+                <button class="detail-action-btn" id="detail-postpone-btn">Postpone</button>
+                <button class="detail-action-btn" id="detail-complete-btn">Complete</button>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- ------------------------- INVITE MODAL ------------------------- -->
     <div id="invite-modal" class="modal">
@@ -583,56 +583,56 @@
         </div>
     </div>
 
-<!-- Invitation Response Modal -->
-<div id="invitation-response-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal" id="invitation-response-close">&times;</span>
-        <div id="invitation-response-header">
-            <h3 id="invitation-response-title">Event Invitation</h3>
-            <p id="invitation-response-message">You are invited to this event.</p>
-            <div class="invitation-response-actions">
-                <button id="invitation-accept-btn" class="accent-btn">Accept</button>
-                <button id="invitation-decline-btn" class="ghost-btn">Decline</button>
+    <!-- ------------------------- INVITATION RESPONSE MODAL ------------------------- -->
+    <div id="invitation-response-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="invitation-response-close">&times;</span>
+            <div id="invitation-response-header">
+                <h3 id="invitation-response-title">Event Invitation</h3>
+                <p id="invitation-response-message">You are invited to this event.</p>
+                <div class="invitation-response-actions">
+                    <button id="invitation-accept-btn" class="accent-btn">Accept</button>
+                    <button id="invitation-decline-btn" class="ghost-btn">Decline</button>
+                </div>
+            </div>
+            <hr class="detail-divider-h" />
+            <div id="invitation-detail-container">
             </div>
         </div>
-        <hr class="detail-divider-h" />
-        <div id="invitation-detail-container">
-        </div>
     </div>
-</div>
 
     <!-- ------------------------- ICON PICKER MODAL ------------------------- -->
-<div id="icon-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal" id="icon-modal-close">&times;</span>
-        <h3 class="modal-heading">Choose Icon</h3>
-        <div id="icon-grid" class="icon-grid"></div>
-        <button id="icon-done-btn" class="accent-btn tag-done-btn" style="margin-top:16px;">Done</button>
+    <div id="icon-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="icon-modal-close">&times;</span>
+            <h3 class="modal-heading">Choose Icon</h3>
+            <div id="icon-grid" class="icon-grid"></div>
+            <button id="icon-done-btn" class="accent-btn tag-done-btn" style="margin-top:16px;">Done</button>
+        </div>
     </div>
-</div>
 
-<!-- Postpone Modal -->
-<div id="postpone-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal" id="postpone-modal-close">&times;</span>
-        <h3>Postpone Event</h3>
-        <p id="postpone-event-title" style="margin-bottom:12px; color:var(--text-light);"></p>
-        <div class="postpone-options">
-            <button class="postpone-option" data-offset="5">5 minutes</button>
-            <button class="postpone-option" data-offset="15">15 minutes</button>
-            <button class="postpone-option" data-offset="30">30 minutes</button>
-            <button class="postpone-option" data-offset="60">1 hour</button>
-            <button class="postpone-option" data-offset="1440">1 day</button>
-            <button class="postpone-option" data-offset="10080">1 week</button>
-            <button class="postpone-option" id="postpone-custom-btn">Custom…</button>
-        </div>
-        <div id="postpone-custom-row" style="display:none; margin-top:12px;">
-            <label for="postpone-custom-input" style="color:var(--text-light);">Minutes:</label>
-            <input type="number" id="postpone-custom-input" min="1" value="30" style="width:80px; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px;">
-            <button id="postpone-custom-apply" class="accent-btn" style="margin-left:8px;">Apply</button>
+    <!-- ------------------------- POSTPONE MODAL ------------------------- -->
+    <div id="postpone-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="postpone-modal-close">&times;</span>
+            <h3>Postpone Event</h3>
+            <p id="postpone-event-title" style="margin-bottom:12px; color:var(--text-light);"></p>
+            <div class="postpone-options">
+                <button class="postpone-option" data-offset="5">5 minutes</button>
+                <button class="postpone-option" data-offset="15">15 minutes</button>
+                <button class="postpone-option" data-offset="30">30 minutes</button>
+                <button class="postpone-option" data-offset="60">1 hour</button>
+                <button class="postpone-option" data-offset="1440">1 day</button>
+                <button class="postpone-option" data-offset="10080">1 week</button>
+                <button class="postpone-option" id="postpone-custom-btn">Custom…</button>
+            </div>
+            <div id="postpone-custom-row" style="display:none; margin-top:12px;">
+                <label for="postpone-custom-input" style="color:var(--text-light);">Minutes:</label>
+                <input type="number" id="postpone-custom-input" min="1" value="30" style="width:80px; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px;">
+                <button id="postpone-custom-apply" class="accent-btn" style="margin-left:8px;">Apply</button>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- ------------------------- FOOTER ------------------------- -->
     <footer class="footer">
@@ -738,15 +738,15 @@
 <script src="assets/Ravlo.js"></script>
 
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/sw.js').then(function(reg) {
-        console.log('SW registered:', reg.scope);
-      }).catch(function(err) {
-        console.warn('SW registration failed (non-fatal):', err.message);
-      });
-    });
-  }
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                console.log('SW registered:', reg.scope);
+            }).catch(function(err) {
+                console.warn('SW registration failed (non-fatal):', err.message);
+            });
+        });
+    }
 </script>
 
 </body>
