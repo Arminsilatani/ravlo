@@ -127,6 +127,96 @@ function getAccentPinIcon() {
     return accentPinIcon;
 }
 
+// =========================== REMOVE NOTIFICATIONS FOR EVENT ============================
+async function removeNotificationsForEvent(eventId, userId) {
+    try {
+        const event = events.find(e => e.id === eventId);
+        if (!event) return;
+        
+        const { data: notifs, error: findError } = await sb
+            .from('notifications')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('type', 'event')
+            .like('body', `%${event.title || 'Untitled'}%`);
+            
+        if (findError) throw findError;
+        
+        if (notifs && notifs.length > 0) {
+            const ids = notifs.map(n => n.id);
+            const { error: deleteError } = await sb
+                .from('notifications')
+                .delete()
+                .in('id', ids);
+                
+            if (deleteError) throw deleteError;
+            console.log(`✅ Removed ${ids.length} notifications for event: ${event.title}`);
+        }
+    } catch (e) {
+        console.warn('Remove notifications error:', e);
+    }
+}
+
+// =========================== CHECK AND CREATE TODAY NOTIFICATIONS ============================
+async function checkAndCreateTodayNotifications() {
+    if (!currentUser) return;
+    
+    const today = new Date();
+    const ty = today.getFullYear(),
+        tm = today.getMonth(),
+        td = today.getDate();
+    
+    const todayEvents = events.filter(ev => {
+        if (!ev.start_date) return false;
+        if (ev.status === 'done' || ev.status === 'completed') return false;
+        
+        const d = new Date(ev.start_date);
+        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
+            if (ev.recurrence_type !== 'none') {
+                const dateStr = today.toISOString().split('T')[0];
+                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                return !isCompleted;
+            }
+            return true;
+        }
+        if (ev.recurrence_type !== 'none') {
+            const dayStart = new Date(ty, tm, td, 0, 0, 0);
+            const dayEnd = new Date(ty, tm, td, 23, 59, 59);
+            const recDates = getRecurrenceDates(ev, dayStart, dayEnd);
+            return recDates.some(rd => {
+                const dateStr = rd.toISOString().split('T')[0];
+                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                return !isCompleted;
+            });
+        }
+        return false;
+    });
+    
+    for (const ev of todayEvents) {
+        const { data: existing } = await sb
+            .from('notifications')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('type', 'event')
+            .like('body', `%${ev.title || 'Untitled'}%`)
+            .limit(1);
+            
+        if (!existing || existing.length === 0) {
+            await addNotificationToUser(
+                currentUser.id,
+                'event',
+                'Event today',
+                `${ev.title || 'Untitled'} is today!`,
+                '#'
+            );
+        }
+    }
+}
+
 /* =========================== UTILITY FUNCTIONS ============================ */
 
 const DASHBOARD_URL = 'https://arminsilatani.github.io/dashboard/';
@@ -745,18 +835,29 @@ function renderTodayList() {
         return false;
     });
 
-    todayEvents.sort((a, b) => {
+    const activeTodayEvents = todayEvents.filter(ev => {
+        if (ev.recurrence_type !== 'none') {
+            const dateStr = today.toISOString().split('T')[0];
+            const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                ? ev.completed_occurrences.includes(dateStr)
+                : false;
+            return !isCompleted;
+        }
+        return ev.status !== 'done' && ev.status !== 'completed';
+    });
+
+    activeTodayEvents.sort((a, b) => {
         const at = a.start_date ? new Date(a.start_date).getTime() : 0;
         const bt = b.start_date ? new Date(b.start_date).getTime() : 0;
         return at - bt;
     });
 
-    if (todayEvents.length === 0) {
+    if (activeTodayEvents.length === 0) {
         container.innerHTML = '';
         return;
     }
 
-    container.innerHTML = todayEvents.map(ev => {
+    container.innerHTML = activeTodayEvents.map(ev => {
         const color = ev.color || 'var(--accent)';
         return `
             <div class="sidebar-today-item" data-event-id="${ev.id}">
@@ -788,10 +889,7 @@ async function updateNotificationDot() {
     }
 
     try {
-        const {
-            data,
-            error
-        } = await sb
+        const { data, error } = await sb
             .from('notifications')
             .select('id')
             .eq('user_id', currentUser.id)
@@ -811,18 +909,37 @@ async function updateNotificationDot() {
     const ty = today.getFullYear(),
         tm = today.getMonth(),
         td = today.getDate();
+    
     const hasTodayEvents = events.some(ev => {
         if (!ev.start_date) return false;
+        if (ev.status === 'done' || ev.status === 'completed') return false;
+        
         const d = new Date(ev.start_date);
-        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) return true;
+        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
+            if (ev.recurrence_type !== 'none') {
+                const dateStr = today.toISOString().split('T')[0];
+                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                return !isCompleted;
+            }
+            return true;
+        }
         if (ev.recurrence_type !== 'none') {
             const dayStart = new Date(ty, tm, td, 0, 0, 0);
             const dayEnd = new Date(ty, tm, td, 23, 59, 59);
             const recDates = getRecurrenceDates(ev, dayStart, dayEnd);
-            return recDates.some(rd => rd.getFullYear() === ty && rd.getMonth() === tm && rd.getDate() === td);
+            return recDates.some(rd => {
+                const dateStr = rd.toISOString().split('T')[0];
+                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                return !isCompleted;
+            });
         }
         return false;
     });
+    
     dot.style.display = hasTodayEvents ? 'block' : 'none';
 }
 
@@ -1071,6 +1188,7 @@ async function showApp() {
         await cleanupOldCompletions();
         await cleanupChecklistFromDescriptions();
         await moveOverdueTasksToToday();
+        await checkAndCreateTodayNotifications();
     }
     renderCalendar();
     animateTabIndicator();
@@ -1663,22 +1781,15 @@ function renderCalendar() {
     
     if (currentUser) {
         moveOverdueTasksToToday().then(() => {
-            if (viewMode === 'month') {
-                renderGregorianMonth();
-            } else if (viewMode === 'day') {
-                renderDayView();
-            } else if (viewMode === 'year') {
-                renderYearView();
-            }
-            animateTabIndicator();
-            if (window.__lastMonthYearText !== currentMonthYearEl.textContent) {
-                animateMonthYearChange(currentMonthYearEl.textContent);
-                window.__lastMonthYearText = currentMonthYearEl.textContent;
-            }
+            renderView();
         });
         return;
     }
     
+    renderView();
+}
+
+function renderView() {
     if (viewMode === 'month') {
         renderGregorianMonth();
     } else if (viewMode === 'day') {
@@ -1691,6 +1802,11 @@ function renderCalendar() {
         animateMonthYearChange(currentMonthYearEl.textContent);
         window.__lastMonthYearText = currentMonthYearEl.textContent;
     }
+    if (currentUser) {
+        checkAndCreateTodayNotifications();
+    }
+    renderTodayList();
+    updateNotificationDot();
 }
 
 /* ------------------------- MONTH VIEW ------------------------- */
@@ -2003,7 +2119,6 @@ function renderDayView() {
                 evEl.style.left = leftPx + 'px';
                 evEl.style.width = laneWidthPx + 'px';
 
-                // مینی مپ
                 if (item.ev.location && item.ev.location.lat && isLeafletReady()) {
                     evEl.style.position = 'relative';
                     var mapBg = document.createElement('div');
@@ -3122,78 +3237,118 @@ function openEventDetail(ev, occurrenceDate) {
     }
 
     // ─── وضعیت تکمیل (Complete / Undo) ───
-    var dateForCompletion = null;
-    if (occurrenceDate) {
-        dateForCompletion = occurrenceDate.toISOString().split('T')[0];
-    }
-    var isCompleted = false;
-    if (dateForCompletion && ev.recurrence_type !== 'none') {
-        isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                        ? ev.completed_occurrences.includes(dateForCompletion)
-                        : false;
-    } else {
-        isCompleted = (ev.status === 'completed' || ev.status === 'done');
-    }
+var dateForCompletion = null;
+if (occurrenceDate) {
+    dateForCompletion = occurrenceDate.toISOString().split('T')[0];
+}
+var isCompleted = false;
+if (dateForCompletion && ev.recurrence_type !== 'none') {
+    isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateForCompletion)
+                    : false;
+} else {
+    isCompleted = (ev.status === 'completed' || ev.status === 'done');
+}
 
-    const completeBtn = document.getElementById('detail-complete-btn');
-    if (completeBtn) {
-        completeBtn.style.display = isInvitee ? 'none' : '';
+const completeBtn = document.getElementById('detail-complete-btn');
+if (completeBtn) {
+    completeBtn.style.display = isInvitee ? 'none' : '';
 
-        if (isCompleted) {
-            completeBtn.textContent = 'Undo';
-            completeBtn.onclick = () => {
-                if (dateForCompletion && ev.recurrence_type !== 'none') {
-                    var idx = ev.completed_occurrences.indexOf(dateForCompletion);
-                    if (idx > -1) ev.completed_occurrences.splice(idx, 1);
-                    if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
-                        delete ev.completed_timestamps[dateForCompletion];
+    if (isCompleted) {
+        completeBtn.textContent = 'Undo';
+        completeBtn.onclick = () => {
+            if (dateForCompletion && ev.recurrence_type !== 'none') {
+                var idx = ev.completed_occurrences.indexOf(dateForCompletion);
+                if (idx > -1) ev.completed_occurrences.splice(idx, 1);
+                if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
+                    delete ev.completed_timestamps[dateForCompletion];
+                }
+                updateEventInDB(ev.id, {
+                    completed_occurrences: ev.completed_occurrences,
+                    completed_timestamps: ev.completed_timestamps
+                }).then(async () => {
+                    if (currentUser && ev.type === 'task') {
+                        const today = new Date();
+                        const evDate = new Date(ev.start_date);
+                        if (evDate.getFullYear() === today.getFullYear() &&
+                            evDate.getMonth() === today.getMonth() &&
+                            evDate.getDate() === today.getDate()) {
+                            await addNotificationToUser(
+                                currentUser.id,
+                                'event',
+                                'Event today',
+                                `${ev.title || 'Untitled'} is today!`,
+                                '#'
+                            );
+                        }
                     }
-                    updateEventInDB(ev.id, {
-                        completed_occurrences: ev.completed_occurrences,
-                        completed_timestamps: ev.completed_timestamps
-                    }).then(() => {
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => alert('Error undoing.'));
-                } else {
-                    updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(() => {
-                        ev.status = 'pending';
-                        ev.completed_at = null;
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => alert('Error undoing.'));
-                }
-            };
-        } else {
-            completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
-            completeBtn.onclick = () => {
-                if (dateForCompletion && ev.recurrence_type !== 'none') {
-                    if (!ev.completed_occurrences) ev.completed_occurrences = [];
-                    ev.completed_occurrences.push(dateForCompletion);
-                    if (!ev.completed_timestamps) ev.completed_timestamps = {};
-                    ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
-                    updateEventInDB(ev.id, {
-                        completed_occurrences: ev.completed_occurrences,
-                        completed_timestamps: ev.completed_timestamps
-                    }).then(() => {
-                        alert('This occurrence will be automatically deleted after 28 days.');
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => alert('Error completing.'));
-                } else {
-                    var newStatus = ev.type === 'task' ? 'done' : 'completed';
-                    var payload = { status: newStatus, completed_at: new Date().toISOString() };
-                    updateEventInDB(ev.id, payload).then(() => {
-                        ev.status = newStatus;
-                        ev.completed_at = payload.completed_at;
-                        alert('This item will be automatically deleted after 28 days.');
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => alert('Error completing.'));
-                }
-            };
-        }
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => alert('Error undoing.'));
+            } else {
+                updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
+                    ev.status = 'pending';
+                    ev.completed_at = null;
+                    if (currentUser && ev.type === 'task') {
+                        const today = new Date();
+                        const evDate = new Date(ev.start_date);
+                        if (evDate.getFullYear() === today.getFullYear() &&
+                            evDate.getMonth() === today.getMonth() &&
+                            evDate.getDate() === today.getDate()) {
+                            await addNotificationToUser(
+                                currentUser.id,
+                                'event',
+                                'Event today',
+                                `${ev.title || 'Untitled'} is today!`,
+                                '#'
+                            );
+                        }
+                    }
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => alert('Error undoing.'));
+            }
+        };
+    } else {
+        completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
+        completeBtn.onclick = () => {
+            if (dateForCompletion && ev.recurrence_type !== 'none') {
+                if (!ev.completed_occurrences) ev.completed_occurrences = [];
+                ev.completed_occurrences.push(dateForCompletion);
+                if (!ev.completed_timestamps) ev.completed_timestamps = {};
+                ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
+                updateEventInDB(ev.id, {
+                    completed_occurrences: ev.completed_occurrences,
+                    completed_timestamps: ev.completed_timestamps
+                }).then(async () => {
+                    if (currentUser) {
+                        await removeNotificationsForEvent(ev.id, currentUser.id);
+                    }
+                    alert('This occurrence will be automatically deleted after 28 days.');
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => alert('Error completing.'));
+            } else {
+                var newStatus = ev.type === 'task' ? 'done' : 'completed';
+                var payload = { status: newStatus, completed_at: new Date().toISOString() };
+                updateEventInDB(ev.id, payload).then(async () => {
+                    ev.status = newStatus;
+                    ev.completed_at = payload.completed_at;
+                    if (currentUser) {
+                        await removeNotificationsForEvent(ev.id, currentUser.id);
+                    }
+                    alert('This item will be automatically deleted after 28 days.');
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => alert('Error completing.'));
+            }
+        };
     }
+}
 
     // ─── دکمه Delete / Leave ───
     const cancelBtn = document.getElementById('detail-cancel-btn');
@@ -5102,7 +5257,6 @@ function checkAllChecklistDone(ev) {
 
 // =========================== MARK TASK DONE ============================
 function markTaskDone(ev) {
-    // اگر از قبل done هست، کاری نکن
     if (ev.status === 'done') return;
 
     ev.status = 'done';
@@ -5111,8 +5265,11 @@ function markTaskDone(ev) {
     updateEventInDB(ev.id, { 
         status: 'done', 
         completed_at: ev.completed_at 
-    }).then(() => {
-        // به‌روزرسانی دکمه کامل در مودال
+    }).then(async () => {
+        if (currentUser) {
+            await removeNotificationsForEvent(ev.id, currentUser.id);
+        }
+        
         const completeBtn = document.getElementById('detail-complete-btn');
         if (completeBtn) {
             completeBtn.textContent = 'Undo';
@@ -5120,18 +5277,34 @@ function markTaskDone(ev) {
                 ev.status = 'pending';
                 ev.completed_at = null;
                 updateEventInDB(ev.id, { status: 'pending', completed_at: null })
-                    .then(() => {
+                    .then(async () => {
+                        if (currentUser) {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    'Event today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#'
+                                );
+                            }
+                        }
                         completeBtn.textContent = 'Done';
                         completeBtn.onclick = () => {
                             markTaskDone(ev);
                         };
-                        // رفرش چک‌لیست
                         renderChecklistInDetail(ev);
+                        renderCalendar();
+                        updateNotificationDot();
                     });
             };
         }
         
-        showToast('🎉 All tasks completed! Event marked as Done.');
+        showToast('🎉 Task marked as Done!');
         renderCalendar();
         updateNotificationDot();
     }).catch(() => alert('Error marking task as done.'));
