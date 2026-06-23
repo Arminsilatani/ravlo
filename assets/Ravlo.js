@@ -1783,6 +1783,7 @@ function renderDayView() {
         vm = viewDate.getMonth(),
         vd = viewDate.getDate();
 
+    // ─── جدا کردن رویدادهای All-Day از بقیه ───
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
         var d = new Date(ev.start_date);
@@ -1796,8 +1797,13 @@ function renderDayView() {
         return false;
     });
 
+    // ─── جدا کردن All-Day از بقیه ───
+    var allDayEvents = dayEvents.filter(ev => ev.all_day === true);
+    var timedEvents = dayEvents.filter(ev => ev.all_day !== true);
+
+    // ─── محاسبه اشغال ساعات برای رویدادهای غیر All-Day ───
     var occupiedHours = new Array(24).fill(false);
-    dayEvents.forEach(ev => {
+    timedEvents.forEach(ev => {
         var start = new Date(ev.start_date);
         var end = ev.end_date ? new Date(ev.end_date) : new Date(start.getTime() + 60 * 60 * 1000);
         var startMin = start.getHours() * 60 + start.getMinutes();
@@ -1813,9 +1819,52 @@ function renderDayView() {
     var hourHeights = occupiedHours.map(occ => occ ? 60 : 20);
     var totalHeight = hourHeights.reduce((sum, h) => sum + h, 0);
 
+    // ─── ساختار اصلی ───
     calendarGrid.className = 'day-view-timeline';
     calendarGrid.innerHTML = '';
 
+    // ─── ردیف All-Day (بالای تایم‌لاین) ───
+    var allDayRow = document.createElement('div');
+    allDayRow.className = 'all-day-events-row';
+    if (allDayEvents.length === 0) {
+        allDayRow.style.display = 'none';
+    } else {
+        // نمایش هر رویداد All-Day به صورت کپسول
+        allDayEvents.forEach(ev => {
+            var capsule = document.createElement('span');
+            capsule.className = 'all-day-capsule';
+            capsule.style.backgroundColor = ev.color || 'var(--accent)';
+            capsule.style.color = '#fff';
+            capsule.style.border = '1px solid ' + (ev.color || 'var(--accent)');
+            
+            // آیکون (اگر وجود داشته باشد)
+            if (ev.icon) {
+                var iconSpan = document.createElement('span');
+                iconSpan.className = 'all-day-capsule-icon';
+                iconSpan.innerHTML = ev.icon;
+                capsule.appendChild(iconSpan);
+            }
+            
+            // عنوان
+            var titleSpan = document.createElement('span');
+            titleSpan.className = 'all-day-capsule-title';
+            titleSpan.textContent = ev.title || 'Untitled';
+            capsule.appendChild(titleSpan);
+            
+            // کلیک روی کپسول
+            capsule.addEventListener('click', function(e) {
+                e.stopPropagation();
+                openEventDetail(ev, new Date(vy, vm, vd));
+            });
+            
+            allDayRow.appendChild(capsule);
+        });
+    }
+    
+    // ─── تایم‌لاین ───
+    var timelineWrapper = document.createElement('div');
+    timelineWrapper.className = 'day-timeline-wrapper';
+    
     var timeLabels = document.createElement('div');
     timeLabels.className = 'time-labels';
     for (var h = 0; h < 24; h++) {
@@ -1829,10 +1878,14 @@ function renderDayView() {
     var slots = document.createElement('div');
     slots.className = 'time-slots';
     slots.style.height = totalHeight + 'px';
-    calendarGrid.appendChild(timeLabels);
-    calendarGrid.appendChild(slots);
+    
+    timelineWrapper.appendChild(timeLabels);
+    timelineWrapper.appendChild(slots);
+    
+    calendarGrid.appendChild(allDayRow);
+    calendarGrid.appendChild(timelineWrapper);
 
-    // Hour lines
+    // ─── خطوط ساعت ───
     var cumulativeTop = 0;
     for (var h = 0; h < 24; h++) {
         var lineEl = document.createElement('div');
@@ -1848,8 +1901,9 @@ function renderDayView() {
         cumulativeTop += hourHeights[h];
     }
 
+    // ─── نمایش رویدادهای غیر All-Day (همان کد قبلی) ───
     requestAnimationFrame(function() {
-        var eventsWithMinutes = dayEvents.map(ev => {
+        var eventsWithMinutes = timedEvents.map(ev => {
             var start = new Date(ev.start_date);
             var end = ev.end_date ? new Date(ev.end_date) : new Date(start.getTime() + 60 * 60 * 1000);
             return {
@@ -1918,7 +1972,6 @@ function renderDayView() {
                 var evEl = document.createElement('div');
                 evEl.className = 'time-slot-event';
 
-                // وضعیت دعوت (pending) → چشمک‌زن با رنگ اصلی
                 if (item.ev.invitation_status === 'pending') {
                     evEl.classList.add('event-invited');
                     if (item.ev.color) {
@@ -1929,7 +1982,6 @@ function renderDayView() {
                         evEl.style.backgroundColor = 'rgba(255, 111, 145, 0.15)';
                     }
                 } else {
-                    // رویدادهای معمولی
                     if (item.ev.status === 'completed' || item.ev.status === 'done') {
                         evEl.classList.add('event-completed');
                     }
@@ -1951,7 +2003,7 @@ function renderDayView() {
                 evEl.style.left = leftPx + 'px';
                 evEl.style.width = laneWidthPx + 'px';
 
-                // Mini map (در صورت وجود)
+                // مینی مپ
                 if (item.ev.location && item.ev.location.lat && isLeafletReady()) {
                     evEl.style.position = 'relative';
                     var mapBg = document.createElement('div');
@@ -1995,7 +2047,6 @@ function renderDayView() {
                 }
                 evEl.appendChild(titleSpan);
 
-                // برچسب "Invited" برای دعوت‌های pending
                 if (item.ev.invitation_status === 'pending') {
                     var invitedBadge = document.createElement('span');
                     invitedBadge.className = 'invited-badge';
@@ -2003,12 +2054,10 @@ function renderDayView() {
                     evEl.appendChild(invitedBadge);
                 }
 
-                // ─── Action Buttons (قسمت اصلی تغییر) ───
                 var actionsDiv = document.createElement('div');
                 actionsDiv.className = 'event-actions';
 
                 if (item.ev.parent_event_id && item.ev.invitation_status === 'accepted') {
-                    // مهمان: فقط دکمه Leave
                     var leaveBtn = document.createElement('button');
                     leaveBtn.className = 'event-action-btn';
                     leaveBtn.textContent = 'Leave';
@@ -2023,10 +2072,9 @@ function renderDayView() {
                     actionsDiv.appendChild(leaveBtn);
 
                 } else if (item.ev.invitation_status === 'pending') {
-                    // دعوت‌های pending: بدون دکمه
+                    // بدون دکمه
 
                 } else {
-                    // سازنده (host) یا رویداد عادی: Cancel + End/Done
                     var cancelBtn = document.createElement('button');
                     cancelBtn.className = 'event-action-btn';
                     cancelBtn.textContent = 'Cancel';
@@ -2077,7 +2125,7 @@ function renderDayView() {
                             evEl.style.opacity = '0.6';
                             evEl.style.textDecoration = 'line-through';
                         }
-                    } else { // event
+                    } else {
                         var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
                         var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
                                             ? item.ev.completed_occurrences.includes(occDate)
@@ -2119,7 +2167,6 @@ function renderDayView() {
 
                 evEl.appendChild(actionsDiv);
 
-                // کلیک روی رویداد
                 evEl.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (item.ev.invitation_status === 'pending') {
@@ -2133,7 +2180,7 @@ function renderDayView() {
             });
         });
 
-        // Current time line
+        // ─── خط زمان فعلی ───
         var now = new Date();
         if (now.getFullYear() === vy && now.getMonth() === vm && now.getDate() === vd) {
             var nowMin = now.getHours() * 60 + now.getMinutes();
@@ -2154,6 +2201,7 @@ function renderDayView() {
             slots.appendChild(line);
         }
 
+        // ─── کلیک روی فضای خالی ───
         slots.addEventListener('click', function(e) {
             if (e.target !== slots) return;
             var rect = slots.getBoundingClientRect();
@@ -2176,10 +2224,10 @@ function renderDayView() {
             var clickDate = new Date(vy, vm, vd, hours, minutes, 0, 0);
             openNewEventAtTime(clickDate);
         });
+    });
 
-        currentMonthYearEl.textContent = viewDate.toLocaleDateString('en-US', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
+    currentMonthYearEl.textContent = viewDate.toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 }
 /* ------------------------- YEAR VIEW ------------------------- */
