@@ -3297,7 +3297,7 @@ a:hover {
     right: 80px;   /* 44 + 28 + 8 = 80 */
 }
 
-/* ========== DETAIL CHECKLIST ========== */
+/* ========== DETAIL CHECKLIST (با چک‌باکس نئونی) ========== */
 .detail-checklist-container {
     margin: 12px 0 16px 0;
     padding: 12px 16px;
@@ -3324,9 +3324,9 @@ a:hover {
 .detail-checklist-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 4px 0;
-    min-height: 28px;
+    gap: 12px;
+    padding: 6px 0;
+    min-height: 32px;
     border-radius: 4px;
     transition: background 0.15s;
 }
@@ -3335,29 +3335,71 @@ a:hover {
     background: rgba(255, 255, 255, 0.05);
 }
 
-/* چک‌باکس */
+/* ===== چک‌باکس نئونی اصلی ===== */
 .detail-checklist-row .neon-checkbox {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    margin: 0;
-    padding: 0;
-    cursor: pointer;
-    accent-color: var(--accent);
-    /* حذف استایل‌های پیش‌فرض مرورگر */
-    appearance: auto;
-    -webkit-appearance: auto;
-    -moz-appearance: auto;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    position: relative !important;
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    background-color: transparent !important;
+    flex-shrink: 0 !important;
+    cursor: pointer !important;
+    --c-base: #555;
+    --c-on: var(--accent, #ff6f91);
+    --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
+    --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
+    background-image:
+        var(--base), var(--base), var(--base),
+        var(--base), var(--base), var(--base),
+        var(--base), var(--base), var(--base);
+    background-size: 4px 4px;
+    background-position:
+        3px 3px, 9.5px 3px, 16px 3px,
+        3px 9.5px, 9.5px 9.5px, 16px 9.5px,
+        3px 16px, 9.5px 16px, 16px 16px;
+    background-repeat: no-repeat;
 }
 
-/* تنظیم برای مرورگرهای مختلف */
-.detail-checklist-row .neon-checkbox:checked {
-    accent-color: var(--accent);
+.detail-checklist-row .neon-checkbox::before,
+.detail-checklist-row .neon-checkbox::after {
+    content: "";
+    position: absolute !important;
+    inset: 0 !important;
+    background-image:
+        var(--on), var(--on), var(--on),
+        var(--on), var(--on), var(--on),
+        var(--on), var(--on), var(--on);
+    background-size: inherit !important;
+    background-position: inherit !important;
+    background-repeat: no-repeat !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    filter: drop-shadow(0 0 2px var(--c-on));
 }
 
-.detail-checklist-row .neon-checkbox:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+.detail-checklist-row .neon-checkbox::before {
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.detail-checklist-row .neon-checkbox:checked::before {
+    opacity: 1 !important;
+}
+
+.detail-checklist-row .neon-checkbox:checked::after {
+    animation: pulseNeon 1.5s infinite ease-in-out;
+    opacity: 0.75 !important;
+}
+
+.detail-checklist-row .neon-checkbox:hover:not(:checked)::after {
+    animation: pulseNeon 1.5s infinite ease-in-out;
 }
 
 /* متن چک‌لیست */
@@ -3390,7 +3432,7 @@ a:hover {
     color: var(--text-secondary);
 }
 
-/* ========== INLINE CHECKLIST (برای ویرایش) ========== */
+/* ========== INLINE CHECKLIST (برای ویرایش با چک‌باکس نئونی) ========== */
 .checklist-inline-editor {
     margin-top: 8px;
     padding: 8px 12px;
@@ -3415,24 +3457,74 @@ a:hover {
     min-height: 28px;
 }
 
-/* چک‌باکس inline */
+/* ===== چک‌باکس نئونی کوچک برای inline ===== */
 .checklist-inline-row .neon-checkbox {
-    flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-    margin: 0;
-    padding: 0;
-    cursor: pointer;
-    accent-color: var(--accent);
-    appearance: auto;
-    -webkit-appearance: auto;
-    -moz-appearance: auto;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    position: relative !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    background-color: transparent !important;
+    flex-shrink: 0 !important;
+    cursor: pointer !important;
+    --c-base: #555;
+    --c-on: var(--accent, #ff6f91);
+    --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
+    --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
+    background-image:
+        var(--base), var(--base), var(--base),
+        var(--base), var(--base), var(--base),
+        var(--base), var(--base), var(--base);
+    background-size: 3.5px 3.5px;
+    background-position:
+        2.5px 2.5px, 8px 2.5px, 13.5px 2.5px,
+        2.5px 8px, 8px 8px, 13.5px 8px,
+        2.5px 13.5px, 8px 13.5px, 13.5px 13.5px;
+    background-repeat: no-repeat;
 }
 
-.checklist-inline-row .neon-checkbox:checked {
-    accent-color: var(--accent);
+.checklist-inline-row .neon-checkbox::before,
+.checklist-inline-row .neon-checkbox::after {
+    content: "";
+    position: absolute !important;
+    inset: 0 !important;
+    background-image:
+        var(--on), var(--on), var(--on),
+        var(--on), var(--on), var(--on),
+        var(--on), var(--on), var(--on);
+    background-size: inherit !important;
+    background-position: inherit !important;
+    background-repeat: no-repeat !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    filter: drop-shadow(0 0 2px var(--c-on));
 }
 
+.checklist-inline-row .neon-checkbox::before {
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.checklist-inline-row .neon-checkbox:checked::before {
+    opacity: 1 !important;
+}
+
+.checklist-inline-row .neon-checkbox:checked::after {
+    animation: pulseNeon 1.5s infinite ease-in-out;
+    opacity: 0.75 !important;
+}
+
+.checklist-inline-row .neon-checkbox:hover:not(:checked)::after {
+    animation: pulseNeon 1.5s infinite ease-in-out;
+}
+
+/* متن inline */
 .checklist-inline-row .checklist-text {
     flex: 1;
     font-size: 13px;
@@ -3529,30 +3621,11 @@ a:hover {
     opacity: 0.9;
 }
 
-/* ========== اصلاح چک‌باکس‌های مودال ========== */
-.modal .neon-checkbox {
-    width: 18px !important;
-    height: 18px !important;
-    min-width: 18px !important;
-    min-height: 18px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    cursor: pointer;
-    accent-color: var(--accent);
+/* ========== انیمیشن نبض نئونی ========== */
+@keyframes pulseNeon {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.75; }
 }
-
-/* اصلاح برای مرورگرهای Webkit (Chrome, Safari, Edge) */
-.modal .neon-checkbox::-webkit-checkbox {
-    width: 18px;
-    height: 18px;
-}
-
-/* اصلاح برای Firefox */
-.modal .neon-checkbox::-moz-checkbox {
-    width: 18px;
-    height: 18px;
-}
-
 /* =========================== SCROLLBAR CUSTOMIZATION ============================ */
 ::-webkit-scrollbar-button {
   display: none !important;
