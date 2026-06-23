@@ -1055,8 +1055,8 @@ body.modal-open {
   appearance: none;
   -webkit-appearance: none;
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 20px;  /* ← کوچک‌تر */
+  height: 20px; /* ← کوچک‌تر */
   margin: 0;
   border: none;
   outline: none;
@@ -1069,81 +1069,16 @@ body.modal-open {
     var(--base), var(--base), var(--base),
     var(--base), var(--base), var(--base),
     var(--base), var(--base), var(--base);
-  background-size: 4px 4px;
+  background-size: 3.5px 3.5px;
   background-position:
-    3px 3px, 9.5px 3px, 16px 3px,
-    3px 9.5px, 9.5px 9.5px, 16px 9.5px,
-    3px 16px, 9.5px 16px, 16px 16px;
+    2.5px 2.5px, 8px 2.5px, 13.5px 2.5px,
+    2.5px 8px, 8px 8px, 13.5px 8px,
+    2.5px 13.5px, 8px 13.5px, 13.5px 13.5px;
   background-repeat: no-repeat;
   cursor: pointer;
   flex-shrink: 0;
-  transform: translateY(-1px);
+  transform: translateY(0);  /* ← حذف translateY(-1px) */
 }
-
-.neon-checkbox::before,
-.neon-checkbox::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    var(--on), var(--on), var(--on),
-    var(--on), var(--on), var(--on),
-    var(--on), var(--on), var(--on);
-  background-size: inherit;
-  background-position: inherit;
-  background-repeat: no-repeat;
-  pointer-events: none;
-  opacity: 0;
-  filter: drop-shadow(0 0 2px var(--c-on));
-}
-
-.neon-checkbox::before {
-  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.neon-checkbox:checked::before {
-  opacity: 1;
-}
-
-.neon-checkbox:checked::after {
-  animation: pulseNeon 1.5s infinite ease-in-out;
-  opacity: 0.75;
-}
-
-.neon-checkbox:hover:not(:checked)::after {
-  animation: pulseNeon 1.5s infinite ease-in-out;
-}
-
-.neon-checkbox-label {
-  font-size: 14px;
-  color: #ccc;
-  user-select: none;
-  cursor: pointer;
-  line-height: 1;
-  transform: translateY(1px);
-}
-
-.all-day-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #ccc;
-}
-
-.all-day-popup-row {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  margin: 12px 0;
-}
-
-.all-day-popup-row .neon-checkbox-label {
-  color: var(--text);
-}
-
 /* =========================== TAG SECTION & PANEL ============================ */
 .tag-section {
   margin-bottom: 16px;
@@ -3329,10 +3264,6 @@ a:hover {
     min-height: 28px;  /* ← کم شد از 32px به 28px */
     border-radius: 4px;
     transition: background 0.15s;
-}
-
-.detail-checklist-row:hover {
-    background: rgba(255, 255, 255, 0.05);
 }
 
 /* ===== چک‌باکس نئونی اصلی ===== */
