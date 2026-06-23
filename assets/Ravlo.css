@@ -3340,7 +3340,7 @@ a:hover {
     appearance: none !important;
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
-    position: relative;
+    position: relative !important;
     width: 24px;
     height: 24px;
     min-width: 24px;
