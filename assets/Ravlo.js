@@ -197,13 +197,6 @@ function generateInviteCode() {
     return 'RAV-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-function appendToDescription(text) {
-    const desc = document.getElementById('event-description');
-    if (!desc) return;
-    const current = desc.value.trim();
-    desc.value = current ? current + '\n' + text : text;
-}
-
 function generateInviteLinkForNewUser() {
     return `${DASHBOARD_URL}?ref=${currentUser.id}`;
 }
@@ -4902,7 +4895,6 @@ function markTaskDone(ev) {
         updateNotificationDot();
     }).catch(() => alert('Error marking task as done.'));
 }
-
 /* =========================== POSTPONE =========================== */
 function openPostponeModal() {
     if (!currentDetailEvent) return;
