@@ -130,28 +130,27 @@ function getAccentPinIcon() {
 // =========================== REMOVE NOTIFICATIONS FOR EVENT ============================
 async function removeNotificationsForEvent(eventId, userId) {
     try {
-        const event = events.find(e => e.id === eventId);
-        if (!event) return;
-        
-        const { data: notifs, error: findError } = await sb
+        // حذف مستقیم با شرط event_id (اگر در جدول داریم)
+        const { error } = await sb
             .from('notifications')
-            .select('id')
+            .delete()
             .eq('user_id', userId)
-            .eq('type', 'event')
-            .like('body', `%${event.title || 'Untitled'}%`);
+            .eq('event_id', eventId);
             
-        if (findError) throw findError;
-        
-        if (notifs && notifs.length > 0) {
-            const ids = notifs.map(n => n.id);
-            const { error: deleteError } = await sb
-                .from('notifications')
-                .delete()
-                .in('id', ids);
-                
-            if (deleteError) throw deleteError;
-            console.log(`✅ Removed ${ids.length} notifications for event: ${event.title}`);
+        if (error) {
+            // اگر فیلد event_id وجود ندارد، با عنوان حذف کن
+            const event = events.find(e => e.id == eventId);
+            if (event) {
+                const { error: err2 } = await sb
+                    .from('notifications')
+                    .delete()
+                    .eq('user_id', userId)
+                    .eq('type', 'event')
+                    .like('body', `%${event.title || 'Untitled'}%`);
+                if (err2) console.warn('Remove by title error:', err2);
+            }
         }
+        console.log(`✅ Notifications removed for event: ${eventId}`);
     } catch (e) {
         console.warn('Remove notifications error:', e);
     }
@@ -181,37 +180,26 @@ async function checkAndCreateTodayNotifications() {
             }
             return true;
         }
-        if (ev.recurrence_type !== 'none') {
-            const dayStart = new Date(ty, tm, td, 0, 0, 0);
-            const dayEnd = new Date(ty, tm, td, 23, 59, 59);
-            const recDates = getRecurrenceDates(ev, dayStart, dayEnd);
-            return recDates.some(rd => {
-                const dateStr = rd.toISOString().split('T')[0];
-                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                    ? ev.completed_occurrences.includes(dateStr)
-                    : false;
-                return !isCompleted;
-            });
-        }
         return false;
     });
     
     for (const ev of todayEvents) {
+        // چک کن که نوتیفیکیشن قبلاً وجود دارد یا نه
         const { data: existing } = await sb
             .from('notifications')
             .select('id')
             .eq('user_id', currentUser.id)
-            .eq('type', 'event')
-            .like('body', `%${ev.title || 'Untitled'}%`)
+            .eq('event_id', ev.id)
             .limit(1);
             
         if (!existing || existing.length === 0) {
             await addNotificationToUser(
                 currentUser.id,
                 'event',
-                'Event today',
+                '📅 Event Today',
                 `${ev.title || 'Untitled'} is today!`,
-                '#'
+                '#',
+                ev.id
             );
         }
     }
@@ -221,15 +209,21 @@ async function checkAndCreateTodayNotifications() {
 
 const DASHBOARD_URL = 'https://arminsilatani.github.io/dashboard/';
 
-async function addNotificationToUser(userId, type, title, body, link) {
+async function addNotificationToUser(userId, type, title, body, link, eventId = null) {
     try {
-        await sb.from('notifications').insert({
+        const payload = {
             user_id: userId,
             type,
             title,
             body,
-            link
-        });
+            link,
+            is_read: false,
+            created_at: new Date().toISOString()
+        };
+        if (eventId) payload.event_id = eventId;
+        
+        await sb.from('notifications').insert(payload);
+        console.log(`✅ Notification added for event: ${eventId}`);
     } catch (e) {
         console.warn('Notification failed:', e);
     }
@@ -824,98 +818,12 @@ function renderTodayList() {
 
     const todayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
-        const d = new Date(ev.start_date);
-        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) return true;
-        if (ev.recurrence_type !== 'none') {
-            const dayStart = new Date(ty, tm, td, 0, 0, 0);
-            const dayEnd = new Date(ty, tm, td, 23, 59, 59);
-            const recDates = getRecurrenceDates(ev, dayStart, dayEnd);
-            return recDates.some(rd => rd.getFullYear() === ty && rd.getMonth() === tm && rd.getDate() === td);
-        }
-        return false;
-    });
-
-    const activeTodayEvents = todayEvents.filter(ev => {
-        if (ev.recurrence_type !== 'none') {
-            const dateStr = today.toISOString().split('T')[0];
-            const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                ? ev.completed_occurrences.includes(dateStr)
-                : false;
-            return !isCompleted;
-        }
-        return ev.status !== 'done' && ev.status !== 'completed';
-    });
-
-    activeTodayEvents.sort((a, b) => {
-        const at = a.start_date ? new Date(a.start_date).getTime() : 0;
-        const bt = b.start_date ? new Date(b.start_date).getTime() : 0;
-        return at - bt;
-    });
-
-    if (activeTodayEvents.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-
-    container.innerHTML = activeTodayEvents.map(ev => {
-        const color = ev.color || 'var(--accent)';
-        return `
-            <div class="sidebar-today-item" data-event-id="${ev.id}">
-                <span class="dot" style="background:${color}"></span>
-                <span class="title">${ev.title || 'Untitled'}</span>
-            </div>
-        `;
-    }).join('');
-
-    container.querySelectorAll('.sidebar-today-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const id = item.dataset.eventId;
-            const event = events.find(e => e.id === id);
-            if (event) {
-                const closeRow = document.getElementById('sidebar-close-row');
-                if (closeRow) closeRow.click();
-                openEventDetail(event, new Date());
-            }
-        });
-    });
-}
-
-async function updateNotificationDot() {
-    const dot = document.getElementById('avatar-notif-dot');
-    if (!dot) return;
-    if (!currentUser) {
-        dot.style.display = 'none';
-        return;
-    }
-
-    try {
-        const { data, error } = await sb
-            .from('notifications')
-            .select('id')
-            .eq('user_id', currentUser.id)
-            .eq('is_read', false);
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-            dot.style.display = 'block';
-            return;
-        }
-    } catch (e) {
-        console.warn('Could not fetch notifications:', e);
-    }
-
-    const today = new Date();
-    const ty = today.getFullYear(),
-        tm = today.getMonth(),
-        td = today.getDate();
-    
-    const hasTodayEvents = events.some(ev => {
-        if (!ev.start_date) return false;
+        // اگر Done یا Completed باشد، نمایش نده
         if (ev.status === 'done' || ev.status === 'completed') return false;
         
         const d = new Date(ev.start_date);
         if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
+            // برای رویدادهای تکراری، چک کن که این occurrence Done نشده باشه
             if (ev.recurrence_type !== 'none') {
                 const dateStr = today.toISOString().split('T')[0];
                 const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
@@ -936,6 +844,93 @@ async function updateNotificationDot() {
                     : false;
                 return !isCompleted;
             });
+        }
+        return false;
+    });
+
+    todayEvents.sort((a, b) => {
+        const at = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const bt = b.start_date ? new Date(b.start_date).getTime() : 0;
+        return at - bt;
+    });
+
+    if (todayEvents.length === 0) {
+        container.innerHTML = '<div style="padding:8px 16px;font-size:12px;color:#555;">No events today</div>';
+        return;
+    }
+
+    container.innerHTML = todayEvents.map(ev => {
+        const color = ev.color || 'var(--accent)';
+        return `
+            <div class="sidebar-today-item" data-event-id="${ev.id}" style="cursor:pointer;">
+                <span class="dot" style="background:${color}"></span>
+                <span class="title">${ev.title || 'Untitled'}</span>
+            </div>
+        `;
+    }).join('');
+
+    // ─── رویداد کلیک ───
+    container.querySelectorAll('.sidebar-today-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            const id = this.dataset.eventId;
+            const event = events.find(ev => ev.id == id);
+            if (event) {
+                // بستن سایدبار
+                const closeBtn = document.getElementById('sidebar-close-btn');
+                if (closeBtn) closeBtn.click();
+                // باز کردن جزئیات
+                openEventDetail(event, new Date());
+            }
+        });
+    });
+}
+
+async function updateNotificationDot() {
+    const dot = document.getElementById('avatar-notif-dot');
+    if (!dot) return;
+    if (!currentUser) {
+        dot.style.display = 'none';
+        return;
+    }
+
+    try {
+        // 1. نوتیفیکیشن‌های خوانده‌نشده دیتابیس
+        const { data, error } = await sb
+            .from('notifications')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('is_read', false);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            dot.style.display = 'block';
+            return;
+        }
+    } catch (e) {
+        console.warn('Could not fetch notifications:', e);
+    }
+
+    // 2. اگر نوتیفیکیشن دیتابیس نبود، چک کردن رویدادهای امروز
+    const today = new Date();
+    const ty = today.getFullYear(),
+        tm = today.getMonth(),
+        td = today.getDate();
+    
+    const hasTodayEvents = events.some(ev => {
+        if (!ev.start_date) return false;
+        if (ev.status === 'done' || ev.status === 'completed') return false;
+        
+        const d = new Date(ev.start_date);
+        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
+            if (ev.recurrence_type !== 'none') {
+                const dateStr = today.toISOString().split('T')[0];
+                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                return !isCompleted;
+            }
+            return true;
         }
         return false;
     });
@@ -1188,7 +1183,7 @@ async function showApp() {
         await cleanupOldCompletions();
         await cleanupChecklistFromDescriptions();
         await moveOverdueTasksToToday();
-        await checkAndCreateTodayNotifications();
+        await checkAndCreateTodayNotifications(); // ✅ اضافه کن
     }
     renderCalendar();
     animateTabIndicator();
@@ -1766,7 +1761,6 @@ function openGregYearPopup() {
     });
 }
 
-/* =========================== CALENDAR RENDERING ============================ */
 
 /* ------------------------- RENDER DISPATCHER ------------------------- */
 function syncViewTabsUI() {
@@ -1802,6 +1796,7 @@ function renderView() {
         animateMonthYearChange(currentMonthYearEl.textContent);
         window.__lastMonthYearText = currentMonthYearEl.textContent;
     }
+    // ✅ به‌روزرسانی نوتیفیکیشن‌ها
     if (currentUser) {
         checkAndCreateTodayNotifications();
     }
@@ -1876,10 +1871,9 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
         } else {
             dot.style.backgroundColor = ev.color || 'var(--accent)';
         }
-        // اضافه کردن شرط دعوت
         if (ev.invitation_status === 'pending') {
-            dot.classList.add('invited'); // کلاس جدید
-            dot.style.backgroundColor = ev.color || 'var(--accent)'; // رنگ اصلی خودش
+            dot.classList.add('invited');
+            dot.style.backgroundColor = ev.color || 'var(--accent)';
         }
         cell.appendChild(dot);
     });
@@ -1899,7 +1893,6 @@ function renderDayView() {
         vm = viewDate.getMonth(),
         vd = viewDate.getDate();
 
-    // ─── جدا کردن رویدادهای All-Day از بقیه ───
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
         var d = new Date(ev.start_date);
@@ -1913,11 +1906,9 @@ function renderDayView() {
         return false;
     });
 
-    // ─── جدا کردن All-Day از بقیه ───
     var allDayEvents = dayEvents.filter(ev => ev.all_day === true);
     var timedEvents = dayEvents.filter(ev => ev.all_day !== true);
 
-    // ─── محاسبه اشغال ساعات برای رویدادهای غیر All-Day ───
     var occupiedHours = new Array(24).fill(false);
     timedEvents.forEach(ev => {
         var start = new Date(ev.start_date);
@@ -1935,17 +1926,14 @@ function renderDayView() {
     var hourHeights = occupiedHours.map(occ => occ ? 60 : 20);
     var totalHeight = hourHeights.reduce((sum, h) => sum + h, 0);
 
-    // ─── ساختار اصلی ───
     calendarGrid.className = 'day-view-timeline';
     calendarGrid.innerHTML = '';
 
-    // ─── ردیف All-Day (بالای تایم‌لاین) ───
     var allDayRow = document.createElement('div');
     allDayRow.className = 'all-day-events-row';
     if (allDayEvents.length === 0) {
         allDayRow.style.display = 'none';
     } else {
-        // نمایش هر رویداد All-Day به صورت کپسول
         allDayEvents.forEach(ev => {
             var capsule = document.createElement('span');
             capsule.className = 'all-day-capsule';
@@ -1953,7 +1941,6 @@ function renderDayView() {
             capsule.style.color = '#fff';
             capsule.style.border = '1px solid ' + (ev.color || 'var(--accent)');
             
-            // آیکون (اگر وجود داشته باشد)
             if (ev.icon) {
                 var iconSpan = document.createElement('span');
                 iconSpan.className = 'all-day-capsule-icon';
@@ -1961,13 +1948,11 @@ function renderDayView() {
                 capsule.appendChild(iconSpan);
             }
             
-            // عنوان
             var titleSpan = document.createElement('span');
             titleSpan.className = 'all-day-capsule-title';
             titleSpan.textContent = ev.title || 'Untitled';
             capsule.appendChild(titleSpan);
             
-            // کلیک روی کپسول
             capsule.addEventListener('click', function(e) {
                 e.stopPropagation();
                 openEventDetail(ev, new Date(vy, vm, vd));
@@ -1977,7 +1962,6 @@ function renderDayView() {
         });
     }
     
-    // ─── تایم‌لاین ───
     var timelineWrapper = document.createElement('div');
     timelineWrapper.className = 'day-timeline-wrapper';
     
@@ -2001,7 +1985,6 @@ function renderDayView() {
     calendarGrid.appendChild(allDayRow);
     calendarGrid.appendChild(timelineWrapper);
 
-    // ─── خطوط ساعت ───
     var cumulativeTop = 0;
     for (var h = 0; h < 24; h++) {
         var lineEl = document.createElement('div');
@@ -2017,7 +2000,6 @@ function renderDayView() {
         cumulativeTop += hourHeights[h];
     }
 
-    // ─── نمایش رویدادهای غیر All-Day (همان کد قبلی) ───
     requestAnimationFrame(function() {
         var eventsWithMinutes = timedEvents.map(ev => {
             var start = new Date(ev.start_date);
@@ -2295,7 +2277,6 @@ function renderDayView() {
             });
         });
 
-        // ─── خط زمان فعلی ───
         var now = new Date();
         if (now.getFullYear() === vy && now.getMonth() === vm && now.getDate() === vd) {
             var nowMin = now.getHours() * 60 + now.getMinutes();
@@ -2316,7 +2297,6 @@ function renderDayView() {
             slots.appendChild(line);
         }
 
-        // ─── کلیک روی فضای خالی ───
         slots.addEventListener('click', function(e) {
             if (e.target !== slots) return;
             var rect = slots.getBoundingClientRect();
@@ -5174,13 +5154,49 @@ function renderChecklistInDetail(ev) {
     updateEventInDB(ev.id, { 
         status: 'done', 
         completed_at: ev.completed_at 
-    }).then(() => {
+    }).then(async () => {
+        // ✅ حذف نوتیفیکیشن
+        if (currentUser) {
+            await removeNotificationsForEvent(ev.id, currentUser.id);
+        }
         
-        showToast('🎉 All tasks completed! Event marked as Done.');
+        const completeBtn = document.getElementById('detail-complete-btn');
+        if (completeBtn) {
+            completeBtn.textContent = 'Undo';
+            completeBtn.onclick = () => {
+                ev.status = 'pending';
+                ev.completed_at = null;
+                updateEventInDB(ev.id, { status: 'pending', completed_at: null })
+                    .then(async () => {
+                        // ✅ بازسازی نوتیفیکیشن اگر امروز است
+                        if (currentUser) {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    '📅 Event Today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#',
+                                    ev.id
+                                );
+                            }
+                        }
+                        completeBtn.textContent = 'Done';
+                        completeBtn.onclick = () => markTaskDone(ev);
+                        renderChecklistInDetail(ev);
+                        renderCalendar();
+                        updateNotificationDot();
+                    });
+            };
+        }
+        
+        showToast('✅ Task marked as Done!');
         renderCalendar();
         updateNotificationDot();
-        
-        moveOverdueTasksToToday();
     }).catch(() => alert('Error marking task as done.'));
 }
 
@@ -5270,39 +5286,112 @@ function markTaskDone(ev) {
             await removeNotificationsForEvent(ev.id, currentUser.id);
         }
         
-        const completeBtn = document.getElementById('detail-complete-btn');
-        if (completeBtn) {
-            completeBtn.textContent = 'Undo';
-            completeBtn.onclick = () => {
-                ev.status = 'pending';
-                ev.completed_at = null;
-                updateEventInDB(ev.id, { status: 'pending', completed_at: null })
-                    .then(async () => {
-                        if (currentUser) {
-                            const today = new Date();
-                            const evDate = new Date(ev.start_date);
-                            if (evDate.getFullYear() === today.getFullYear() &&
-                                evDate.getMonth() === today.getMonth() &&
-                                evDate.getDate() === today.getDate()) {
-                                await addNotificationToUser(
-                                    currentUser.id,
-                                    'event',
-                                    'Event today',
-                                    `${ev.title || 'Untitled'} is today!`,
-                                    '#'
-                                );
-                            }
+        // ─── وضعیت تکمیل (Complete / Undo) ───
+const completeBtn = document.getElementById('detail-complete-btn');
+if (completeBtn) {
+    completeBtn.style.display = isInvitee ? 'none' : '';
+
+    if (isCompleted) {
+        completeBtn.textContent = 'Undo';
+        completeBtn.onclick = () => {
+            if (dateForCompletion && ev.recurrence_type !== 'none') {
+                var idx = ev.completed_occurrences.indexOf(dateForCompletion);
+                if (idx > -1) ev.completed_occurrences.splice(idx, 1);
+                if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
+                    delete ev.completed_timestamps[dateForCompletion];
+                }
+                updateEventInDB(ev.id, {
+                    completed_occurrences: ev.completed_occurrences,
+                    completed_timestamps: ev.completed_timestamps
+                }).then(async () => {
+                    // ✅ بازسازی نوتیفیکیشن اگر امروز است
+                    if (currentUser) {
+                        const today = new Date();
+                        const evDate = new Date(ev.start_date);
+                        if (evDate.getFullYear() === today.getFullYear() &&
+                            evDate.getMonth() === today.getMonth() &&
+                            evDate.getDate() === today.getDate()) {
+                            await addNotificationToUser(
+                                currentUser.id,
+                                'event',
+                                '📅 Event Today',
+                                `${ev.title || 'Untitled'} is today!`,
+                                '#',
+                                ev.id
+                            );
                         }
-                        completeBtn.textContent = 'Done';
-                        completeBtn.onclick = () => {
-                            markTaskDone(ev);
-                        };
-                        renderChecklistInDetail(ev);
-                        renderCalendar();
-                        updateNotificationDot();
-                    });
-            };
-        }
+                    }
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => alert('Error undoing.'));
+            } else {
+                updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
+                    ev.status = 'pending';
+                    ev.completed_at = null;
+                    // ✅ بازسازی نوتیفیکیشن اگر امروز است
+                    if (currentUser) {
+                        const today = new Date();
+                        const evDate = new Date(ev.start_date);
+                        if (evDate.getFullYear() === today.getFullYear() &&
+                            evDate.getMonth() === today.getMonth() &&
+                            evDate.getDate() === today.getDate()) {
+                            await addNotificationToUser(
+                                currentUser.id,
+                                'event',
+                                '📅 Event Today',
+                                `${ev.title || 'Untitled'} is today!`,
+                                '#',
+                                ev.id
+                            );
+                        }
+                    }
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => alert('Error undoing.'));
+            }
+        };
+    } else {
+        completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
+        completeBtn.onclick = () => {
+            if (dateForCompletion && ev.recurrence_type !== 'none') {
+                if (!ev.completed_occurrences) ev.completed_occurrences = [];
+                ev.completed_occurrences.push(dateForCompletion);
+                if (!ev.completed_timestamps) ev.completed_timestamps = {};
+                ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
+                updateEventInDB(ev.id, {
+                    completed_occurrences: ev.completed_occurrences,
+                    completed_timestamps: ev.completed_timestamps
+                }).then(async () => {
+                    // ✅ حذف نوتیفیکیشن
+                    if (currentUser) {
+                        await removeNotificationsForEvent(ev.id, currentUser.id);
+                    }
+                    alert('This occurrence will be auto-deleted after 28 days.');
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => alert('Error completing.'));
+            } else {
+                var newStatus = ev.type === 'task' ? 'done' : 'completed';
+                var payload = { status: newStatus, completed_at: new Date().toISOString() };
+                updateEventInDB(ev.id, payload).then(async () => {
+                    ev.status = newStatus;
+                    ev.completed_at = payload.completed_at;
+                    // ✅ حذف نوتیفیکیشن
+                    if (currentUser) {
+                        await removeNotificationsForEvent(ev.id, currentUser.id);
+                    }
+                    alert('This item will be auto-deleted after 28 days.');
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => alert('Error completing.'));
+            }
+        };
+    }
+}
         
         showToast('🎉 Task marked as Done!');
         renderCalendar();
