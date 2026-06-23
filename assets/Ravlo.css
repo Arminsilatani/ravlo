@@ -3435,7 +3435,7 @@ a:hover {
 /* ========== INLINE CHECKLIST (برای ویرایش با چک‌باکس نئونی) ========== */
 .checklist-inline-editor {
     margin-top: 8px;
-    padding: 88px 12px;
+    padding: 8px 12px;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.06);
