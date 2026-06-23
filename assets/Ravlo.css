@@ -3337,10 +3337,10 @@ a:hover {
 
 /* ===== چک‌باکس نئونی اصلی ===== */
 .detail-checklist-row .neon-checkbox {
-    appearance: none !important;
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    position: relative !important;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    position: relative;
     width: 24px !important;
     height: 24px !important;
     min-width: 24px;
