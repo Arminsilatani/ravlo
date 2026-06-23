@@ -2557,15 +2557,12 @@ async function saveEvent() {
             recurrence_interval: recurrence.interval,
             recurrence_days: (recurrence.type === 'weekly' || recurrence.type === 'custom') ? recurrence.days : [],
             recurrence_smart_interval: recurrence.type === 'smart' ? recurrence.smartInterval : null,
-            invitees: eventType === 'event' ? currentInvitees.map(inv => inv.name) : []
+            invitees: eventType === 'event' ? currentInvitees.map(inv => inv.name) : [],
+            // Checklist items (بدون تبدیل به متن)
+            checklist: eventType === 'task' ? currentChecklistItems : []
         };
 
-        if (eventType === 'task') {
-            payload.checklist = currentChecklistItems;
-        } else {
-            payload.checklist = [];
-        }
-
+        // ── 3. Location (فقط برای event) ──────────────────
         if (eventType === 'event' && (currentLocationCoords || currentLocationName)) {
             payload.location = {
                 lat: currentLocationCoords?.lat || null,
@@ -2573,15 +2570,20 @@ async function saveEvent() {
                 name: currentLocationName || '',
                 address: currentLocationAddress || null
             };
+        } else {
+            payload.location = null;
         }
 
+        // ── 4. Completed occurrences ──────────────────────
         if (!editingEventId) {
             payload.completed_occurrences = [];
+            payload.completed_timestamps = {};
         }
 
+        // ── 5. Invitee IDs ────────────────────────────────
         payload.invitee_ids = currentInvitees.map(inv => inv.id);
 
-        // ── 3. Save to database ───────────────────────────
+        // ── 6. Save to database ───────────────────────────
         showGlobalLoader();
 
         if (editingEventId) {
@@ -2590,7 +2592,16 @@ async function saveEvent() {
             var idx = events.findIndex(function(ev) {
                 return ev.id == editingEventId;
             });
-            if (idx !== -1) Object.assign(events[idx], payload);
+            if (idx !== -1) {
+                // حفظ کردن completed_occurrences و completed_timestamps موجود
+                if (events[idx].completed_occurrences) {
+                    payload.completed_occurrences = events[idx].completed_occurrences;
+                }
+                if (events[idx].completed_timestamps) {
+                    payload.completed_timestamps = events[idx].completed_timestamps;
+                }
+                Object.assign(events[idx], payload);
+            }
             editingEventId = null;
         } else {
             // Create new event
@@ -2599,7 +2610,7 @@ async function saveEvent() {
                 // Push to local events array
                 events.push(saved);
 
-                // ── 4. Create invitee rows (if any) ─────────
+                // ── 7. Create invitee rows (if any) ─────────
                 if (currentInvitees.length > 0) {
                     for (const invitee of currentInvitees) {
                         const invitePayload = {
@@ -2609,7 +2620,10 @@ async function saveEvent() {
                             invitation_status: 'pending',
                             invitees: [],
                             invitee_ids: [],
-                            completed_occurrences: []
+                            completed_occurrences: [],
+                            completed_timestamps: {},
+                            // checklist برای مهمان‌ها هم کپی میشه
+                            checklist: eventType === 'task' ? currentChecklistItems : []
                         };
 
                         // Use RPC to bypass RLS (SECURITY DEFINER function)
@@ -2624,7 +2638,7 @@ async function saveEvent() {
                     }
                 }
 
-                // ── 5. Send notifications ─────────────────
+                // ── 8. Send notifications ─────────────────
                 const eventTitle = title || 'Untitled event';
                 currentInvitees.forEach(inv => {
                     addNotificationToUser(inv.id, 'event', 'You have been invited to an event',
@@ -2633,18 +2647,62 @@ async function saveEvent() {
             }
         }
 
-        // ── 6. Clean up UI ────────────────────────────────
+        // ── 9. Clean up UI ────────────────────────────────
         hideGlobalLoader();
         closeModal(eventModal);
 
+        // Reset form fields
         if (eventTitleInput) eventTitleInput.value = '';
         if (eventStartInput) eventStartInput.value = '';
         if (eventEndInput) eventEndInput.value = '';
         if (eventStartGreg) eventStartGreg.value = '';
+        if (gregTriggerText) gregTriggerText.textContent = 'Select date';
+        if (gregPickerTrigger) gregPickerTrigger.classList.remove('has-value');
 
+        // Reset checklist
+        currentChecklistItems = [];
+        hideInlineChecklist();
+
+        // Reset location
+        currentLocationCoords = null;
+        currentLocationName = '';
+        currentLocationAddress = null;
+        document.getElementById('location-coords-input').value = '';
+        document.getElementById('location-section').style.display = 'none';
+        document.getElementById('toggle-location-btn')?.classList.remove('active');
+
+        // Reset invitees
+        currentInvitees = [];
+        document.getElementById('toggle-invite-btn')?.classList.remove('active');
+
+        // Reset color
         selectedTagColor = '#f5f5f5';
+        document.getElementById('toggle-color-btn')?.classList.remove('active');
+
+        // Reset icon
+        selectedIcon = null;
+        updateIconButton();
+        document.getElementById('toggle-icon-btn')?.classList.remove('active');
+
+        // Reset recurrence
+        recurrence = {
+            type: 'none',
+            interval: 1,
+            days: [],
+            smartInterval: 'weekly'
+        };
+        updateRecurrencePreview();
+
+        // Reset event type to default
+        eventType = 'event';
+        setEventType('event');
+
+        // Re-render calendar
         renderCalendar();
         updateNotificationDot();
+
+        // Show success message
+        showToast(editingEventId ? '✅ Event updated successfully!' : '✅ Event created successfully!');
 
     } catch (err) {
         console.error('Save event error:', err);
