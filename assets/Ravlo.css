@@ -3324,9 +3324,9 @@ a:hover {
 .detail-checklist-row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 0;
-    min-height: 32px;
+    gap: 6px;  /* ← کم شد از 12px به 6px */
+    padding: 2px 0;  /* ← کم شد از 6px 0 به 2px 0 */
+    min-height: 28px;  /* ← کم شد از 32px به 28px */
     border-radius: 4px;
     transition: background 0.15s;
 }
