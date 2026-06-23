@@ -3318,7 +3318,7 @@ a:hover {
 .detail-checklist-items {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 2px;  /* ← کم شد از 6px به 2px */
 }
 
 .detail-checklist-row {
