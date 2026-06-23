@@ -1,14 +1,22 @@
 /*
-  ****************************************************
-  *  Author: Armin Silatani
-  *  Date: 2026-06-18
-  *  Version: 0.2.0
-  ****************************************************
+****************************************************
+* Author: Armin Silatani
+* Date: 2026-06-23
+* Version: 0.2.0
+****************************************************
 */
 
 /* =========================== MAIN STYLESHEET ============================ */
 
-/* ------------------------- FONT FACES ------------------------- */
+/* :::::::::::::::::::::::::: CSS VARIABLES :::::::::::::::::::::::::: */
+:root {
+  --bg: #0d0d0d;
+  --text: #f5f5f5;
+  --accent: #ff6f91;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+/* :::::::::::::::::::::::::: FONT FACES :::::::::::::::::::::::::: */
 @font-face {
   font-family: "Kalameh";
   src: url("../../assets/fonts/KalamehWeb-Regular.woff2") format("woff2"),
@@ -25,14 +33,6 @@
   font-weight: 900;
   font-style: normal;
   font-display: swap;
-}
-
-/* :::::::::::::::::::::::::: CSS VARIABLES :::::::::::::::::::::::::: */
-:root {
-  --bg: #0d0d0d;
-  --text: #f5f5f5;
-  --accent: #ff6f91;
-  --border: rgba(255, 255, 255, 0.08);
 }
 
 /* :::::::::::::::::::::::::: RESET & BASE :::::::::::::::::::::::::: */
@@ -58,239 +58,66 @@ body.modal-open {
   overflow: hidden;
 }
 
-/* ------------------------- UTILITY CLASSES ------------------------- */
+/* :::::::::::::::::::::::::: KEYFRAMES :::::::::::::::::::::::::: */
+@keyframes loader-slide {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(150%);  }
+  100% { transform: translateX(300%);  }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.2; }
+}
+
+@keyframes neonBlink {
+  0%, 100% {
+    opacity: 0.2;
+    box-shadow: 0 0 2px var(--accent, #4ECDC4);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 6px var(--accent, #4ECDC4);
+  }
+}
+
+@keyframes pulseNeon {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.75; }
+}
+
+@keyframes subtleBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes toastSlideDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* :::::::::::::::::::::::::: SCROLLBAR CUSTOMIZATION :::::::::::::::::::::::::: */
+::-webkit-scrollbar-button {
+  display: none !important;
+}
+
+/* :::::::::::::::::::::::::: UTILITY CLASSES :::::::::::::::::::::::::: */
 .hidden {
   display: none !important;
 }
 
 .ltr-direction {
   direction: ltr;
-}
-
-/* =========================== AUTH OVERLAY ============================ */
-#auth-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(6px);
-  z-index: 10;
-  justify-content: center;
-  align-items: center;
-}
-
-.auth-box {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: 40px 32px;
-  width: 100%;
-  max-width: 380px;
-  text-align: center;
-  backdrop-filter: blur(10px);
-}
-
-.auth-box img {
-  height: 44px;
-  margin-bottom: 16px;
-}
-
-.auth-box h2 {
-  font-size: 22px;
-  font-weight: 900;
-  margin-bottom: 4px;
-  color: #f5f5f5;
-}
-
-.auth-box .sub {
-  font-size: 13px;
-  color: #888;
-  margin-bottom: 24px;
-}
-
-.auth-field {
-  width: 100%;
-  padding: 12px 16px;
-  background: #1a1a1a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  color: #f5f5f5;
-  font-size: 14px;
-  font-family: inherit;
-  margin-bottom: 12px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.auth-field:focus {
-  border-color: #ff6f91;
-}
-
-.auth-error {
-  color: #ff6f91;
-  font-size: 12px;
-  min-height: 18px;
-  margin-top: 8px;
-}
-
-.auth-switch {
-  font-size: 12px;
-  color: #888;
-  margin-top: 12px;
-}
-
-.auth-switch span {
-  color: #ff6f91;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.auth-step {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.auth-user-email {
-  font-size: 14px;
-  color: #aaa;
-  text-align: left;
-  margin-bottom: 4px;
-}
-
-.auth-forgot-link {
-  font-size: 12px;
-  color: var(--accent);
-  text-decoration: none;
-  cursor: pointer;
-  align-self: flex-end;
-}
-
-.auth-back-link {
-  font-size: 12px;
-  color: var(--accent);
-  text-decoration: none;
-  cursor: pointer;
-  margin-top: 8px;
-  display: inline-block;
-}
-
-.auth-success {
-  color: #4ecdc4;
-  font-size: 13px;
-  margin-top: 8px;
-}
-
-/* ------------------------- AUTH PASSWORD TOGGLE ------------------------- */
-.password-field-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.password-field-wrapper .auth-field {
-  margin-bottom: 0;
-  padding-right: 44px;
-}
-
-.toggle-password-btn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-  padding: 4px;
-}
-
-.toggle-password-btn:hover {
-  color: #fff;
-}
-
-/* ------------------------- AUTH SUCCESS MESSAGE ------------------------- */
-.reg-success-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-  opacity: 0.9;
-}
-
-.reg-success-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 8px;
-}
-
-.reg-success-text {
-  font-size: 14px;
-  color: #aaa;
-  line-height: 1.6;
-}
-
-/* =========================== AUTH TABS ============================ */
-.auth-tabs {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-
-.auth-tab {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
-  color: #888;
-  font-family: inherit;
-  font-size: 12px;
-  padding: 6px 16px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-
-.auth-tab:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
-.auth-tab.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  font-weight: 600;
-}
-
-/* =========================== AUTH FORMS ============================ */
-.auth-form {
-  display: none;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.auth-form.active {
-  display: flex;
-}
-
-.auth-form .accent-btn {
-  margin-top: 4px;
-}
-
-.auth-hint {
-  font-size: 11px;
-  color: #777;
-  margin: 4px 0;
-}
-
-.auth-form .auth-success {
-  color: #4ecdc4;
-  font-size: 12px;
-  margin-top: 12px;
 }
 
 /* =========================== APP CONTAINER & LOADER ============================ */
@@ -302,7 +129,7 @@ body.modal-open {
   display: none;
 }
 
-/* ------------------------- LOADER ------------------------- */
+/* ------------------------- RAVLO LOADER ------------------------- */
 #ravlo-loader {
   position: fixed;
   inset: 0;
@@ -344,16 +171,56 @@ body.modal-open {
   animation: loader-slide 1.2s ease-in-out infinite;
 }
 
-@keyframes loader-slide {
-  0%   { transform: translateX(-100%); }
-  50%  { transform: translateX(150%);  }
-  100% { transform: translateX(300%);  }
-}
-
 .loader-label {
   font-size: 12px;
   color: #555;
   letter-spacing: 0.1em;
+}
+
+/* ------------------------- FULLPAGE LOADER (NEON DOTS) ------------------------- */
+.fullpage-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lds-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 8px);
+  grid-gap: 5px;
+  justify-content: center;
+  align-items: center;
+}
+
+.lds-grid div {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #4ECDC4);
+  box-shadow: 0 0 4px var(--accent, #4ECDC4);
+  animation: neonBlink 1.5s infinite ease-in-out;
+}
+
+.lds-grid div:nth-child(1) { animation-delay: 0.0s; animation-duration: 1.2s; }
+.lds-grid div:nth-child(2) { animation-delay: 0.3s; animation-duration: 1.4s; }
+.lds-grid div:nth-child(3) { animation-delay: 0.7s; animation-duration: 1.1s; }
+.lds-grid div:nth-child(4) { animation-delay: 0.1s; animation-duration: 1.3s; }
+.lds-grid div:nth-child(5) { animation-delay: 0.5s; animation-duration: 1.6s; }
+.lds-grid div:nth-child(6) { animation-delay: 0.2s; animation-duration: 1.2s; }
+.lds-grid div:nth-child(7) { animation-delay: 0.8s; animation-duration: 1.5s; }
+.lds-grid div:nth-child(8) { animation-delay: 0.4s; animation-duration: 1.3s; }
+.lds-grid div:nth-child(9) { animation-delay: 0.6s; animation-duration: 1.1s; }
+
+.lds-grid div:nth-child(1),
+.lds-grid div:nth-child(3),
+.lds-grid div:nth-child(7),
+.lds-grid div:nth-child(9) {
+  opacity: 0.35;
 }
 
 /* =========================== HEADER ============================ */
@@ -617,6 +484,15 @@ body.modal-open {
   margin-top: 2px;
 }
 
+.event-dot.completed {
+  background-color: #555 !important;
+  opacity: 0.5;
+}
+
+.event-dot.invited {
+  animation: subtleBlink 2.5s infinite ease-in-out;
+}
+
 .holiday-label {
   font-size: 9px;
   color: var(--accent);
@@ -703,6 +579,522 @@ body.modal-open {
   font-weight: 400;
 }
 
+/* =========================== HAMBURGER BUTTON ============================ */
+.hamburger-btn {
+  position: fixed;
+  top: 41px;
+  left: 44px;
+  z-index: 10;
+  width: 18px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 0;
+  color: var(--text);
+  transition: color 0.2s ease;
+}
+
+.hamburger-line {
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease;
+}
+
+.hamburger-btn.open .hamburger-line:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.hamburger-btn.open .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-btn.open .hamburger-line:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* =========================== SIDEBAR ============================ */
+
+/* ------------------------- SIDEBAR OVERLAY ------------------------- */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 2;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.sidebar-overlay.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ------------------------- SIDEBAR PANEL ------------------------- */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 300px;
+  max-width: 85vw;
+  height: 100vh;
+  background: rgba(18, 18, 18, 0.85);
+  backdrop-filter: blur(24px);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 3;
+  transform: translateX(-100%);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px 20px;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.4);
+  will-change: transform;
+}
+
+.sidebar-close-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 22px 166px 12px 16px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  color: #bbb;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  user-select: none;
+}
+
+.sidebar-close-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  margin-top: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+  scrollbar-gutter: stable;
+  direction: rtl;
+}
+
+.sidebar-nav > * {
+  direction: ltr;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: var(--accent);
+  border-radius: 4px;
+}
+
+.sidebar-separator {
+  height: 1px;
+  min-height: 1px;
+  background-color: rgba(255, 255, 255, 0.15);
+  margin: 12px 0;
+  width: 100%;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  color: #bbb;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  text-align: left;
+  width: 100%;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.sidebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.login-item:hover {
+  color: #6bcbff;
+  background: rgba(100, 180, 255, 0.1);
+}
+
+.logout-item:hover {
+  color: #ff6b6b;
+  background: rgba(255, 90, 90, 0.1);
+}
+
+.sidebar-tools-label {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.sidebar-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.sidebar-item.disabled .sidebar-icon img {
+  filter: grayscale(100%) opacity(0.5);
+}
+
+.sidebar-item.coming-soon {
+  position: relative;
+  overflow: visible;
+}
+
+.sidebar-item .coming-soon-tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 111, 145, 0.15);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 111, 145, 0.2);
+}
+
+.sidebar-item.coming-soon:hover .coming-soon-tooltip {
+  opacity: 1;
+}
+
+.notification-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 4px;
+  height: 4px;
+  background: #ff6b6b;
+  border-radius: 50%;
+  display: none;
+  z-index: 2;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.sidebar-today-list {
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-today-item {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sidebar-today-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-today-item .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  justify-self: center;
+}
+
+.sidebar-today-item .title {
+  font-size: 13px;
+  color: #bbb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-dashboard-text {
+  display: inline-block;
+  transform: translateY(0px);
+}
+
+/* =========================== AUTH OVERLAY ============================ */
+#auth-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  z-index: 10;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 40px 32px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.auth-box img {
+  height: 44px;
+  margin-bottom: 16px;
+}
+
+.auth-box h2 {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 4px;
+  color: #f5f5f5;
+}
+
+.auth-box .sub {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 24px;
+}
+
+/* ------------------------- AUTH TABS ------------------------- */
+.auth-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.auth-tab {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  color: #888;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.auth-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.auth-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ------------------------- AUTH FORMS ------------------------- */
+.auth-form {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-form.active {
+  display: flex;
+}
+
+.auth-form .accent-btn {
+  margin-top: 4px;
+}
+
+.auth-form .auth-success {
+  color: #4ecdc4;
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+.auth-hint {
+  font-size: 11px;
+  color: #777;
+  margin: 4px 0;
+}
+
+.auth-field {
+  width: 100%;
+  padding: 12px 16px;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: #f5f5f5;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.auth-field:focus {
+  border-color: #ff6f91;
+}
+
+.auth-error {
+  color: #ff6f91;
+  font-size: 12px;
+  min-height: 18px;
+  margin-top: 8px;
+}
+
+.auth-switch {
+  font-size: 12px;
+  color: #888;
+  margin-top: 12px;
+}
+
+.auth-switch span {
+  color: #ff6f91;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.auth-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-user-email {
+  font-size: 14px;
+  color: #aaa;
+  text-align: left;
+  margin-bottom: 4px;
+}
+
+.auth-forgot-link {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.auth-back-link {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+.auth-success {
+  color: #4ecdc4;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/* ------------------------- AUTH PASSWORD TOGGLE ------------------------- */
+.password-field-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.password-field-wrapper .auth-field {
+  margin-bottom: 0;
+  padding-right: 44px;
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  padding: 4px;
+}
+
+.toggle-password-btn:hover {
+  color: #fff;
+}
+
+/* ------------------------- AUTH SUCCESS MESSAGE ------------------------- */
+.reg-success-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+
+.reg-success-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.reg-success-text {
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1.6;
+}
+
 /* =========================== UNIFIED GLASS MODALS ============================ */
 .modal {
   display: none;
@@ -730,11 +1122,6 @@ body.modal-open {
   scrollbar-color: var(--accent) transparent;
   animation: modalIn 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-}
-
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.92) translateY(12px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .modal-content::-webkit-scrollbar {
@@ -865,6 +1252,146 @@ body.modal-open {
   border-color: var(--accent);
 }
 
+/* ------------------------- SMART RECURRENCE RADIO BUTTONS ------------------------- */
+#smart-options {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.smart-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #ccc;
+  cursor: pointer;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.smart-radio input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  background-image:
+    radial-gradient(circle, #555 40%, transparent 65%),
+    radial-gradient(circle, #555 40%, transparent 65%),
+    radial-gradient(circle, #555 40%, transparent 65%),
+    radial-gradient(circle, #555 40%, transparent 65%),
+    radial-gradient(circle, #555 40%, transparent 65%),
+    radial-gradient(circle, #555 40%, transparent 65%),
+    radial-gradient(circle, #555 40%, transparent 65%),
+    radial-gradient(circle, #555 40%, transparent 65%),
+    radial-gradient(circle, #555 40%, transparent 65%);
+  background-size: 4px 4px;
+  background-position:
+    3px 3px, 9.5px 3px, 16px 3px,
+    3px 9.5px, 9.5px 9.5px, 16px 9.5px,
+    3px 16px, 9.5px 16px, 16px 16px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.smart-radio input[type="radio"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, var(--accent) 40%, transparent 65%),
+    radial-gradient(circle, var(--accent) 40%, transparent 65%),
+    radial-gradient(circle, var(--accent) 40%, transparent 65%),
+    radial-gradient(circle, var(--accent) 40%, transparent 65%),
+    radial-gradient(circle, var(--accent) 40%, transparent 65%),
+    radial-gradient(circle, var(--accent) 40%, transparent 65%),
+    radial-gradient(circle, var(--accent) 40%, transparent 65%),
+    radial-gradient(circle, var(--accent) 40%, transparent 65%),
+    radial-gradient(circle, var(--accent) 40%, transparent 65%);
+  background-size: inherit;
+  background-position: inherit;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.smart-radio input[type="radio"]:checked::before {
+  opacity: 1;
+}
+
+/* ------------------------- RECURRENCE INLINE ROW ------------------------- */
+.interval-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rec-label,
+.rec-unit {
+  font-size: 14px;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.rec-interval-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.interval-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #888;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 300;
+  cursor: pointer;
+  transition: 0.2s;
+  line-height: 1;
+  user-select: none;
+}
+
+.interval-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.interval-btn:active {
+  transform: scale(0.95);
+}
+
+.interval-display {
+  display: inline-block;
+  min-width: 24px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+}
+
 /* ------------------------- DAY DETAIL MODAL ------------------------- */
 #day-events-list {
   list-style: none;
@@ -974,6 +1501,63 @@ body.modal-open {
   text-align: center;
 }
 
+/* ------------------------- NEW MODALS (INVITE, LOCATION, CHECKLIST) ------------------------- */
+#invite-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+#invite-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  color: #ccc;
+}
+
+#invite-list li .remove-invite {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#checklist-modal-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+#checklist-modal-items .checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+#checklist-modal-items .checklist-item span[contenteditable] {
+  flex: 1;
+  color: #ccc;
+  font-size: 13px;
+  outline: none;
+}
+
+#checklist-modal-items .checklist-item button {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 14px;
+}
+
 /* =========================== ACCENT BUTTON ============================ */
 .accent-btn {
   background: var(--accent);
@@ -997,6 +1581,38 @@ body.modal-open {
 
 .accent-btn:active {
   transform: scale(0.98);
+}
+
+/* ------------------------- GENERAL SMALL ACTION BUTTONS ------------------------- */
+.btn-accent,
+.btn-ghost {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.btn-accent:hover,
+.btn-ghost:hover {
+  opacity: 0.85;
+  filter: brightness(1.1);
+}
+
+.btn-accent:active,
+.btn-ghost:active {
+  transform: scale(0.97);
 }
 
 /* =========================== EVENT TYPE TOGGLE ============================ */
@@ -1045,18 +1661,13 @@ body.modal-open {
               width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* =========================== NEON CHECKBOX ============================ */
-@keyframes pulseNeon {
-  0%, 100% { opacity: 0; }
-  50% { opacity: 0.75; }
-}
-
+/* =========================== NEON CHECKBOX (BASE 20px) ============================ */
 .neon-checkbox {
   appearance: none;
   -webkit-appearance: none;
   position: relative;
-  width: 20px;  /* ← کوچک‌تر */
-  height: 20px; /* ← کوچک‌تر */
+  width: 20px;
+  height: 20px;
   margin: 0;
   border: none;
   outline: none;
@@ -1077,8 +1688,9 @@ body.modal-open {
   background-repeat: no-repeat;
   cursor: pointer;
   flex-shrink: 0;
-  transform: translateY(0);  /* ← حذف translateY(-1px) */
+  transform: translateY(0);
 }
+
 /* =========================== TAG SECTION & PANEL ============================ */
 .tag-section {
   margin-bottom: 16px;
@@ -1214,6 +1826,41 @@ body.modal-open {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+/* =========================== ICON GRID (ICON PICKER) ============================ */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+  justify-items: center;
+}
+
+.icon-item {
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.icon-item.selected {
+  border-color: var(--accent);
+  background: rgba(255, 111, 145, 0.1);
+}
+
+.icon-item svg {
+  width: 28px;
+  height: 28px;
 }
 
 /* =========================== CALENDAR TRIGGER (GREGORIAN) ============================ */
@@ -1490,47 +2137,7 @@ body.modal-open {
   transform: scale(0.98);
 }
 
-/* =========================== YEAR PANEL (SHARED) ============================ */
-.picker-year-panel {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: 8px 0;
-  max-height: 240px;
-  overflow-y: auto;
-  background: transparent;
-}
-
-.py-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid transparent;
-  color: #aaa;
-  font-family: 'Kalameh', sans-serif;
-  font-size: 13px;
-  padding: 8px 4px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  text-align: center;
-}
-
-.py-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-.py-btn.selected {
-  background: var(--accent);
-  color: #fff;
-  font-weight: 400;
-  border-color: var(--accent);
-}
-
-.py-btn.current-year {
-  border-color: var(--accent);
-}
-
-/* =========================== SEPARATE MONTH / YEAR PICKER ============================ */
+/* ------------------------- SEPARATE MONTH / YEAR PICKER ------------------------- */
 .picker-month-year {
   display: flex;
   align-items: center;
@@ -1582,11 +2189,6 @@ body.modal-open {
   display: none;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
 .picker-month-popup.open,
 .picker-year-popup.open {
   display: block;
@@ -1631,7 +2233,47 @@ body.modal-open {
   padding: 4px 0;
 }
 
-/* =========================== DESCRIPTION & CHECKLIST ============================ */
+/* =========================== YEAR PANEL (SHARED) ============================ */
+.picker-year-panel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 8px 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: transparent;
+}
+
+.py-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
+  color: #aaa;
+  font-family: 'Kalameh', sans-serif;
+  font-size: 13px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  text-align: center;
+}
+
+.py-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.py-btn.selected {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 400;
+  border-color: var(--accent);
+}
+
+.py-btn.current-year {
+  border-color: var(--accent);
+}
+
+/* =========================== DESCRIPTION & TEXTAREA ============================ */
 #event-description {
   background: #1a1a1a;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1662,11 +2304,23 @@ body.modal-open {
   min-height: 70px;
 }
 
-/* ------------------------- TEXTAREA BUTTONS (CHECKLIST, LOCATION, INVITE) ------------------------- */
-.checklist-toggle-btn {
+/* =========================== TEXTAREA BUTTONS ============================ */
+.textarea-actions {
   position: absolute;
   bottom: 16px;
   right: 8px;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 8px;
+  z-index: 2;
+}
+
+/* Individual button base styles inside textarea */
+.checklist-toggle-btn,
+.location-toggle-btn,
+.invite-toggle-btn,
+.color-toggle-btn,
+.icon-toggle-btn {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
@@ -1681,76 +2335,81 @@ body.modal-open {
   z-index: 2;
 }
 
-.checklist-toggle-btn:hover {
+.checklist-toggle-btn:hover,
+.location-toggle-btn:hover,
+.invite-toggle-btn:hover,
+.color-toggle-btn:hover,
+.icon-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   border-color: var(--accent);
 }
 
-.checklist-toggle-btn.active {
-  background: rgba(255, 111, 145, 0.15);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.location-toggle-btn {
-  position: absolute;
-  bottom: 16px;
-  right: 44px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: #888;
-  width: 28px;
-  height: 28px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  z-index: 2;
-}
-
+.checklist-toggle-btn.active,
 .location-toggle-btn.active,
-.location-toggle-btn:hover {
-  background: rgba(255, 111, 145, 0.15);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.invite-toggle-btn {
-  position: absolute;
-  bottom: 16px;
-  right: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: #888;
-  width: 28px;
-  height: 28px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  z-index: 2;
-}
-
 .invite-toggle-btn.active,
-.invite-toggle-btn:hover {
+.color-toggle-btn.active,
+.icon-toggle-btn.active {
   background: rgba(255, 111, 145, 0.15);
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.invite-toggle-btn svg {
+.checklist-toggle-btn svg,
+.location-toggle-btn svg,
+.invite-toggle-btn svg,
+.color-toggle-btn svg,
+.icon-toggle-btn svg {
   display: block;
 }
 
-/* ------------------------- INLINE CHECKLIST ------------------------- */
+/* Default positions when all visible */
+.checklist-toggle-btn { right: 152px; }
+.location-toggle-btn  { right: 116px; }
+.invite-toggle-btn    { right: 80px;  }
+.color-toggle-btn     { right: 44px;  }
+.icon-toggle-btn      { right: 8px;   }
+
+/* Individual position overrides within textarea-wrapper */
+.textarea-wrapper .icon-toggle-btn {
+  position: absolute;
+  bottom: 16px;
+  right: 8px;
+}
+
+.textarea-wrapper .icon-toggle-btn.active,
+.textarea-wrapper .icon-toggle-btn:hover {
+  background: rgba(255, 111, 145, 0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Task tab adjustments: hide invite & location, reposition remaining */
+#textarea-wrapper.task-tab-active .invite-toggle-btn,
+#textarea-wrapper.task-tab-active .location-toggle-btn {
+  display: none !important;
+}
+
+#textarea-wrapper.task-tab-active .icon-toggle-btn {
+  right: 8px;
+}
+
+#textarea-wrapper.task-tab-active .color-toggle-btn {
+  right: 44px;
+}
+
+#textarea-wrapper.task-tab-active .checklist-toggle-btn {
+  right: 80px;
+}
+
+/* =========================== INLINE CHECKLIST EDITOR ============================ */
 .checklist-inline-editor {
   display: none;
-  margin-top: 4px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 #checklist-inline-items {
@@ -1760,19 +2419,27 @@ body.modal-open {
   margin-bottom: 8px;
 }
 
+.checklist-inline-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
 .checklist-inline-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 4px 0;
+  min-height: 28px;
   background: rgba(255, 255, 255, 0.03);
-  padding: 6px 8px;
   border-radius: 6px;
-  min-width: 0;
 }
 
 .checklist-inline-row .checklist-text {
   flex: 1 1 auto;
-  min-width: 0;
+  min-width: 50px;
   word-break: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
@@ -1783,6 +2450,12 @@ body.modal-open {
   outline: none;
   font-family: inherit;
   line-height: 1.4;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.checklist-inline-row .checklist-text:focus {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .checklist-inline-row .add-subtask-btn,
@@ -1798,14 +2471,69 @@ body.modal-open {
 }
 
 .checklist-inline-row .neon-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background-color: transparent;
   flex-shrink: 0;
-  margin-right: 4px;
+  cursor: pointer;
+  --c-base: #555;
+  --c-on: var(--accent, #ff6f91);
+  --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
+  --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
+  background-image:
+    var(--base), var(--base), var(--base),
+    var(--base), var(--base), var(--base),
+    var(--base), var(--base), var(--base);
+  background-size: 3.5px 3.5px;
+  background-position:
+    2.5px 2.5px, 8px 2.5px, 13.5px 2.5px,
+    2.5px 8px, 8px 8px, 13.5px 8px,
+    2.5px 13.5px, 8px 13.5px, 13.5px 13.5px;
+  background-repeat: no-repeat;
 }
 
-.subtask-row {
-  margin-left: 28px;
-  border-left: 2px solid rgba(255, 255, 255, 0.06);
-  padding-left: 8px;
+.checklist-inline-row .neon-checkbox::before,
+.checklist-inline-row .neon-checkbox::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    var(--on), var(--on), var(--on),
+    var(--on), var(--on), var(--on),
+    var(--on), var(--on), var(--on);
+  background-size: inherit;
+  background-position: inherit;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0;
+  filter: drop-shadow(0 0 2px var(--c-on));
+}
+
+.checklist-inline-row .neon-checkbox::before {
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.checklist-inline-row .neon-checkbox:checked::before {
+  opacity: 1;
+}
+
+.checklist-inline-row .neon-checkbox:checked::after {
+  animation: pulseNeon 1.5s infinite ease-in-out;
+  opacity: 0.75;
+}
+
+.checklist-inline-row .neon-checkbox:hover:not(:checked)::after {
+  animation: pulseNeon 1.5s infinite ease-in-out;
 }
 
 .checklist-inline-row .delete-item-btn {
@@ -1817,32 +2545,13 @@ body.modal-open {
   padding: 2px 4px;
   border-radius: 4px;
   transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .checklist-inline-row .delete-item-btn:hover {
   color: #ff6b6b;
   background: rgba(255, 255, 255, 0.08);
-}
-
-.checklist-new-item-input {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: #ccc;
-  font-size: 13px;
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.checklist-new-item-input::placeholder {
-  color: #555;
-}
-
-.checklist-new-item-input:focus {
-  border-color: var(--accent);
 }
 
 .add-subtask-btn {
@@ -1869,7 +2578,103 @@ body.modal-open {
   border-color: var(--accent);
 }
 
-/* ------------------------- LOCATION SECTION (HIDDEN) ------------------------- */
+.checklist-inline-row .add-subtask-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 16px;
+  line-height: 1;
+  transition: color 0.2s;
+  width: auto;
+  height: auto;
+}
+
+.checklist-inline-row .add-subtask-btn:hover {
+  color: var(--accent);
+  background: none;
+  border: none;
+}
+
+.subtask-row {
+  margin-left: 28px;
+  border-left: 2px solid rgba(255, 255, 255, 0.06);
+  padding-left: 8px;
+}
+
+.checklist-inline-row.subtask-row {
+  padding-left: 20px;
+}
+
+.checklist-inline-row.subtask-row .checklist-text {
+  font-size: 12px;
+  color: var(--text-secondary, #aaa);
+}
+
+.checklist-new-item-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #ccc;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.checklist-new-item-input::placeholder {
+  color: #555;
+}
+
+.checklist-new-item-input:focus {
+  border-color: var(--accent);
+}
+
+.checklist-inline-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.checklist-inline-add-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--text-primary, #ccc);
+  font-size: 13px;
+  outline: none;
+}
+
+.checklist-inline-add-input:focus {
+  border-color: var(--accent);
+}
+
+.checklist-inline-add-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  padding: 4px 12px;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.checklist-inline-add-btn:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+/* =========================== LOCATION SECTION ============================ */
 .location-section-hidden {
   display: none;
   margin-bottom: 12px;
@@ -1898,636 +2703,6 @@ body.modal-open {
   border-radius: 8px;
   border: 1px solid var(--border);
   background: #1a1a1a;
-}
-
-/* ------------------------- LEGACY CHECKLIST (HIDDEN) ------------------------- */
-.checklist-section {
-  display: none;
-  margin-bottom: 12px;
-}
-
-.checklist-section-label {
-  display: block;
-  margin-bottom: 6px;
-  color: #aaa;
-  font-size: 13px;
-}
-
-.checklist-add-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.checklist-add-btn {
-  width: auto;
-  padding: 10px 16px;
-  white-space: nowrap;
-}
-
-/* =========================== NEW MODALS (INVITE, LOCATION, CHECKLIST) ============================ */
-#invite-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 12px 0;
-  max-height: 160px;
-  overflow-y: auto;
-}
-
-#invite-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 13px;
-  color: #ccc;
-}
-
-#invite-list li .remove-invite {
-  background: none;
-  border: none;
-  color: #ff6b6b;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-#checklist-modal-items {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-#checklist-modal-items .checklist-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-#checklist-modal-items .checklist-item span[contenteditable] {
-  flex: 1;
-  color: #ccc;
-  font-size: 13px;
-  outline: none;
-}
-
-#checklist-modal-items .checklist-item button {
-  background: none;
-  border: none;
-  color: #ff6b6b;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-/* =========================== HAMBURGER BUTTON ============================ */
-.hamburger-btn {
-  position: fixed;
-  top: 41px;
-  left: 44px;
-  z-index: 10;
-  width: 18px;
-  height: 24px;
-  background: transparent;
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  cursor: pointer;
-  padding: 0;
-  color: var(--text);
-  transition: color 0.2s ease;
-}
-
-.hamburger-line {
-  width: 18px;
-  height: 2px;
-  background: currentColor;
-  border-radius: 2px;
-  transform-origin: center;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.2s ease;
-}
-
-.hamburger-btn.open .hamburger-line:nth-child(1) {
-  transform: translateY(6px) rotate(45deg);
-}
-
-.hamburger-btn.open .hamburger-line:nth-child(2) {
-  opacity: 0;
-}
-
-.hamburger-btn.open .hamburger-line:nth-child(3) {
-  transform: translateY(-6px) rotate(-45deg);
-}
-
-/* =========================== SIDEBAR ============================ */
-
-/* ------------------------- SIDEBAR OVERLAY ------------------------- */
-.sidebar-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: 2;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-.sidebar-overlay.open {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-/* ------------------------- SIDEBAR PANEL ------------------------- */
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 300px;
-  max-width: 85vw;
-  height: 100vh;
-  background: rgba(18, 18, 18, 0.85);
-  backdrop-filter: blur(24px);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  z-index: 3;
-  transform: translateX(-100%);
-  display: flex;
-  flex-direction: column;
-  padding: 24px 16px 20px;
-  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.4);
-  will-change: transform;
-}
-
-.sidebar-close-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 22px 166px 12px 16px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-  background: transparent;
-  border: none;
-  color: #bbb;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  user-select: none;
-}
-
-.sidebar-close-row:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-}
-
-.sidebar-nav {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  margin-top: 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--accent) transparent;
-  scrollbar-gutter: stable;
-  direction: rtl;
-}
-
-.sidebar-nav > * {
-  direction: ltr;
-}
-
-.sidebar-nav::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sidebar-nav::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb {
-  background-color: var(--accent);
-  border-radius: 4px;
-}
-
-.sidebar-separator {
-  height: 1px;
-  min-height: 1px;
-  background-color: rgba(255, 255, 255, 0.15);
-  margin: 12px 0;
-  width: 100%;
-}
-
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-radius: 12px;
-  background: transparent;
-  border: none;
-  color: #bbb;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  text-align: left;
-  width: 100%;
-}
-
-.sidebar-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-}
-
-.sidebar-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  opacity: 0.8;
-}
-
-.login-item:hover {
-  color: #6bcbff;
-  background: rgba(100, 180, 255, 0.1);
-}
-
-.logout-item:hover {
-  color: #ff6b6b;
-  background: rgba(255, 90, 90, 0.1);
-}
-
-.sidebar-tools-label {
-  padding: 8px 16px;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #555;
-  text-transform: uppercase;
-}
-
-.sidebar-item.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.sidebar-item.disabled .sidebar-icon img {
-  filter: grayscale(100%) opacity(0.5);
-}
-
-.sidebar-item.coming-soon {
-  position: relative;
-  overflow: visible;
-}
-
-.sidebar-item .coming-soon-tooltip {
-  position: absolute;
-  left: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255, 111, 145, 0.15);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 6px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-  z-index: 10;
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 111, 145, 0.2);
-}
-
-.sidebar-item.coming-soon:hover .coming-soon-tooltip {
-  opacity: 1;
-}
-
-.notification-dot {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 4px;
-  height: 4px;
-  background: #ff6b6b;
-  border-radius: 50%;
-  display: none;
-  z-index: 2;
-  animation: blink 1.2s ease-in-out infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.2; }
-}
-
-.sidebar-today-list {
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-today-item {
-  display: grid;
-  grid-template-columns: 24px 1fr;
-  gap: 14px;
-  align-items: center;
-  padding: 6px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.sidebar-today-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.sidebar-today-item .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  justify-self: center;
-}
-
-.sidebar-today-item .title {
-  font-size: 13px;
-  color: #bbb;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebar-dashboard-text {
-  display: inline-block;
-  transform: translateY(0px);
-}
-
-/* =========================== LINKS & AVATAR ============================ */
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-a:hover {
-  opacity: 0.8;
-}
-
-.avatar-initial {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: var(--accent);
-  color: white;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: bold;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-/* =========================== VERTICAL DAY TIMELINE ============================ */
-.day-view-timeline {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  background: #0d0d0d;
-}
-
-.time-labels {
-  width: 60px;
-  flex-shrink: 0;
-  background: #111;
-  border-right: 1px solid var(--border);
-}
-
-.time-label {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  font-size: 11px;
-  color: #666;
-  font-weight: 400;
-  padding-top: 2px;
-  box-sizing: border-box;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.time-slots {
-  flex: 1;
-  position: relative;
-  padding: 0;
-  box-sizing: border-box;
-  cursor: cell;
-}
-
-.time-slot-event {
-  position: absolute;
-  background: rgba(255, 111, 145, 0.15);
-  border-radius: 6px;
-  padding: 6px 15px;
-  font-size: 12px;
-  color: #f5f5f5;
-  overflow: hidden;
-  box-sizing: border-box;
-  cursor: pointer;
-  transition: background 0.2s;
-  z-index: 2;
-}
-
-.time-slot-event:hover {
-  background: rgba(255, 111, 145, 0.25);
-}
-
-.time-slot-event .event-title {
-  font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #1a1a1a;
-  background: rgba(255, 255, 255, 0.85);
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  line-height: 1.3;
-}
-
-.current-time-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--accent);
-  z-index: 3;
-  pointer-events: none;
-}
-
-.current-time-line::before {
-  content: '';
-  position: absolute;
-  left: -5px;
-  top: -4px;
-  width: 9px;
-  height: 9px;
-  background: var(--accent);
-  border-radius: 50%;
-}
-
-/* =========================== RECURRENCE INLINE ROW ============================ */
-.interval-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.rec-label,
-.rec-unit {
-  font-size: 14px;
-  color: #aaa;
-  white-space: nowrap;
-}
-
-.rec-interval-spinner {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.interval-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #888;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 300;
-  cursor: pointer;
-  transition: 0.2s;
-  line-height: 1;
-  user-select: none;
-}
-
-.interval-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-.interval-btn:active {
-  transform: scale(0.95);
-}
-
-.interval-display {
-  display: inline-block;
-  min-width: 24px;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 400;
-  color: var(--text);
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  line-height: 1;
-}
-
-/* =========================== SMART RECURRENCE RADIO BUTTONS ============================ */
-#smart-options {
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-  width: 100%;
-}
-
-.smart-radio {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #ccc;
-  cursor: pointer;
-  white-space: nowrap;
-  margin: 0;
-}
-
-.smart-radio input[type="radio"] {
-  appearance: none;
-  -webkit-appearance: none;
-  position: relative;
-  width: 24px;
-  height: 24px;
-  margin: 0;
-  border: none;
-  outline: none;
-  background-color: transparent;
-  background-image:
-    radial-gradient(circle, #555 40%, transparent 65%),
-    radial-gradient(circle, #555 40%, transparent 65%),
-    radial-gradient(circle, #555 40%, transparent 65%),
-    radial-gradient(circle, #555 40%, transparent 65%),
-    radial-gradient(circle, #555 40%, transparent 65%),
-    radial-gradient(circle, #555 40%, transparent 65%),
-    radial-gradient(circle, #555 40%, transparent 65%),
-    radial-gradient(circle, #555 40%, transparent 65%),
-    radial-gradient(circle, #555 40%, transparent 65%);
-  background-size: 4px 4px;
-  background-position:
-    3px 3px, 9.5px 3px, 16px 3px,
-    3px 9.5px, 9.5px 9.5px, 16px 9.5px,
-    3px 16px, 9.5px 16px, 16px 16px;
-  background-repeat: no-repeat;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.smart-radio input[type="radio"]::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(circle, var(--accent) 40%, transparent 65%),
-    radial-gradient(circle, var(--accent) 40%, transparent 65%),
-    radial-gradient(circle, var(--accent) 40%, transparent 65%),
-    radial-gradient(circle, var(--accent) 40%, transparent 65%),
-    radial-gradient(circle, var(--accent) 40%, transparent 65%),
-    radial-gradient(circle, var(--accent) 40%, transparent 65%),
-    radial-gradient(circle, var(--accent) 40%, transparent 65%),
-    radial-gradient(circle, var(--accent) 40%, transparent 65%),
-    radial-gradient(circle, var(--accent) 40%, transparent 65%);
-  background-size: inherit;
-  background-position: inherit;
-  background-repeat: no-repeat;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.smart-radio input[type="radio"]:checked::before {
-  opacity: 1;
 }
 
 /* ------------------------- LOCATION SUGGESTIONS DROPDOWN ------------------------- */
@@ -2564,18 +2739,231 @@ a:hover {
   margin-bottom: 12px;
 }
 
-/* ------------------------- CUSTOM ACCENT MAP PIN ------------------------- */
-.custom-pin {
-  color: var(--accent);
-  background: none;
-  border: none;
+/* =========================== LEGACY CHECKLIST (HIDDEN) ============================ */
+.checklist-section {
+  display: none;
+  margin-bottom: 12px;
 }
 
-.time-slot-event {
-  position: relative;
+.checklist-section-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #aaa;
+  font-size: 13px;
+}
+
+.checklist-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.checklist-add-btn {
+  width: auto;
+  padding: 10px 16px;
+  white-space: nowrap;
+}
+
+/* =========================== VERTICAL DAY TIMELINE ============================ */
+.day-timeline-wrapper {
+  display: flex;
+  flex: 1;
+  width: 100%;
+}
+
+.day-view-timeline {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   overflow: hidden;
+  background: #0d0d0d;
 }
 
+.day-view-timeline .time-labels {
+  width: 60px;
+  flex-shrink: 0;
+  background: #111;
+  border-right: 1px solid var(--border);
+}
+
+.day-view-timeline .time-label {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  font-size: 11px;
+  color: #666;
+  font-weight: 400;
+  padding-top: 2px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.day-view-timeline .time-slots {
+  flex: 1;
+  position: relative;
+  padding: 0;
+  box-sizing: border-box;
+  cursor: cell;
+}
+
+.time-labels {
+  width: 60px;
+  flex-shrink: 0;
+  background: #111;
+  border-right: 1px solid var(--border);
+}
+
+.time-label {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  font-size: 11px;
+  color: #666;
+  font-weight: 400;
+  padding-top: 2px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.time-slots {
+  flex: 1;
+  position: relative;
+  padding: 0;
+  box-sizing: border-box;
+  cursor: cell;
+}
+
+/* ------------------------- ALL-DAY EVENTS ROW ------------------------- */
+.all-day-events-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+  border-radius: 12px 12px 0 0;
+  min-height: 40px;
+  margin-bottom: 0;
+}
+
+.all-day-events-row:empty {
+  display: none;
+}
+
+.all-day-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: var(--accent);
+  border: 1px solid var(--accent);
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.all-day-capsule:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  opacity: 0.9;
+}
+
+.all-day-capsule-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.all-day-capsule-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+}
+
+.all-day-capsule-title {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------- TIME SLOT EVENTS ------------------------- */
+.time-slot-event {
+  position: absolute;
+  background: rgba(255, 111, 145, 0.15);
+  border-radius: 6px;
+  padding: 6px 15px;
+  font-size: 12px;
+  color: #f5f5f5;
+  overflow: hidden;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 2;
+}
+
+.time-slot-event:hover {
+  background: rgba(255, 111, 145, 0.25);
+}
+
+.time-slot-event .event-title {
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #1a1a1a;
+  background: rgba(255, 255, 255, 0.85);
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.3;
+  position: relative;
+  z-index: 2;
+}
+
+.time-slot-event.event-completed {
+  filter: grayscale(100%);
+  opacity: 0.6;
+}
+
+.time-slot-event.event-invited {
+  animation: subtleBlink 2.5s infinite ease-in-out;
+}
+
+.time-slot-event.event-invited:hover {
+  animation: none;
+  opacity: 1 !important;
+}
+
+.invited-badge {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  background: #666;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  z-index: 2;
+}
+
+/* ------------------------- EVENT MAP BACKGROUND ------------------------- */
 .event-map-bg {
   position: absolute;
   inset: 0;
@@ -2592,44 +2980,6 @@ a:hover {
   z-index: 1;
   pointer-events: none;
 }
-
-.time-slot-event .event-title {
-  position: relative;
-  z-index: 2;
-}
-
-.color-toggle-btn {
-  position: absolute;
-  bottom: 16px;
-  right: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: #888;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: 0.2s;
-  z-index: 2;
-}
-
-.color-toggle-btn.active,
-.color-toggle-btn:hover {
-  background: rgba(255, 111, 145, 0.15);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* ------------------------- TEXTAREA BUTTONS POSITION OVERRIDES ------------------------- */
-/* هر دکمه یک جای ثابت و غیرقابل تداخل */
-.icon-toggle-btn      { right: 8px;   }
-.color-toggle-btn     { right: 44px;  }
-.invite-toggle-btn    { right: 80px;  }
-.location-toggle-btn  { right: 116px; }
-.checklist-toggle-btn { right: 152px; }  /* از همه دورتر به چپ */
 
 /* ------------------------- EVENT ACTIONS ON TIMELINE ------------------------- */
 .event-actions {
@@ -2667,111 +3017,39 @@ a:hover {
   color: var(--accent);
 }
 
-/* ظرف دکمه‌های پایین textarea */
-.textarea-actions {
+/* ------------------------- CURRENT TIME LINE ------------------------- */
+.current-time-line {
   position: absolute;
-  bottom: 16px;
-  right: 8px;
-  display: flex;
-  flex-direction: row-reverse;  /* اولین دکمه‌ی توی HTML، سمت راست‌ترین می‌شه */
-  gap: 8px;
-  z-index: 2;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent);
+  z-index: 3;
+  pointer-events: none;
 }
 
-/* =========================== FOOTER ============================ */
-.footer {
-  padding: 30px 0;
-  display: flex;
-  justify-content: center;
-  border-top: 1px solid var(--border);
-}
-
-.footer-signature {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  opacity: 0.7;
-  transition: opacity 0.3s ease;
-}
-
-.footer-signature:hover {
-  opacity: 1;
-}
-
-.crafted {
-  font-size: 10px;
-  color: #7a7a7a;
-  letter-spacing: 0.08em;
-}
-
-.signature {
-  height: 20px;
-  transform: translateY(-2px);
-  opacity: 0.85;
-  filter: brightness(0.9) contrast(1.05);
-}
-
-.footer-signature a {
-  display: contents;
-  text-decoration: none;
-  color: inherit;
-}
-
-/* =========================== FULLPAGE LOADER (NEON DOTS) ============================ */
-.fullpage-loader {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lds-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 8px);
-  grid-gap: 5px;
-  justify-content: center;
-  align-items: center;
-}
-
-.lds-grid div {
-  width: 8px;
-  height: 8px;
+.current-time-line::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 9px;
+  height: 9px;
+  background: var(--accent);
   border-radius: 50%;
-  background: var(--accent, #4ECDC4);
-  box-shadow: 0 0 4px var(--accent, #4ECDC4);
-  animation: neonBlink 1.5s infinite ease-in-out;
 }
 
-.lds-grid div:nth-child(1) { animation-delay: 0.0s; animation-duration: 1.2s; }
-.lds-grid div:nth-child(2) { animation-delay: 0.3s; animation-duration: 1.4s; }
-.lds-grid div:nth-child(3) { animation-delay: 0.7s; animation-duration: 1.1s; }
-.lds-grid div:nth-child(4) { animation-delay: 0.1s; animation-duration: 1.3s; }
-.lds-grid div:nth-child(5) { animation-delay: 0.5s; animation-duration: 1.6s; }
-.lds-grid div:nth-child(6) { animation-delay: 0.2s; animation-duration: 1.2s; }
-.lds-grid div:nth-child(7) { animation-delay: 0.8s; animation-duration: 1.5s; }
-.lds-grid div:nth-child(8) { animation-delay: 0.4s; animation-duration: 1.3s; }
-.lds-grid div:nth-child(9) { animation-delay: 0.6s; animation-duration: 1.1s; }
-
-.lds-grid div:nth-child(1),
-.lds-grid div:nth-child(3),
-.lds-grid div:nth-child(7),
-.lds-grid div:nth-child(9) {
-  opacity: 0.35;
+/* ------------------------- EVENT ICON IN DAY VIEW ------------------------- */
+.event-icon {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 4px;
 }
 
-@keyframes neonBlink {
-  0%, 100% {
-    opacity: 0.2;
-    box-shadow: 0 0 2px var(--accent, #4ECDC4);
-  }
-  50% {
-    opacity: 1;
-    box-shadow: 0 0 6px var(--accent, #4ECDC4);
-  }
+.event-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
 }
 
 /* =========================== EVENT DETAIL COMMON ELEMENTS ============================ */
@@ -2812,49 +3090,29 @@ a:hover {
   margin: 14px 0;
 }
 
-.detail-invitees-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.avatar-item {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+.detail-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: #fff;
-  font-weight: 600;
-  background-color: #4a4a4a;
-  cursor: default;
+  gap: 4px;
 }
 
-.avatar-tooltip {
-  position: absolute;
-  bottom: -22px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.85);
-  color: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-  z-index: 10;
+#event-detail-title {
+  margin: 0;
+  line-height: 1.2;
+  font-size: 20px;
 }
 
-.avatar-item:hover .avatar-tooltip {
-  opacity: 1;
+#detail-date-text,
+#detail-time-text,
+#detail-duration-paren {
+  transform: translate(1px, 1px);
 }
 
+#detail-description-text {
+  text-align: left;
+}
+
+/* ------------------------- DETAIL ACTIONS ROW ------------------------- */
 .detail-actions-row {
   display: flex;
   justify-content: center;
@@ -2881,6 +3139,50 @@ a:hover {
   color: #fff;
 }
 
+/* ------------------------- DETAIL TOP ACTIONS ------------------------- */
+.detail-top-actions {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1;
+}
+
+.detail-icon-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s;
+}
+
+.detail-icon-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ------------------------- DETAIL ICON ------------------------- */
+.detail-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0;
+  transform: translate(-2px, 2px);
+}
+
+.detail-icon svg {
+  width: 19px;
+  height: 19px;
+  stroke: currentColor;
+}
+
+/* ------------------------- DETAIL LOCATION ------------------------- */
 .detail-location {
   position: relative;
   margin-bottom: 20px;
@@ -2891,6 +3193,10 @@ a:hover {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--border);
+}
+
+#detail-location-map {
+  cursor: pointer;
 }
 
 .map-address-overlay {
@@ -2911,26 +3217,132 @@ a:hover {
   pointer-events: none;
 }
 
-#detail-description-text {
-  text-align: left;
+/* ------------------------- DETAIL CHECKLIST ------------------------- */
+.detail-checklist-container {
+  margin: 8px 0 12px 0;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.detail-header {
+.detail-checklist-header {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: var(--text-secondary, #aaa);
 }
 
-#event-detail-title {
+.detail-checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-checklist-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  min-height: 28px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.detail-checklist-row .neon-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px;
+  min-height: 24px;
   margin: 0;
-  line-height: 1.2;
-  font-size: 20px;
+  padding: 0;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  flex-shrink: 0;
+  cursor: pointer;
+  --c-base: #555;
+  --c-on: var(--accent, #ff6f91);
+  --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
+  --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
+  background-image:
+    var(--base), var(--base), var(--base),
+    var(--base), var(--base), var(--base),
+    var(--base), var(--base), var(--base);
+  background-size: 4px 4px;
+  background-position:
+    3px 3px, 9.5px 3px, 16px 3px,
+    3px 9.5px, 9.5px 9.5px, 16px 9.5px,
+    3px 16px, 9.5px 16px, 16px 16px;
+  background-repeat: no-repeat;
 }
 
-#detail-date-text,
-#detail-time-text,
-#detail-duration-paren {
-  transform: translate(1px, 1px);
+.detail-checklist-row .neon-checkbox::before,
+.detail-checklist-row .neon-checkbox::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    var(--on), var(--on), var(--on),
+    var(--on), var(--on), var(--on),
+    var(--on), var(--on), var(--on);
+  background-size: inherit;
+  background-position: inherit;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0;
+  filter: drop-shadow(0 0 2px var(--c-on));
+}
+
+.detail-checklist-row .neon-checkbox::before {
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.detail-checklist-row .neon-checkbox:checked::before {
+  opacity: 1;
+}
+
+.detail-checklist-row .neon-checkbox:checked::after {
+  animation: pulseNeon 1.5s infinite ease-in-out;
+  opacity: 0.75;
+}
+
+.detail-checklist-row .neon-checkbox:hover:not(:checked)::after {
+  animation: pulseNeon 1.5s infinite ease-in-out;
+}
+
+.detail-checklist-text {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-primary, #f5f5f5);
+  word-break: break-word;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1.4;
+}
+
+.detail-checklist-text:focus {
+  outline: 2px solid var(--accent);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.detail-checklist-subcontainer {
+  padding-left: 24px;
+}
+
+.detail-checklist-row.subtask-row {
+  padding-left: 20px;
+}
+
+.detail-checklist-row.subtask-row .detail-checklist-text {
+  font-size: 13px;
+  color: var(--text-secondary, #aaa);
 }
 
 /* =========================== ATTENDEES SECTION ============================ */
@@ -3026,758 +3438,293 @@ a:hover {
   color: #888;
 }
 
-/* ------------------------- DETAIL TOP ACTIONS ------------------------- */
-.detail-top-actions {
-  position: absolute;
-  top: 12px;
-  right: 16px;
+/* ------------------------- DETAIL INVITEES ROW ------------------------- */
+.detail-invitees-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 1;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
-.detail-icon-btn {
-  background: none;
-  border: none;
-  color: #aaa;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
+.avatar-item {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s, background 0.2s;
-}
-
-.detail-icon-btn:hover {
+  font-size: 14px;
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+  background-color: #4a4a4a;
+  cursor: default;
 }
 
-/* ------------------------- COMPLETED STATES ------------------------- */
-.time-slot-event.event-completed {
-  filter: grayscale(100%);
-  opacity: 0.6;
+.avatar-tooltip {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 10;
 }
 
-.event-dot.completed {
-  background-color: #555 !important;
-  opacity: 0.5;
+.avatar-item:hover .avatar-tooltip {
+  opacity: 1;
 }
 
-
-.ravlo-toast {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--accent);
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 8px; 
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    z-index: 2;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    animation: toastSlideDown 0.3s ease;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.toast-ring {
-    flex-shrink: 0;
-}
-
-@keyframes toastSlideDown {
-    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
-
-.invite-results { max-height: 200px; overflow-y: auto; margin: 8px 0; }
-.invite-user-card {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 12px; background: rgba(255,255,255,0.03);
-    border-radius: 6px; margin-bottom: 6px; font-size: 14px;
-}
-.invite-selected-list {
-    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
-}
-.invite-selected-item {
-    background: var(--accent); color: #fff;
-    padding: 4px 8px; border-radius: 12px;
-    display: flex; align-items: center; gap: 6px; font-size: 13px;
-}
-.invite-selected-item button {
-    background: none; border: none; color: #fff; cursor: pointer; font-size: 14px; line-height: 1;
-}
-
-/* انیمیشن چشمک زدن ملایم */
-@keyframes subtleBlink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-}
-
-/* نقطه‌های دعوت در نمای ماه */
-.event-dot.invited {
-    animation: subtleBlink 2.5s infinite ease-in-out;
-}
-
-/* کارت‌های دعوت در نمای روز */
-.time-slot-event.event-invited {
-    animation: subtleBlink 2.5s infinite ease-in-out;
-    /* حاشیه یا پس‌زمینه را رنگ اصلی خودش بگذار، فقط opacity تغییر کند */
-}
-
-/* توقف چشمک زدن هنگام هاور در نمای روز */
-.time-slot-event.event-invited:hover {
-    animation: none;
-    opacity: 1 !important;
-}
-.invited-badge {
-    position: absolute;
-    top: 4px;
-    right: 8px;
-    background: #666;
-    color: white;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 8px;
-    z-index: 2;
-}
-
+/* =========================== INVITATION RESPONSE ============================ */
 .invitation-response-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 8px;
-    justify-content: center;
-}
-#invitation-response-message {
-    color: var(--text-light);
-    font-size: 14px;
-    margin-bottom: 4px;
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  justify-content: center;
 }
 
-.ghost-btn {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.2);
-    color: var(--text-light, #aaa);
-    padding: 8px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-}
-.ghost-btn:hover {
-    background: rgba(255,255,255,0.05);
-    border-color: var(--accent, #ff6f91);
-    color: var(--accent, #ff6f91);
+#invitation-response-message {
+  color: var(--text-light, #aaa);
+  font-size: 14px;
+  margin-bottom: 4px;
 }
 
 .invitation-detail-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
 }
+
 .invitation-detail-header .detail-icon,
 .invitation-detail-header .detail-color-dot {
-    width: 24px;
-    height: 24px;
-    font-size: 20px;
+  width: 24px;
+  height: 24px;
+  font-size: 20px;
 }
+
 .invitation-detail-header h3 {
-    margin: 0;
-    font-size: 18px;
+  margin: 0;
+  font-size: 18px;
+}
+
+.ghost-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-light, #aaa);
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent, #ff6f91);
+  color: var(--accent, #ff6f91);
 }
 
 .postpone-options {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
 }
+
 .postpone-option {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #fff;
-    padding: 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    text-align: center;
-    transition: 0.2s;
-}
-.postpone-option:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-}
-/* =========================== TASK TAB BUTTON LAYOUT ============================ */
-/* دکمه‌های دعوت و مکان در تب تسک کاملاً حذف شوند */
-#textarea-wrapper.task-tab-active .invite-toggle-btn,
-#textarea-wrapper.task-tab-active .location-toggle-btn {
-    display: none !important;
-}
-
-/* تنظیم دوباره موقعیت سه دکمه با فاصله‌های یکسان (۸px) */
-#textarea-wrapper.task-tab-active .icon-toggle-btn {
-    right: 8px;
-}
-
-#textarea-wrapper.task-tab-active .color-toggle-btn {
-    right: 44px;   /* 8 + 28 + 8 = 44 */
-}
-
-#textarea-wrapper.task-tab-active .checklist-toggle-btn {
-    right: 80px;   /* 44 + 28 + 8 = 80 */
-}
-
-/* ========== DETAIL CHECKLIST (با چک‌باکس نئونی) ========== */
-.detail-checklist-container {
-    margin: 8px 0 12px 0;
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.detail-checklist-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;  /* ← کم شد از 10px به 4px */
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.detail-checklist-items {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;  /* ← کم شد از 6px به 2px */
-}
-
-.detail-checklist-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;  /* ← کم شد از 12px به 6px */
-    padding: 2px 0;  /* ← کم شد از 6px 0 به 2px 0 */
-    min-height: 28px;  /* ← کم شد از 32px به 28px */
-    border-radius: 4px;
-    transition: background 0.15s;
-}
-
-/* ===== چک‌باکس نئونی اصلی ===== */
-.detail-checklist-row .neon-checkbox {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    position: relative;
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px;
-    min-height: 24px;
-    margin: 0;
-    padding: 0;
-    border: none;
-    outline: none;
-    background-color: transparent;
-    flex-shrink: 0;
-    cursor: pointer;
-    --c-base: #555;
-    --c-on: var(--accent, #ff6f91);
-    --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
-    --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
-    background-image:
-        var(--base), var(--base), var(--base),
-        var(--base), var(--base), var(--base),
-        var(--base), var(--base), var(--base);
-    background-size: 4px 4px;
-    background-position:
-        3px 3px, 9.5px 3px, 16px 3px,
-        3px 9.5px, 9.5px 9.5px, 16px 9.5px,
-        3px 16px, 9.5px 16px, 16px 16px;
-    background-repeat: no-repeat;
-}
-
-.detail-checklist-row .neon-checkbox::before,
-.detail-checklist-row .neon-checkbox::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image:
-        var(--on), var(--on), var(--on),
-        var(--on), var(--on), var(--on),
-        var(--on), var(--on), var(--on);
-    background-size: inherit;
-    background-position: inherit;
-    background-repeat: no-repeat;
-    pointer-events: none;
-    opacity: 0;
-    filter: drop-shadow(0 0 2px var(--c-on));
-}
-
-.detail-checklist-row .neon-checkbox::before {
-    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.detail-checklist-row .neon-checkbox:checked::before {
-    opacity: 1;
-}
-
-.detail-checklist-row .neon-checkbox:checked::after {
-    animation: pulseNeon 1.5s infinite ease-in-out;
-    opacity: 0.75;
-}
-
-.detail-checklist-row .neon-checkbox:hover:not(:checked)::after {
-    animation: pulseNeon 1.5s infinite ease-in-out;
-}
-
-/* متن چک‌لیست */
-.detail-checklist-text {
-    flex: 1;
-    font-size: 14px;
-    color: var(--text-primary);
-    word-break: break-word;
-    padding: 2px 4px;
-    border-radius: 3px;
-    line-height: 1.4;
-}
-
-.detail-checklist-text:focus {
-    outline: 2px solid var(--accent);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-/* زیرآیتم‌ها */
-.detail-checklist-subcontainer {
-    padding-left: 24px;
-}
-
-.detail-checklist-row.subtask-row {
-    padding-left: 20px;
-}
-
-.detail-checklist-row.subtask-row .detail-checklist-text {
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
-/* ========== INLINE CHECKLIST (برای ویرایش با چک‌باکس نئونی) ========== */
-.checklist-inline-editor {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.checklist-inline-items {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.checklist-inline-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 0;
-    min-height: 28px;
-}
-
-/* ===== چک‌باکس نئونی کوچک برای inline ===== */
-.checklist-inline-row .neon-checkbox {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    position: relative;
-    width: 20px;
-    height: 20px;
-    min-width: 20px;
-    min-height: 20px;
-    margin: 0;
-    padding: 0;
-    border: none;
-    outline: none;
-    background-color: transparent;
-    flex-shrink: 0;
-    cursor: pointer;
-    --c-base: #555;
-    --c-on: var(--accent, #ff6f91);
-    --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
-    --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
-    background-image:
-        var(--base), var(--base), var(--base),
-        var(--base), var(--base), var(--base),
-        var(--base), var(--base), var(--base);
-    background-size: 3.5px 3.5px;
-    background-position:
-        2.5px 2.5px, 8px 2.5px, 13.5px 2.5px,
-        2.5px 8px, 8px 8px, 13.5px 8px,
-        2.5px 13.5px, 8px 13.5px, 13.5px 13.5px;
-    background-repeat: no-repeat;
-}
-
-.checklist-inline-row .neon-checkbox::before,
-.checklist-inline-row .neon-checkbox::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image:
-        var(--on), var(--on), var(--on),
-        var(--on), var(--on), var(--on),
-        var(--on), var(--on), var(--on);
-    background-size: inherit;
-    background-position: inherit;
-    background-repeat: no-repeat;
-    pointer-events: none;
-    opacity: 0;
-    filter: drop-shadow(0 0 2px var(--c-on));
-}
-
-.checklist-inline-row .neon-checkbox::before {
-    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.checklist-inline-row .neon-checkbox:checked::before {
-    opacity: 1;
-}
-
-.checklist-inline-row .neon-checkbox:checked::after {
-    animation: pulseNeon 1.5s infinite ease-in-out;
-    opacity: 0.75;
-}
-
-.checklist-inline-row .neon-checkbox:hover:not(:checked)::after {
-    animation: pulseNeon 1.5s infinite ease-in-out;
-}
-
-/* متن inline */
-.checklist-inline-row .checklist-text {
-    flex: 1;
-    font-size: 13px;
-    color: var(--text-primary);
-    padding: 2px 4px;
-    border-radius: 3px;
-    outline: none;
-    min-width: 50px;
-    line-height: 1.4;
-}
-
-.checklist-inline-row .checklist-text:focus {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.checklist-inline-row .delete-item-btn {
-    flex-shrink: 0;
-    background: none;
-    border: none;
-    color: #666;
-    cursor: pointer;
-    padding: 0 4px;
-    font-size: 14px;
-    line-height: 1;
-    transition: color 0.2s;
-}
-
-.checklist-inline-row .delete-item-btn:hover {
-    color: #ff6b6b;
-}
-
-.checklist-inline-row .add-subtask-btn {
-    flex-shrink: 0;
-    background: none;
-    border: none;
-    color: #666;
-    cursor: pointer;
-    padding: 0 4px;
-    font-size: 16px;
-    line-height: 1;
-    transition: color 0.2s;
-}
-
-.checklist-inline-row .add-subtask-btn:hover {
-    color: var(--accent);
-}
-
-.checklist-inline-row.subtask-row {
-    padding-left: 20px;
-}
-
-.checklist-inline-row.subtask-row .checklist-text {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-.checklist-inline-add-row {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.08);
-}
-
-.checklist-inline-add-input {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    padding: 4px 8px;
-    color: var(--text-primary);
-    font-size: 13px;
-    outline: none;
-}
-
-.checklist-inline-add-input:focus {
-    border-color: var(--accent);
-}
-
-.checklist-inline-add-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: 4px;
-    padding: 4px 12px;
-    color: #fff;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.2s;
-    line-height: 1;
-}
-
-.checklist-inline-add-btn:hover {
-    transform: scale(1.05);
-    opacity: 0.9;
-}
-
-/* ========== انیمیشن نبض نئونی ========== */
-@keyframes pulseNeon {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 0.75; }
-}
-
-/* =========================== ALL-DAY EVENTS ROW ============================ */
-.all-day-events-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 5px;  /* فاصله 5 پیکسل بین کپسول‌ها */
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid var(--border);
-    border-radius: 12px 12px 0 0;
-    min-height: 40px;
-    margin-bottom: 0;
-}
-
-.all-day-events-row:empty {
-    display: none;
-}
-
-.all-day-capsule {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #fff;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background-color: var(--accent);
-    border: 1px solid var(--accent);
-    white-space: nowrap;
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.all-day-capsule:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-    opacity: 0.9;
-}
-
-.all-day-capsule-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    line-height: 1;
-    flex-shrink: 0;
-}
-
-.all-day-capsule-icon svg {
-    width: 14px;
-    height: 14px;
-    stroke: currentColor;
-    fill: none;
-}
-
-.all-day-capsule-title {
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* =========================== DAY TIMELINE WRAPPER ============================ */
-.day-timeline-wrapper {
-    display: flex;
-    flex: 1;
-    width: 100%;
-}
-
-.day-view-timeline {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    background: #0d0d0d;
-}
-
-/* تنظیمات تایم‌لاین برای حالت All-Day */
-.day-view-timeline .time-labels {
-    width: 60px;
-    flex-shrink: 0;
-    background: #111;
-    border-right: 1px solid var(--border);
-}
-
-.day-view-timeline .time-label {
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    font-size: 11px;
-    color: #666;
-    font-weight: 400;
-    padding-top: 2px;
-    box-sizing: border-box;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.day-view-timeline .time-slots {
-    flex: 1;
-    position: relative;
-    padding: 0;
-    box-sizing: border-box;
-    cursor: cell;
-}
-/* =========================== SCROLLBAR CUSTOMIZATION ============================ */
-::-webkit-scrollbar-button {
-  display: none !important;
-}
-
-/* General small action buttons (used in invite modal) */
-.btn-accent,
-.btn-ghost {
-  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 10px;
   border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-size: 14px;
+  text-align: center;
+  transition: 0.2s;
+}
+
+.postpone-option:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* =========================== INVITE SYSTEM ============================ */
+.invite-results {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 8px 0;
+}
+
+.invite-user-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.invite-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.invite-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--border, rgba(255, 255, 255, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invite-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.invite-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  font-family: inherit;
+  font-weight: 600;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
 }
 
-.btn-ghost {
-  background: transparent;
+.invite-user-details {
+  overflow: hidden;
+}
+
+.invite-user-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+}
+
+.invite-user-status {
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+.invite-selected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.invite-selected-item {
+  background: var(--accent);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.invite-selected-item button {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.invite-not-found {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.invite-not-found-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.invite-not-found-sub {
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 10px;
+}
+
+.invite-link-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #111;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.invite-nonuser-link {
+  font-size: 12px;
   color: var(--accent);
-  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  word-break: break-all;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.btn-accent:hover,
-.btn-ghost:hover {
-  opacity: 0.85;
-  filter: brightness(1.1);
+.copy-invite-link-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.btn-accent:active,
-.btn-ghost:active {
-  transform: scale(0.97);
+.copy-invite-link-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-/* For the "Added" badge inside invite cards (optional) */
+/* ------------------------- INVITE BADGES ------------------------- */
 .badge-accepted {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   color: #aaa;
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 12px;
-}
-
-/* Avatar inside invite cards */
-.invite-user-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: rgba(255,255,255,0.03);
-    border-radius: 6px;
-    margin-bottom: 6px;
-    font-size: 14px;
-}
-.invite-user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-    min-width: 0; /* prevents overflow */
-}
-.invite-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-    background: var(--border, rgba(255,255,255,0.1));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.invite-avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-.invite-avatar-fallback {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: var(--accent);
-    color: #fff;
-    font-weight: 600;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-transform: uppercase;
-}
-.invite-user-details {
-    overflow: hidden;
-}
-.invite-user-name {
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: #fff;
-}
-.invite-user-status {
-    font-size: 12px;
-    color: #aaa;
-    margin-top: 2px;
 }
 
 .badge-pending {
@@ -3789,154 +3736,99 @@ a:hover {
   font-weight: 500;
 }
 
-/* Invite non-user section */
-.invite-not-found {
-    padding: 12px;
-    background: rgba(255,255,255,0.03);
-    border-radius: 8px;
-    margin-top: 8px;
-    text-align: center;
-}
-.invite-not-found-title {
-    font-weight: 600;
-    font-size: 14px;
-    color: #fff;
-    margin-bottom: 4px;
-}
-.invite-not-found-sub {
-    font-size: 13px;
-    color: #aaa;
-    margin-bottom: 10px;
-}
-.invite-link-box {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #111;
-    padding: 8px 10px;
-    border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.08);
-    max-width: 100%;
-    overflow: hidden;
-}
-.invite-nonuser-link {
-    font-size: 12px;
-    color: var(--accent);
-    word-break: break-all;
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.copy-invite-link-btn {
-    background: none;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    padding: 2px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-.copy-invite-link-btn:hover {
-    background: rgba(255,255,255,0.1);
+/* =========================== CUSTOM ACCENT MAP PIN ============================ */
+.custom-pin {
+  color: var(--accent);
+  background: none;
+  border: none;
 }
 
-/* Icon button inside textarea wrapper */
-.textarea-wrapper .icon-toggle-btn {
-  position: absolute;
-  bottom: 16px;
-  right: 8px;                 /* سمت راست همه، کنار لبه */
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: #888;
-  width: 28px;
-  height: 28px;
-  display: flex;               /* همیشه نمایش بده */
+/* =========================== LINKS & AVATAR ============================ */
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+.avatar-initial {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  width: 20px;
+  height: 20px;
+  background: var(--accent);
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* =========================== TOAST ============================ */
+.ravlo-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   z-index: 2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: toastSlideDown 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.textarea-wrapper .icon-toggle-btn.active,
-.textarea-wrapper .icon-toggle-btn:hover {
-  background: rgba(255, 111, 145, 0.15);
-  border-color: var(--accent);
-  color: var(--accent);
+.toast-ring {
+  flex-shrink: 0;
 }
 
-.textarea-wrapper .icon-toggle-btn svg {
-  display: block;
+/* =========================== FOOTER ============================ */
+.footer {
+  padding: 30px 0;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--border);
 }
 
-.icon-toggle-btn:hover {
-    background: rgba(255,255,255,0.05);
-}
-.icon-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    margin-top: 12px;
-    justify-items: center;
-}
-.icon-item {
-    padding: 10px;
-    border-radius: 8px;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.icon-item:hover {
-    background: rgba(255,255,255,0.05);
-    border-color: var(--border, rgba(255,255,255,0.1));
-}
-.icon-item.selected {
-    border-color: var(--accent);
-    background: rgba(255,111,145,0.1);
-}
-.icon-item svg {
-    width: 28px;
-    height: 28px;
+.footer-signature {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
 }
 
-/* ------------------------- EVENT ICON IN DAY VIEW ------------------------- */
-.event-icon {
-    display: inline-flex;
-    vertical-align: middle;
-    margin-right: 4px;
+.footer-signature:hover {
+  opacity: 1;
 }
 
-.event-icon svg {
-    width: 14px;
-    height: 14px;
-    stroke: currentColor;
+.crafted {
+  font-size: 10px;
+  color: #7a7a7a;
+  letter-spacing: 0.08em;
 }
 
-/* ------------------------- DETAIL MODAL ICON ------------------------- */
-.detail-icon {
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 0;
-    transform: translate(-2px, 2px);
+.signature {
+  height: 20px;
+  transform: translateY(-2px);
+  opacity: 0.85;
+  filter: brightness(0.9) contrast(1.05);
 }
 
-.detail-icon svg {
-    width: 19px;
-    height: 19px;
-    stroke: currentColor;
-}
-
-/* ------------------------- CLICKABLE DETAIL MAP ------------------------- */
-#detail-location-map {
-    cursor: pointer;
+.footer-signature a {
+  display: contents;
+  text-decoration: none;
+  color: inherit;
 }
 
 /* =========================== MEDIA QUERIES ============================ */
