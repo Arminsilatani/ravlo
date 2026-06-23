@@ -3345,7 +3345,7 @@ a:hover {
     height: 24px !important;
     min-width: 24px;
     min-height: 24px;
-    margin-right: 2px;
+    margin: 0;
     padding: 0;
     border: none;
     outline: none;
