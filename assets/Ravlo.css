@@ -3318,14 +3318,14 @@ a:hover {
 .detail-checklist-items {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
 .detail-checklist-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 4px 0;
+    padding: 6px 0;
     border-radius: 4px;
     transition: background 0.15s;
 }
@@ -3349,31 +3349,6 @@ a:hover {
     word-break: break-word;
     padding: 2px 4px;
     border-radius: 3px;
-    transition: all 0.2s;
-}
-
-.detail-checklist-text:focus {
-    outline: 2px solid var(--accent);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.detail-checklist-delete-btn {
-    flex-shrink: 0;
-    background: none;
-    border: none;
-    color: #666;
-    cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 14px;
-    transition: all 0.2s;
-    opacity: 0.4;
-}
-
-.detail-checklist-delete-btn:hover {
-    color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.1);
-    opacity: 1;
 }
 
 .detail-checklist-subcontainer {
@@ -3387,47 +3362,6 @@ a:hover {
 .detail-checklist-row.subtask-row .detail-checklist-text {
     font-size: 13px;
     color: var(--text-secondary);
-}
-
-.detail-checklist-add-row {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.08);
-}
-
-.detail-checklist-add-input {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    padding: 6px 12px;
-    color: var(--text-primary);
-    font-size: 13px;
-    outline: none;
-    transition: border 0.2s;
-}
-
-.detail-checklist-add-input:focus {
-    border-color: var(--accent);
-}
-
-.detail-checklist-add-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: 6px;
-    padding: 6px 14px;
-    color: #fff;
-    font-size: 18px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.detail-checklist-add-btn:hover {
-    transform: scale(1.05);
-    opacity: 0.9;
 }
 
 /* =========================== SCROLLBAR CUSTOMIZATION ============================ */
