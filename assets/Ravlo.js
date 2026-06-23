@@ -1315,6 +1315,8 @@ async function logout() {
     hideGlobalLoader();
 }
 
+/* ====================== CONTINUED FROM PART 3 ====================== */
+
 /* ------------------------- DELETE CONFIRMATION ------------------------- */
 async function deleteEventById(id) {
     showGlobalLoader();
@@ -1512,6 +1514,17 @@ function animateTabIndicator() {
         duration: 0.4,
         ease: 'power2.out'
     });
+}
+
+/* --------- MISSING FUNCTION: openTitlePicker --------- */
+function openTitlePicker() {
+    titlePickerActive = true;
+    const gregAllDayRow = document.getElementById('all-day-greg-row');
+    const gregTimeRow = document.querySelector('#greg-picker-popup .picker-time-row');
+    if (gregAllDayRow) gregAllDayRow.style.display = 'none';
+    if (gregTimeRow) gregTimeRow.style.display = 'none';
+    document.getElementById('greg-today-btn').style.display = 'block';
+    openGregPicker(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
 }
 
 /* =========================== EVENT LISTENERS ============================ */
