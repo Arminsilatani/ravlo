@@ -4683,6 +4683,286 @@ function openInvitationResponse(ev) {
     };
 }
 
+// =========================== RENDER CHECKLIST IN DETAIL ============================
+function renderChecklistInDetail(ev) {
+    const container = document.getElementById('detail-checklist-container');
+    if (!container) return;
+
+    // اگر تسک نباشه یا چک‌لیست نداشته باشه، مخفی کن
+    if (ev.type !== 'task' || !ev.checklist || ev.checklist.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    
+    // آیکون چک‌لیست رو همرنگ با تسک کن
+    const icon = document.getElementById('detail-checklist-icon');
+    if (icon) icon.style.color = ev.color || 'var(--accent)';
+
+    const listContainer = document.getElementById('detail-checklist-items');
+    listContainer.innerHTML = '';
+
+    let allDone = true;
+
+    // تابع بازگشتی برای رندر کردن آیتم‌ها و زیرآیتم‌ها
+    function renderItems(items, parentElement, depth = 0) {
+        items.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = 'detail-checklist-row';
+            if (depth > 0) {
+                row.style.paddingLeft = (depth * 20) + 'px';
+                row.classList.add('subtask-row');
+            }
+
+            // چک‌باکس
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'neon-checkbox';
+            cb.checked = item.done || false;
+            cb.dataset.parentIndex = index;
+            cb.dataset.depth = depth;
+
+            // متن
+            const textSpan = document.createElement('span');
+            textSpan.className = 'detail-checklist-text';
+            textSpan.textContent = item.text || 'Untitled';
+            if (item.done) {
+                textSpan.style.textDecoration = 'line-through';
+                textSpan.style.opacity = '0.6';
+            } else {
+                allDone = false;
+            }
+
+            // دکمه حذف (فقط برای سازنده)
+            const isInvitee = !!ev.parent_event_id;
+            if (!isInvitee) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'detail-checklist-delete-btn';
+                delBtn.innerHTML = '✕';
+                delBtn.title = 'Delete item';
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (depth === 0) {
+                        ev.checklist.splice(index, 1);
+                    } else {
+                        // پیدا کردن آیتم والد
+                        let parentItems = ev.checklist;
+                        let parentDepth = depth;
+                        let currentIndex = index;
+                        let path = [];
+                        let temp = ev.checklist;
+                        for (let i = 0; i < depth; i++) {
+                            // این منطق پیچیده می‌شه، برای سادگی فعلاً فقط سطح اول رو پشتیبانی می‌کنیم
+                        }
+                        // برای سادگی، فعلاً فقط حذف آیتم‌های سطح اول رو پشتیبانی می‌کنیم
+                        if (depth === 0) {
+                            ev.checklist.splice(index, 1);
+                        } else {
+                            // برای زیرآیتم‌ها: پیدا کردن آیتم والد
+                            let parentFound = false;
+                            for (let pIdx = 0; pIdx < ev.checklist.length; pIdx++) {
+                                const parent = ev.checklist[pIdx];
+                                if (parent.subtasks && parent.subtasks.length > 0) {
+                                    const subIdx = parent.subtasks.indexOf(item);
+                                    if (subIdx !== -1) {
+                                        parent.subtasks.splice(subIdx, 1);
+                                        parentFound = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!parentFound) {
+                                // اگر پیدا نشد، کل آیتم رو از لیست حذف کن
+                                const flatIndex = ev.checklist.indexOf(item);
+                                if (flatIndex !== -1) ev.checklist.splice(flatIndex, 1);
+                            }
+                        }
+                    }
+                    // ذخیره در دیتابیس
+                    updateEventInDB(ev.id, { checklist: ev.checklist })
+                        .then(() => {
+                            renderChecklistInDetail(ev);
+                            // بررسی اینکه همه آیتم‌ها Done شدن
+                            checkAllChecklistDone(ev);
+                        })
+                        .catch(() => alert('Error deleting item.'));
+                });
+                row.appendChild(delBtn);
+            }
+
+            row.appendChild(cb);
+            row.appendChild(textSpan);
+            parentElement.appendChild(row);
+
+            // اگر زیرآیتم‌ها داره
+            if (item.subtasks && item.subtasks.length > 0) {
+                const subContainer = document.createElement('div');
+                subContainer.className = 'detail-checklist-subcontainer';
+                renderItems(item.subtasks, subContainer, depth + 1);
+                parentElement.appendChild(subContainer);
+            }
+        });
+    }
+
+    // رندر کردن آیتم‌ها
+    renderItems(ev.checklist, listContainer, 0);
+
+    // اگر همه آیتم‌ها Done بودند، تسک رو هم Done کن
+    if (allDone && ev.checklist.length > 0) {
+        markTaskDone(ev);
+    }
+
+    // رویدادهای چک‌باکس‌ها (بعد از رندر شدن)
+    listContainer.querySelectorAll('.neon-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const depth = parseInt(this.dataset.depth);
+            let item = null;
+            let parentItem = null;
+            let parentIndex = -1;
+
+            if (depth === 0) {
+                const idx = parseInt(this.dataset.parentIndex);
+                if (idx >= 0 && idx < ev.checklist.length) {
+                    item = ev.checklist[idx];
+                    parentIndex = idx;
+                }
+            } else {
+                // برای زیرآیتم‌ها: پیدا کردن آیتم
+                let flatIdx = 0;
+                let found = false;
+                for (let i = 0; i < ev.checklist.length; i++) {
+                    const p = ev.checklist[i];
+                    if (p.subtasks) {
+                        for (let s = 0; s < p.subtasks.length; s++) {
+                            if (flatIdx === parseInt(this.dataset.parentIndex)) {
+                                item = p.subtasks[s];
+                                parentItem = p;
+                                parentIndex = i;
+                                found = true;
+                                break;
+                            }
+                            flatIdx++;
+                        }
+                    }
+                    if (found) break;
+                }
+            }
+
+            if (item) {
+                item.done = this.checked;
+                // به‌روزرسانی ظاهر متن
+                const row = this.closest('.detail-checklist-row');
+                if (row) {
+                    const text = row.querySelector('.detail-checklist-text');
+                    if (text) {
+                        text.style.textDecoration = this.checked ? 'line-through' : 'none';
+                        text.style.opacity = this.checked ? '0.6' : '1';
+                    }
+                }
+
+                // ذخیره در دیتابیس
+                updateEventInDB(ev.id, { checklist: ev.checklist })
+                    .then(() => {
+                        // بررسی همه آیتم‌ها
+                        checkAllChecklistDone(ev);
+                    })
+                    .catch(() => alert('Error updating checklist.'));
+            }
+        });
+    });
+
+    // اضافه کردن دکمه افزودن آیتم جدید (فقط برای سازنده)
+    const isInvitee = !!ev.parent_event_id;
+    if (!isInvitee) {
+        const addRow = document.createElement('div');
+        addRow.className = 'detail-checklist-add-row';
+        addRow.innerHTML = `
+            <input type="text" class="detail-checklist-add-input" placeholder="Add new item..." />
+            <button class="detail-checklist-add-btn">+</button>
+        `;
+        listContainer.appendChild(addRow);
+
+        const input = addRow.querySelector('.detail-checklist-add-input');
+        const addBtn = addRow.querySelector('.detail-checklist-add-btn');
+
+        function addNewItem() {
+            const text = input.value.trim();
+            if (text) {
+                ev.checklist.push({ text, done: false });
+                updateEventInDB(ev.id, { checklist: ev.checklist })
+                    .then(() => {
+                        renderChecklistInDetail(ev);
+                    })
+                    .catch(() => alert('Error adding item.'));
+                input.value = '';
+            }
+        }
+
+        addBtn.addEventListener('click', addNewItem);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addNewItem();
+        });
+    }
+}
+
+// =========================== CHECK ALL CHECKLIST DONE ============================
+function checkAllChecklistDone(ev) {
+    if (!ev.checklist || ev.checklist.length === 0) return;
+
+    // بررسی همه آیتم‌ها (شامل زیرآیتم‌ها)
+    function allItemsDone(items) {
+        for (const item of items) {
+            if (!item.done) return false;
+            if (item.subtasks && item.subtasks.length > 0) {
+                if (!allItemsDone(item.subtasks)) return false;
+            }
+        }
+        return true;
+    }
+
+    if (allItemsDone(ev.checklist)) {
+        markTaskDone(ev);
+    }
+}
+
+// =========================== MARK TASK DONE ============================
+function markTaskDone(ev) {
+    // اگر از قبل done هست، کاری نکن
+    if (ev.status === 'done') return;
+
+    ev.status = 'done';
+    ev.completed_at = new Date().toISOString();
+    
+    updateEventInDB(ev.id, { 
+        status: 'done', 
+        completed_at: ev.completed_at 
+    }).then(() => {
+        // به‌روزرسانی دکمه کامل در مودال
+        const completeBtn = document.getElementById('detail-complete-btn');
+        if (completeBtn) {
+            completeBtn.textContent = 'Undo';
+            completeBtn.onclick = () => {
+                ev.status = 'pending';
+                ev.completed_at = null;
+                updateEventInDB(ev.id, { status: 'pending', completed_at: null })
+                    .then(() => {
+                        completeBtn.textContent = 'Done';
+                        completeBtn.onclick = () => {
+                            markTaskDone(ev);
+                        };
+                        // رفرش چک‌لیست
+                        renderChecklistInDetail(ev);
+                    });
+            };
+        }
+        
+        showToast('🎉 All tasks completed! Event marked as Done.');
+        renderCalendar();
+        updateNotificationDot();
+    }).catch(() => alert('Error marking task as done.'));
+}
+
 /* =========================== POSTPONE =========================== */
 function openPostponeModal() {
     if (!currentDetailEvent) return;
