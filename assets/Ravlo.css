@@ -3325,7 +3325,8 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 6px 0;
+    padding: 4px 0;
+    min-height: 28px;
     border-radius: 4px;
     transition: background 0.15s;
 }
@@ -3334,14 +3335,32 @@ a:hover {
     background: rgba(255, 255, 255, 0.05);
 }
 
+/* چک‌باکس */
 .detail-checklist-row .neon-checkbox {
     flex-shrink: 0;
     width: 18px;
     height: 18px;
+    margin: 0;
+    padding: 0;
     cursor: pointer;
+    accent-color: var(--accent);
+    /* حذف استایل‌های پیش‌فرض مرورگر */
+    appearance: auto;
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
+}
+
+/* تنظیم برای مرورگرهای مختلف */
+.detail-checklist-row .neon-checkbox:checked {
     accent-color: var(--accent);
 }
 
+.detail-checklist-row .neon-checkbox:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* متن چک‌لیست */
 .detail-checklist-text {
     flex: 1;
     font-size: 14px;
@@ -3349,10 +3368,17 @@ a:hover {
     word-break: break-word;
     padding: 2px 4px;
     border-radius: 3px;
+    line-height: 1.4;
 }
 
+.detail-checklist-text:focus {
+    outline: 2px solid var(--accent);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* زیرآیتم‌ها */
 .detail-checklist-subcontainer {
-    padding-left: 20px;
+    padding-left: 24px;
 }
 
 .detail-checklist-row.subtask-row {
@@ -3362,6 +3388,169 @@ a:hover {
 .detail-checklist-row.subtask-row .detail-checklist-text {
     font-size: 13px;
     color: var(--text-secondary);
+}
+
+/* ========== INLINE CHECKLIST (برای ویرایش) ========== */
+.checklist-inline-editor {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.checklist-inline-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.checklist-inline-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    min-height: 28px;
+}
+
+/* چک‌باکس inline */
+.checklist-inline-row .neon-checkbox {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+    appearance: auto;
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
+}
+
+.checklist-inline-row .neon-checkbox:checked {
+    accent-color: var(--accent);
+}
+
+.checklist-inline-row .checklist-text {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-primary);
+    padding: 2px 4px;
+    border-radius: 3px;
+    outline: none;
+    min-width: 50px;
+    line-height: 1.4;
+}
+
+.checklist-inline-row .checklist-text:focus {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.checklist-inline-row .delete-item-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0 4px;
+    font-size: 14px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.checklist-inline-row .delete-item-btn:hover {
+    color: #ff6b6b;
+}
+
+.checklist-inline-row .add-subtask-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0 4px;
+    font-size: 16px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.checklist-inline-row .add-subtask-btn:hover {
+    color: var(--accent);
+}
+
+.checklist-inline-row.subtask-row {
+    padding-left: 20px;
+}
+
+.checklist-inline-row.subtask-row .checklist-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.checklist-inline-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.checklist-inline-add-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+}
+
+.checklist-inline-add-input:focus {
+    border-color: var(--accent);
+}
+
+.checklist-inline-add-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 12px;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.checklist-inline-add-btn:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* ========== اصلاح چک‌باکس‌های مودال ========== */
+.modal .neon-checkbox {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+/* اصلاح برای مرورگرهای Webkit (Chrome, Safari, Edge) */
+.modal .neon-checkbox::-webkit-checkbox {
+    width: 18px;
+    height: 18px;
+}
+
+/* اصلاح برای Firefox */
+.modal .neon-checkbox::-moz-checkbox {
+    width: 18px;
+    height: 18px;
 }
 
 /* =========================== SCROLLBAR CUSTOMIZATION ============================ */
