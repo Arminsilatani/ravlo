@@ -4753,7 +4753,7 @@ function renderChecklistInDetail(ev) {
                 row.classList.add('subtask-row');
             }
 
-            // چک‌باکس
+            // فقط چک‌باکس (بدون دکمه حذف)
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.className = 'neon-checkbox';
@@ -4772,63 +4772,7 @@ function renderChecklistInDetail(ev) {
                 allDone = false;
             }
 
-            // دکمه حذف (فقط برای سازنده)
-            const isInvitee = !!ev.parent_event_id;
-            if (!isInvitee) {
-                const delBtn = document.createElement('button');
-                delBtn.className = 'detail-checklist-delete-btn';
-                delBtn.innerHTML = '✕';
-                delBtn.title = 'Delete item';
-                delBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (depth === 0) {
-                        ev.checklist.splice(index, 1);
-                    } else {
-                        // پیدا کردن آیتم والد
-                        let parentItems = ev.checklist;
-                        let parentDepth = depth;
-                        let currentIndex = index;
-                        let path = [];
-                        let temp = ev.checklist;
-                        for (let i = 0; i < depth; i++) {
-                            // این منطق پیچیده می‌شه، برای سادگی فعلاً فقط سطح اول رو پشتیبانی می‌کنیم
-                        }
-                        // برای سادگی، فعلاً فقط حذف آیتم‌های سطح اول رو پشتیبانی می‌کنیم
-                        if (depth === 0) {
-                            ev.checklist.splice(index, 1);
-                        } else {
-                            // برای زیرآیتم‌ها: پیدا کردن آیتم والد
-                            let parentFound = false;
-                            for (let pIdx = 0; pIdx < ev.checklist.length; pIdx++) {
-                                const parent = ev.checklist[pIdx];
-                                if (parent.subtasks && parent.subtasks.length > 0) {
-                                    const subIdx = parent.subtasks.indexOf(item);
-                                    if (subIdx !== -1) {
-                                        parent.subtasks.splice(subIdx, 1);
-                                        parentFound = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!parentFound) {
-                                // اگر پیدا نشد، کل آیتم رو از لیست حذف کن
-                                const flatIndex = ev.checklist.indexOf(item);
-                                if (flatIndex !== -1) ev.checklist.splice(flatIndex, 1);
-                            }
-                        }
-                    }
-                    // ذخیره در دیتابیس
-                    updateEventInDB(ev.id, { checklist: ev.checklist })
-                        .then(() => {
-                            renderChecklistInDetail(ev);
-                            // بررسی اینکه همه آیتم‌ها Done شدن
-                            checkAllChecklistDone(ev);
-                        })
-                        .catch(() => alert('Error deleting item.'));
-                });
-                row.appendChild(delBtn);
-            }
-
+            // فقط چک‌باکس و متن (بدون دکمه حذف)
             row.appendChild(cb);
             row.appendChild(textSpan);
             parentElement.appendChild(row);
@@ -4856,14 +4800,11 @@ function renderChecklistInDetail(ev) {
         cb.addEventListener('change', function() {
             const depth = parseInt(this.dataset.depth);
             let item = null;
-            let parentItem = null;
-            let parentIndex = -1;
 
             if (depth === 0) {
                 const idx = parseInt(this.dataset.parentIndex);
                 if (idx >= 0 && idx < ev.checklist.length) {
                     item = ev.checklist[idx];
-                    parentIndex = idx;
                 }
             } else {
                 // برای زیرآیتم‌ها: پیدا کردن آیتم
@@ -4875,8 +4816,6 @@ function renderChecklistInDetail(ev) {
                         for (let s = 0; s < p.subtasks.length; s++) {
                             if (flatIdx === parseInt(this.dataset.parentIndex)) {
                                 item = p.subtasks[s];
-                                parentItem = p;
-                                parentIndex = i;
                                 found = true;
                                 break;
                             }
@@ -4910,40 +4849,7 @@ function renderChecklistInDetail(ev) {
         });
     });
 
-    // اضافه کردن دکمه افزودن آیتم جدید (فقط برای سازنده)
-    const isInvitee = !!ev.parent_event_id;
-    if (!isInvitee) {
-        const addRow = document.createElement('div');
-        addRow.className = 'detail-checklist-add-row';
-        addRow.innerHTML = `
-            <input type="text" class="detail-checklist-add-input" placeholder="Add new item..." />
-            <button class="detail-checklist-add-btn">+</button>
-        `;
-        listContainer.appendChild(addRow);
-
-        const input = addRow.querySelector('.detail-checklist-add-input');
-        const addBtn = addRow.querySelector('.detail-checklist-add-btn');
-
-        function addNewItem() {
-            const text = input.value.trim();
-            if (text) {
-                ev.checklist.push({ text, done: false });
-                updateEventInDB(ev.id, { checklist: ev.checklist })
-                    .then(() => {
-                        renderChecklistInDetail(ev);
-                    })
-                    .catch(() => alert('Error adding item.'));
-                input.value = '';
-            }
-        }
-
-        addBtn.addEventListener('click', addNewItem);
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addNewItem();
-        });
-    }
 }
-
 // =========================== CHECK ALL CHECKLIST DONE ============================
 function checkAllChecklistDone(ev) {
     if (!ev.checklist || ev.checklist.length === 0) return;
