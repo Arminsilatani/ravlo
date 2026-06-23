@@ -2552,13 +2552,13 @@ async function saveEvent() {
             reminder_minutes: 0,
             color: selectedTagColor,
             icon: selectedIcon || null,
-            description: desc,
+            description: desc,  // فقط description خالص، بدون چک‌لیست
             recurrence_type: recurrence.type,
             recurrence_interval: recurrence.interval,
             recurrence_days: (recurrence.type === 'weekly' || recurrence.type === 'custom') ? recurrence.days : [],
             recurrence_smart_interval: recurrence.type === 'smart' ? recurrence.smartInterval : null,
             invitees: eventType === 'event' ? currentInvitees.map(inv => inv.name) : [],
-            // Checklist items (بدون تبدیل به متن)
+            // چک‌لیست به صورت جداگانه ذخیره میشه
             checklist: eventType === 'task' ? currentChecklistItems : []
         };
 
@@ -2622,11 +2622,9 @@ async function saveEvent() {
                             invitee_ids: [],
                             completed_occurrences: [],
                             completed_timestamps: {},
-                            // checklist برای مهمان‌ها هم کپی میشه
                             checklist: eventType === 'task' ? currentChecklistItems : []
                         };
 
-                        // Use RPC to bypass RLS (SECURITY DEFINER function)
                         const {
                             error: invErr
                         } = await sb
@@ -2711,382 +2709,6 @@ async function saveEvent() {
     }
 }
 
-function openEventDetail(ev, occurrenceDate) {
-    currentDetailEventId = ev.id;
-    currentDetailEvent = ev;
-
-    // ─── Color & title ───
-    document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
-    const colorDot = document.getElementById('detail-color-dot');
-    colorDot.style.backgroundColor = ev.color || '#f5f5f5';
-
-    const detailHeader = document.querySelector('#event-detail-modal .detail-header');
-    let iconSpan = document.getElementById('detail-icon');
-    if (!iconSpan) {
-        iconSpan = document.createElement('span');
-        iconSpan.id = 'detail-icon';
-        iconSpan.className = 'detail-icon';
-        colorDot.after(iconSpan);
-    }
-
-    if (ev.icon) {
-        iconSpan.innerHTML = ev.icon;
-        iconSpan.style.color = ev.color || 'var(--accent)';
-        iconSpan.style.display = 'inline-block';
-        colorDot.style.display = 'none';
-    } else {
-        iconSpan.innerHTML = '';
-        iconSpan.style.display = 'none';
-        colorDot.style.display = 'inline-block';
-    }
-
-    const descIcon = document.getElementById('detail-desc-icon');
-    if (descIcon) {
-        descIcon.style.color = ev.color || 'var(--accent)';
-    }
-    const calIcon = document.getElementById('detail-calendar-icon');
-    calIcon.style.color = ev.color || 'var(--accent)';
-
-    // ─── Date and time ───
-    const start = ev.start_date ? new Date(ev.start_date) : null;
-    const end = ev.end_date ? new Date(ev.end_date) : null;
-    let dateText = '';
-    let timeText = '';
-    let durationParen = '';
-
-    if (start) {
-        dateText = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        if (ev.all_day) {
-            timeText = 'All day';
-        } else {
-            const fmtTime = d => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-            timeText = fmtTime(start);
-            if (end) {
-                const diffMs = end.getTime() - start.getTime();
-                if (diffMs > 0) {
-                    const totalMinutes = Math.floor(diffMs / 60000);
-                    const days = Math.floor(totalMinutes / 1440);
-                    const hours = Math.floor((totalMinutes % 1440) / 60);
-                    const mins = totalMinutes % 60;
-                    let parts = [];
-                    if (days > 0) parts.push(days + 'd');
-                    if (hours > 0) parts.push(hours + 'h');
-                    if (mins > 0) parts.push(mins + 'm');
-                    if (parts.length > 0) durationParen = ' (' + parts.join(' ') + ')';
-                }
-            }
-        }
-    }
-
-    document.getElementById('detail-date-text').textContent = dateText;
-    document.getElementById('detail-time-text').textContent = timeText;
-    document.getElementById('detail-duration-paren').textContent = durationParen;
-
-    // ─── Hide horizontal dividers for tasks ───
-    const dividers = eventDetailModal.querySelectorAll('.detail-divider-h');
-    if (ev.type === 'task') {
-        dividers.forEach(hr => hr.style.display = 'none');
-    } else {
-        dividers.forEach(hr => hr.style.display = '');
-    }
-
-    // ─── Description ───
-    const descContainer = document.getElementById('detail-description-container');
-    const descText = document.getElementById('detail-description-text');
-    if (ev.description && ev.description.trim()) {
-        descContainer.style.display = 'block';
-        descText.textContent = ev.description;
-    } else {
-        descContainer.style.display = 'none';
-    }
-
-    // ─── CHECKLIST SECTION (برای تسک‌ها) ───
-    // اطمینان از وجود container
-    let checklistContainer = document.getElementById('detail-checklist-container');
-    if (!checklistContainer) {
-        // اگر وجود نداشت، بعد از توضیحات ایجادش کن
-        const descContainer = document.getElementById('detail-description-container');
-        if (descContainer && descContainer.parentNode) {
-            checklistContainer = document.createElement('div');
-            checklistContainer.id = 'detail-checklist-container';
-            checklistContainer.className = 'detail-checklist-container';
-            checklistContainer.style.display = 'none';
-            
-            const header = document.createElement('div');
-            header.className = 'detail-checklist-header';
-            header.innerHTML = `
-                <span id="detail-checklist-icon" class="detail-icon" style="color:var(--accent);">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                </span>
-                <span style="font-weight:600;font-size:14px;">Checklist</span>
-            `;
-            checklistContainer.appendChild(header);
-            
-            const listItems = document.createElement('div');
-            listItems.id = 'detail-checklist-items';
-            listItems.className = 'detail-checklist-items';
-            checklistContainer.appendChild(listItems);
-            
-            descContainer.parentNode.insertBefore(checklistContainer, descContainer.nextSibling);
-        }
-    }
-
-    // رندر چک‌لیست
-    if (checklistContainer) {
-        renderChecklistInDetail(ev);
-    }
-
-    // ─── Attendees section (only events) ───
-    const inviteesSection = document.getElementById('detail-invitees-section');
-    if (inviteesSection) {
-        if (ev.type === 'event') {
-            inviteesSection.style.display = 'block';
-            const attendIcon = document.getElementById('detail-attendees-icon');
-            if (attendIcon) attendIcon.style.color = ev.color || 'var(--accent)';
-
-            const attendeesList = document.getElementById('detail-attendees-list');
-            attendeesList.innerHTML = '';
-            const invitees = ev.invitees || [];
-
-            if (invitees.length === 0) {
-                attendeesList.innerHTML = `
-                    <div class="attendee-empty">
-                        <div class="attendee-avatar empty-plus">+</div>
-                        <span class="attendee-empty-text">Invite more people</span>
-                    </div>`;
-            } else if (invitees.length <= 3) {
-                const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
-                invitees.forEach((name, i) => {
-                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
-                    const item = document.createElement('div');
-                    item.className = 'attendee-item';
-                    item.innerHTML = `
-                        <div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div>
-                        <span class="attendee-name">${name}</span>`;
-                    attendeesList.appendChild(item);
-                });
-            } else {
-                const colors = ['#f97316','#e11d48'];
-                const firstTwo = invitees.slice(0,2);
-                const restCount = invitees.length - 2;
-                const overlapRow = document.createElement('div');
-                overlapRow.className = 'attendees-overlap-row';
-                firstTwo.forEach((name, i) => {
-                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
-                    overlapRow.innerHTML += `
-                        <div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
-                });
-                overlapRow.innerHTML += `<span class="attendee-extra-count">+${restCount} more</span>`;
-                attendeesList.appendChild(overlapRow);
-            }
-        } else {
-            inviteesSection.style.display = 'none';
-        }
-    }
-
-    // ─── Location map ───
-    const mapContainer = document.getElementById('detail-location-container');
-    if (ev.location && (ev.location.lat || ev.location.lng)) {
-        const lat = ev.location.lat;
-        const lng = ev.location.lng;
-        if (lat != null && lng != null && isLeafletReady() && mapContainer) {
-            mapContainer.style.display = 'block';
-            const coordsText = document.getElementById('detail-location-coords-text');
-            if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-
-            const overlay = document.getElementById('detail-map-address-overlay');
-            if (ev.location.address) {
-                const addr = ev.location.address;
-                const place = addr.name || addr.road || addr.amenity || addr.shop || addr.tourism || '';
-                const city = addr.city || addr.town || addr.village || addr.county || '';
-                const country = addr.country || '';
-                const parts = [place, city, country].filter(Boolean);
-                if (overlay) {
-                    overlay.textContent = parts.join(', ');
-                    overlay.style.display = 'block';
-                }
-            } else if (overlay) {
-                overlay.style.display = 'none';
-            }
-
-            setTimeout(() => {
-                const detailMapDiv = document.getElementById('detail-location-map');
-                if (detailMapDiv) {
-                    if (detailMapDiv._leaflet_id) {
-                        const oldMap = detailMapDiv._leaflet_map;
-                        if (oldMap) oldMap.remove();
-                        else delete detailMapDiv._leaflet_id;
-                    }
-                    const detailMap = L.map('detail-location-map', {
-                        center: [lat, lng],
-                        zoom: 15,
-                        attributionControl: false,
-                        zoomControl: false,
-                        dragging: false,
-                        scrollWheelZoom: false,
-                        doubleClickZoom: false,
-                        touchZoom: false,
-                        keyboard: false,
-                        interactive: false
-                    });
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                        maxZoom: 19
-                    }).addTo(detailMap);
-                    const icon = getAccentPinIcon();
-                    if (icon) L.marker([lat, lng], { icon }).addTo(detailMap);
-                    else L.marker([lat, lng]).addTo(detailMap);
-                    setTimeout(() => detailMap.invalidateSize(), 100);
-                    const mapDivForClick = document.getElementById('detail-location-map');
-                    if (mapDivForClick) {
-                        mapDivForClick.style.cursor = 'pointer';
-                        mapDivForClick.addEventListener('click', () => {
-                            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-                            window.open(url, '_blank');
-                        });
-                    }
-                }
-            }, 200);
-        }
-    } else if (mapContainer) {
-        mapContainer.style.display = 'none';
-    }
-
-    const oldConfirm = document.getElementById('event-detail-confirm');
-    if (oldConfirm) oldConfirm.classList.add('hidden');
-    const oldAddr = document.getElementById('detail-address-container');
-    if (oldAddr) oldAddr.style.display = 'none';
-
-    // ─── تشخیص مهمان بودن ───
-    const isInvitee = !!ev.parent_event_id;
-
-    // ─── دکمه Edit (فقط سازنده) ───
-    const editBtn = document.getElementById('detail-edit-btn-top');
-    if (editBtn) {
-        editBtn.style.display = isInvitee ? 'none' : '';
-        editBtn.onclick = () => {
-            closeModal(eventDetailModal);
-            const evToEdit = events.find(e => e.id == currentDetailEventId);
-            if (evToEdit) openEditModal(evToEdit);
-        };
-    }
-
-    // ─── وضعیت تکمیل (Complete / Undo) ───
-    var dateForCompletion = null;
-    if (occurrenceDate) {
-        dateForCompletion = occurrenceDate.toISOString().split('T')[0];
-    }
-    var isCompleted = false;
-    if (dateForCompletion && ev.recurrence_type !== 'none') {
-        isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                        ? ev.completed_occurrences.includes(dateForCompletion)
-                        : false;
-    } else {
-        isCompleted = (ev.status === 'completed' || ev.status === 'done');
-    }
-
-    const completeBtn = document.getElementById('detail-complete-btn');
-    if (completeBtn) {
-        // فقط برای سازنده نمایش داده شود
-        completeBtn.style.display = isInvitee ? 'none' : '';
-
-        if (isCompleted) {
-            completeBtn.textContent = 'Undo';
-            completeBtn.onclick = () => {
-                if (dateForCompletion && ev.recurrence_type !== 'none') {
-                    var idx = ev.completed_occurrences.indexOf(dateForCompletion);
-                    if (idx > -1) ev.completed_occurrences.splice(idx, 1);
-                    if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
-                        delete ev.completed_timestamps[dateForCompletion];
-                    }
-                    updateEventInDB(ev.id, {
-                        completed_occurrences: ev.completed_occurrences,
-                        completed_timestamps: ev.completed_timestamps
-                    }).then(() => {
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => alert('Error undoing.'));
-                } else {
-                    updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(() => {
-                        ev.status = 'pending';
-                        ev.completed_at = null;
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => alert('Error undoing.'));
-                }
-            };
-        } else {
-            completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
-            completeBtn.onclick = () => {
-                if (dateForCompletion && ev.recurrence_type !== 'none') {
-                    if (!ev.completed_occurrences) ev.completed_occurrences = [];
-                    ev.completed_occurrences.push(dateForCompletion);
-                    if (!ev.completed_timestamps) ev.completed_timestamps = {};
-                    ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
-                    updateEventInDB(ev.id, {
-                        completed_occurrences: ev.completed_occurrences,
-                        completed_timestamps: ev.completed_timestamps
-                    }).then(() => {
-                        alert('This occurrence will be automatically deleted after 28 days.');
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => alert('Error completing.'));
-                } else {
-                    var newStatus = ev.type === 'task' ? 'done' : 'completed';
-                    var payload = { status: newStatus, completed_at: new Date().toISOString() };
-                    updateEventInDB(ev.id, payload).then(() => {
-                        ev.status = newStatus;
-                        ev.completed_at = payload.completed_at;
-                        alert('This item will be automatically deleted after 28 days.');
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => alert('Error completing.'));
-                }
-            };
-        }
-    }
-
-    // ─── دکمه Delete / Leave ───
-    const cancelBtn = document.getElementById('detail-cancel-btn');
-    if (cancelBtn) {
-        if (isInvitee) {
-            cancelBtn.textContent = 'Leave Event';
-            cancelBtn.onclick = () => {
-                showConfirmModal('Leave this event? It will be removed from your calendar.', async () => {
-                    await deleteEventFromDB(ev.id);
-                    events = events.filter(e => e.id !== ev.id);
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                });
-            };
-        } else {
-            cancelBtn.textContent = 'Delete';
-            cancelBtn.onclick = () => {
-                showConfirmModal('Are you sure you want to delete this event?', () => {
-                    deleteEventById(ev.id).then(() => {
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => alert('Failed to delete event.'));
-                });
-            };
-        }
-    }
-
-    const postponeBtn = document.getElementById('detail-postpone-btn');
-    if (postponeBtn) {
-        if (isInvitee) {
-            postponeBtn.style.display = 'none';
-        } else {
-            postponeBtn.style.display = '';
-            postponeBtn.onclick = () => openPostponeModal();
-        }
-    }
-
-    openModal(eventDetailModal);
-}
-
 /* =========================== DELETE CONFIRMATION ============================ */
 
 async function deleteEventById(id) {
@@ -3130,8 +2752,7 @@ function hideDeleteConfirmation() {
     }
 }
 
-/* =========================== CHECKLIST HELPERS ============================ */
-
+// =========================== HIDE INLINE CHECKLIST ============================
 function hideInlineChecklist() {
     const editor = document.getElementById('checklist-inline-editor');
     const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
@@ -3139,6 +2760,7 @@ function hideInlineChecklist() {
     if (toggleBtn) toggleBtn.classList.remove('active');
 }
 
+// =========================== SHOW INLINE CHECKLIST ============================
 function showInlineChecklist() {
     const editor = document.getElementById('checklist-inline-editor');
     const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
@@ -3147,6 +2769,7 @@ function showInlineChecklist() {
     renderInlineChecklistItems(currentChecklistItems);
 }
 
+// =========================== RENDER INLINE CHECKLIST ITEMS ============================
 function renderInlineChecklistItems(items) {
     const container = document.getElementById('checklist-inline-items');
     if (!container) return;
@@ -4449,8 +4072,11 @@ document.getElementById('checklist-modal-add-btn')?.addEventListener('click', ()
 
 document.getElementById('checklist-done-btn')?.addEventListener('click', () => {
     currentChecklistItems = tempChecklistItems;
+    // ❌ دیگر به توضیحات اضافه نمیشه
     closeModal(document.getElementById('checklist-modal'));
     document.getElementById('toggle-checklist-mode-btn')?.classList.add('active');
+    // نمایش چک‌لیست درون‌خطی
+    showInlineChecklist();
 });
 
 document.getElementById('checklist-modal-close')?.addEventListener('click', () => {
@@ -4895,8 +4521,8 @@ function renderChecklistInDetail(ev) {
             }
         });
     });
-
 }
+
 // =========================== CHECK ALL CHECKLIST DONE ============================
 function checkAllChecklistDone(ev) {
     if (!ev.checklist || ev.checklist.length === 0) return;
@@ -4953,6 +4579,7 @@ function markTaskDone(ev) {
         updateNotificationDot();
     }).catch(() => alert('Error marking task as done.'));
 }
+
 /* =========================== POSTPONE =========================== */
 function openPostponeModal() {
     if (!currentDetailEvent) return;
@@ -5017,6 +4644,58 @@ document.getElementById('postpone-custom-apply').addEventListener('click', funct
 document.getElementById('postpone-modal-close').addEventListener('click', () => {
     closeModal(document.getElementById('postpone-modal'));
 });
+
+// =========================== CLEANUP CHECKLIST FROM DESCRIPTIONS ============================
+async function cleanupChecklistFromDescriptions() {
+    if (!currentUser) return;
+    
+    try {
+        const { data: eventsData, error } = await sb
+            .from('ravlo')
+            .select('id, description, checklist')
+            .eq('user_id', currentUser.id)
+            .eq('type', 'task');
+        
+        if (error || !eventsData) return;
+        
+        let cleanedCount = 0;
+        
+        for (const ev of eventsData) {
+            if (!ev.description) continue;
+            
+            // چک کن که description شامل چک‌لیست هست یا نه
+            const lines = ev.description.split('\n');
+            const hasChecklist = lines.some(line => 
+                line.trim().startsWith('☑') || line.trim().startsWith('☐') ||
+                line.trim().startsWith('- [x]') || line.trim().startsWith('- [ ]')
+            );
+            
+            if (hasChecklist) {
+                // پاک کردن خطوطی که شبیه چک‌لیست هستند
+                const cleanLines = lines.filter(line => 
+                    !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
+                    !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
+                );
+                const cleanDesc = cleanLines.join('\n').trim();
+                
+                // آپدیت کردن در دیتابیس
+                await updateEventInDB(ev.id, { description: cleanDesc });
+                cleanedCount++;
+                console.log(`🧹 Cleaned checklist from event: ${ev.id}`);
+            }
+        }
+        
+        if (cleanedCount > 0) {
+            console.log(`✅ Cleaned ${cleanedCount} events`);
+            // ریفرش رویدادها
+            const freshEvents = await fetchEvents();
+            events = freshEvents;
+            renderCalendar();
+        }
+    } catch (e) {
+        console.warn('Cleanup error:', e);
+    }
+}
 
 /* =========================== INITIALIZATION =========================== */
 
