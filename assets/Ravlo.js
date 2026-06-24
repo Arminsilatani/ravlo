@@ -1898,6 +1898,11 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
         }
         return false;
     });
+
+    // ایجاد ردیف افقی برای نقطه‌ها
+    const dotsRow = document.createElement('div');
+    dotsRow.className = 'event-dots-row';
+
     dayEvents.forEach(ev => {
         var dot = document.createElement('div');
         dot.className = 'event-dot';
@@ -1910,8 +1915,13 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
             dot.classList.add('invited');
             dot.style.backgroundColor = ev.color || 'var(--accent)';
         }
-        cell.appendChild(dot);
+        dotsRow.appendChild(dot);
     });
+
+    if (dayEvents.length > 0) {
+        cell.appendChild(dotsRow);
+    }
+
     cell.addEventListener('click', () => {
         currentDate = new Date(ny, nm, nd);
         viewMode = 'day';
