@@ -812,69 +812,106 @@ function renderTodayList() {
     }
 
     const today = new Date();
-    const ty = today.getFullYear(),
-        tm = today.getMonth(),
-        td = today.getDate();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
 
-    const todayEvents = events.filter(ev => {
-        if (!ev.start_date) return false;
-        if (ev.status === 'done' || ev.status === 'completed') return false;
-        
-        const d = new Date(ev.start_date);
-        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
-            if (ev.recurrence_type !== 'none') {
-                const dateStr = today.toISOString().split('T')[0];
-                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                    ? ev.completed_occurrences.includes(dateStr)
-                    : false;
-                return !isCompleted;
-            }
-            return true;
-        }
-        if (ev.recurrence_type !== 'none') {
-            const dayStart = new Date(ty, tm, td, 0, 0, 0);
-            const dayEnd = new Date(ty, tm, td, 23, 59, 59);
-            const recDates = getRecurrenceDates(ev, dayStart, dayEnd);
-            return recDates.some(rd => {
+    // جمع‌آوری رخدادهای امروز (مثل قبل)
+    const todayItems = [];
+    // جمع‌آوری رخدادهای عقب‌افتاده (فقط تکراری، انجام‌نشده)
+    const overdueItems = [];
+
+    events.forEach(ev => {
+        if (!ev.start_date) return;
+        if (ev.status === 'done' || ev.status === 'completed') return;
+
+        // بررسی رخدادهای تکراری در بازۀ دیروز و قبل از آن تا تاریخ شروع
+        if (ev.recurrence_type && ev.recurrence_type !== 'none') {
+            const start = new Date(ev.start_date);
+            const todayEnd = new Date(today.getTime() - 1); // دیروز ۲۳:۵۹:۵۹
+            const recDates = getRecurrenceDates(ev, start, todayEnd);
+            recDates.forEach(rd => {
                 const dateStr = rd.toISOString().split('T')[0];
                 const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
                     ? ev.completed_occurrences.includes(dateStr)
                     : false;
-                return !isCompleted;
+                if (!isCompleted && dateStr < todayStr) {
+                    overdueItems.push({ ev, date: dateStr });
+                }
             });
         }
-        return false;
+
+        // رخدادهای معمولی امروز (غیرتکراری یا تکراری که امروز رخداد دارند)
+        const d = new Date(ev.start_date);
+        if (ev.recurrence_type === 'none' || !ev.recurrence_type) {
+            if (d.toISOString().split('T')[0] === todayStr) {
+                const isCompleted = ev.completed_occurrences?.includes?.(todayStr);
+                if (!isCompleted) todayItems.push({ ev, date: todayStr });
+            }
+        } else {
+            const todayStart = new Date(today);
+            const todayEnd = new Date(today.getTime() + 24*60*60*1000 - 1);
+            const recDates = getRecurrenceDates(ev, todayStart, todayEnd);
+            recDates.forEach(rd => {
+                const dateStr = rd.toISOString().split('T')[0];
+                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                if (!isCompleted && dateStr === todayStr) {
+                    todayItems.push({ ev, date: dateStr });
+                }
+            });
+        }
     });
 
-    todayEvents.sort((a, b) => {
-        const at = a.start_date ? new Date(a.start_date).getTime() : 0;
-        const bt = b.start_date ? new Date(b.start_date).getTime() : 0;
-        return at - bt;
-    });
+    // ساخت HTML
+    let html = '';
 
-    if (todayEvents.length === 0) {
-        container.innerHTML = '<div style="padding:8px 16px;font-size:12px;color:#555;">No events today</div>';
-        return;
+    if (overdueItems.length > 0) {
+        html += '<div style="padding:8px 16px; font-size:10px; text-transform:uppercase; color:#ff6b6b; letter-spacing:0.5px;">Overdue</div>';
+        overdueItems.forEach(item => {
+            const color = item.ev.color || 'var(--accent)';
+            html += `
+                <div class="sidebar-today-item overdue-item" data-event-id="${item.ev.id}" data-date="${item.date}" style="cursor:pointer;">
+                    <span class="dot" style="background:${color}"></span>
+                    <span class="title">${item.ev.title || 'Untitled'}</span>
+                    <span class="overdue-date">${item.date}</span>
+                </div>`;
+        });
     }
 
-    container.innerHTML = todayEvents.map(ev => {
-        const color = ev.color || 'var(--accent)';
-        return `
-            <div class="sidebar-today-item" data-event-id="${ev.id}" style="cursor:pointer;">
-                <span class="dot" style="background:${color}"></span>
-                <span class="title">${ev.title || 'Untitled'}</span>
-            </div>
-        `;
-    }).join('');
+    if (todayItems.length > 0) {
+        html += '<div style="padding:8px 16px; font-size:10px; text-transform:uppercase; color:#aaa; letter-spacing:0.5px;">Today</div>';
+        todayItems.sort((a, b) => {
+            const at = a.ev.start_date ? new Date(a.ev.start_date).getTime() : 0;
+            const bt = b.ev.start_date ? new Date(b.ev.start_date).getTime() : 0;
+            return at - bt;
+        });
+        todayItems.forEach(item => {
+            const color = item.ev.color || 'var(--accent)';
+            html += `
+                <div class="sidebar-today-item" data-event-id="${item.ev.id}" style="cursor:pointer;">
+                    <span class="dot" style="background:${color}"></span>
+                    <span class="title">${item.ev.title || 'Untitled'}</span>
+                </div>`;
+        });
+    }
 
+    if (html === '') {
+        html = '<div style="padding:8px 16px;font-size:12px;color:#555;">No events today</div>';
+    }
+
+    container.innerHTML = html;
+
+    // رویدادهای کلیک
     container.querySelectorAll('.sidebar-today-item').forEach(item => {
         item.addEventListener('click', function(e) {
             const id = this.dataset.eventId;
+            const date = this.dataset.date;
             const event = events.find(ev => ev.id == id);
             if (event) {
                 const closeBtn = document.getElementById('sidebar-close-btn');
                 if (closeBtn) closeBtn.click();
-                openEventDetail(event, new Date());
+                openEventDetail(event, date ? new Date(date + 'T00:00:00') : new Date());
             }
         });
     });
