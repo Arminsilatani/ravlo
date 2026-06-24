@@ -735,7 +735,7 @@ function renderSidebarMenu() {
             }
             const canUseNow = hasAccess(currentUserRole, tool.minRole);
             if (!canUseNow) {
-                alert('Your access level is too low to use this tool.');
+                showToast('Your access level is too low to use this tool.');
                 return;
             }
             if (tool.link) {
@@ -1124,14 +1124,14 @@ async function fetchEvents() {
 
 async function updateEventInDB(id, payload) {
     if (!currentUser) {
-        alert('Not logged in');
+        showToast('Not logged in');
         return null;
     }
     const {
         error
     } = await sb.from('ravlo').update(payload).eq('id', id).eq('user_id', currentUser.id);
     if (error) {
-        alert('Update failed: ' + error.message);
+        showToast('Update failed: ' + error.message);
         return null;
     }
     return true;
@@ -1139,13 +1139,13 @@ async function updateEventInDB(id, payload) {
 
 async function deleteEventFromDB(id) {
     if (!currentUser) {
-        alert('Not logged in');
+        showToast('Not logged in');
         return;
     }
     const {
         error
     } = await sb.from('ravlo').delete().eq('id', id).eq('user_id', currentUser.id);
-    if (error) alert('Delete failed: ' + error.message);
+    if (error) showToast('Delete failed: ' + error.message);
     return !error;
 }
 
@@ -2862,7 +2862,7 @@ async function saveEvent() {
         var start = '';
         if (eventStartInput) start = eventStartInput.value;
         if (!title || !start) {
-            alert('Title and start date are required.');
+            showToast('Title and start date are required.');
             return;
         }
 
@@ -3033,11 +3033,11 @@ async function saveEvent() {
         updateNotificationDot();
 
         // Show success message
-        showToast(editingEventId ? '✅ Event updated successfully!' : '✅ Event created successfully!');
+        showToast(editingEventId ? 'Event updated successfully!' : 'Event created successfully!');
 
     } catch (err) {
         console.error('Save event error:', err);
-        alert('Error saving event: ' + err.message);
+        showToast('Error saving event: ' + err.message);
         hideGlobalLoader();
     }
 }
@@ -3367,7 +3367,7 @@ if (completeBtn) {
                     closeModal(eventDetailModal);
                     renderCalendar();
                     updateNotificationDot();
-                }).catch(() => alert('Error undoing.'));
+                }).catch(() => showToast('Error undoing.'));
             } else {
                 updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
                     ev.status = 'pending';
@@ -3390,7 +3390,7 @@ if (completeBtn) {
                     closeModal(eventDetailModal);
                     renderCalendar();
                     updateNotificationDot();
-                }).catch(() => alert('Error undoing.'));
+                }).catch(() => showToast('Error undoing.'));
             }
         };
     } else {
@@ -3408,11 +3408,11 @@ if (completeBtn) {
                     if (currentUser) {
                         await removeNotificationsForEvent(ev.id, currentUser.id);
                     }
-                    alert('This occurrence will be automatically deleted after 28 days.');
+                    showToast('Occurrence marked done. Auto‑deleted in 28 days.');
                     closeModal(eventDetailModal);
                     renderCalendar();
                     updateNotificationDot();
-                }).catch(() => alert('Error completing.'));
+                }).catch(() => showToast('Error completing.'));
             } else {
                 var newStatus = ev.type === 'task' ? 'done' : 'completed';
                 var payload = { status: newStatus, completed_at: new Date().toISOString() };
@@ -3422,11 +3422,11 @@ if (completeBtn) {
                     if (currentUser) {
                         await removeNotificationsForEvent(ev.id, currentUser.id);
                     }
-                    alert('This item will be automatically deleted after 28 days.');
+                    showToast('Item marked done. Auto‑deleted in 28 days.');
                     closeModal(eventDetailModal);
                     renderCalendar();
                     updateNotificationDot();
-                }).catch(() => alert('Error completing.'));
+                }).catch(() => showToast('Error completing.'));
             }
         };
     }
@@ -3452,7 +3452,7 @@ if (completeBtn) {
                     deleteEventById(ev.id).then(() => {
                         closeModal(eventDetailModal);
                         renderCalendar();
-                    }).catch(() => alert('Failed to delete event.'));
+                    }).catch(() => showToast('Failed to delete event.'));
                 });
             };
         }
@@ -3485,7 +3485,7 @@ async function deleteEventById(id) {
         }
     } catch (err) {
         console.error('Delete failed:', err);
-        alert('Failed to delete event. Please try again.');
+        showToast('Failed to delete event. Please try again.');
     } finally {
         hideGlobalLoader();
     }
@@ -4371,7 +4371,7 @@ document.getElementById('icon-modal')?.addEventListener('click', function(e) {
 document.getElementById('toggle-invite-btn')?.addEventListener('click', () => {
     const btn = document.getElementById('toggle-invite-btn');
     if (!currentUser) {
-        alert('Please sign in first.');
+        showToast('Please sign in first.');
         return;
     }
     if (btn && btn.classList.contains('active')) {
@@ -4420,7 +4420,7 @@ function rebuildInviteModal() {
     });
     document.getElementById('copy-invite-link-btn')?.addEventListener('click', () => {
         const link = document.getElementById('invite-link-text').textContent;
-        navigator.clipboard.writeText(link).then(() => alert('Link copied!'));
+        navigator.clipboard.writeText(link).then(() => showToast('Link copied!'));
     });
     let searchTimeout;
     document.getElementById('invite-search-input').addEventListener('input', function() {
@@ -4583,9 +4583,9 @@ async function sendConnectionInvite(userId, name) {
         if (existing && existing.length > 0) {
             const req = existing[0];
             if (req.status === 'accepted') {
-                alert('You are already connected with this user.');
+                showToast('You are already connected with this user.');
             } else if (req.status === 'pending') {
-                alert('A connection request is already pending. Please wait for a response.');
+                showToast('A connection request is already pending. Please wait for a response.');
             }
             return;
         }
@@ -4615,7 +4615,7 @@ async function sendConnectionInvite(userId, name) {
 
         showToast(`Connection request sent! Share the invite link with ${name}.`);
     } catch (e) {
-        alert('Error: ' + e.message);
+        showToast('Error: ' + e.message);
     }
 }
 
@@ -4796,7 +4796,7 @@ document.getElementById('location-done-btn')?.addEventListener('click', () => {
     } else if (currentLocationCoords) {
         // coordinates only
     } else {
-        alert('Please select a location.');
+        showToast('Please select a location.');
         return;
     }
 
@@ -4849,7 +4849,7 @@ document.getElementById('checklist-modal-close')?.addEventListener('click', () =
 // Copy invite code
 document.getElementById('copy-invite-code-btn')?.addEventListener('click', () => {
     const code = document.getElementById('invite-code-text').textContent;
-    navigator.clipboard.writeText(code).then(() => alert('Code copied!'));
+    navigator.clipboard.writeText(code).then(() => showToast('Code copied!'));
 });
 
 // Clear location (old inline)
@@ -5008,7 +5008,7 @@ function fallbackCopy(text) {
         document.execCommand('copy');
         showToast('Link copied!');
     } catch (e) {
-        alert('Could not copy link. Please copy it manually.');
+        showToast('Could not copy link. Please copy it manually.');
     }
     document.body.removeChild(textarea);
 }
@@ -5296,10 +5296,10 @@ function renderChecklistInDetail(ev) {
             };
         }
         
-        showToast('✅ Task marked as Done!');
+        showToast('Task marked as Done!');
         renderCalendar();
         updateNotificationDot();
-    }).catch(() => alert('Error marking task as done.'));
+    }).catch(() => showToast('Error marking task as done.'));
 }
 
     // رویدادهای چک‌باکس
@@ -5347,7 +5347,7 @@ function renderChecklistInDetail(ev) {
                     .then(() => {
                         checkAllChecklistDone(ev);
                     })
-                    .catch(() => alert('Error updating checklist.'));
+                    .catch(() => showToast('Error updating checklist.'));
             }
         });
     });
@@ -5357,7 +5357,6 @@ function renderChecklistInDetail(ev) {
 function checkAllChecklistDone(ev) {
     if (!ev.checklist || ev.checklist.length === 0) return;
 
-    // بررسی همه آیتم‌ها (شامل زیرآیتم‌ها)
     function allItemsDone(items) {
         for (const item of items) {
             if (!item.done) return false;
@@ -5426,12 +5425,11 @@ if (completeBtn) {
                     closeModal(eventDetailModal);
                     renderCalendar();
                     updateNotificationDot();
-                }).catch(() => alert('Error undoing.'));
+                }).catch(() => showToast('Error undoing.'));
             } else {
                 updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
                     ev.status = 'pending';
                     ev.completed_at = null;
-                    // ✅ بازسازی نوتیفیکیشن اگر امروز است
                     if (currentUser) {
                         const today = new Date();
                         const evDate = new Date(ev.start_date);
@@ -5451,7 +5449,7 @@ if (completeBtn) {
                     closeModal(eventDetailModal);
                     renderCalendar();
                     updateNotificationDot();
-                }).catch(() => alert('Error undoing.'));
+                }).catch(() => showToast('Error undoing.'));
             }
         };
     } else {
@@ -5466,39 +5464,37 @@ if (completeBtn) {
                     completed_occurrences: ev.completed_occurrences,
                     completed_timestamps: ev.completed_timestamps
                 }).then(async () => {
-                    // ✅ حذف نوتیفیکیشن
                     if (currentUser) {
                         await removeNotificationsForEvent(ev.id, currentUser.id);
                     }
-                    alert('This occurrence will be auto-deleted after 28 days.');
+                    showToast('This occurrence will be auto-deleted after 28 days.');
                     closeModal(eventDetailModal);
                     renderCalendar();
                     updateNotificationDot();
-                }).catch(() => alert('Error completing.'));
+                }).catch(() => showToast('Error completing.'));
             } else {
                 var newStatus = ev.type === 'task' ? 'done' : 'completed';
                 var payload = { status: newStatus, completed_at: new Date().toISOString() };
                 updateEventInDB(ev.id, payload).then(async () => {
                     ev.status = newStatus;
                     ev.completed_at = payload.completed_at;
-                    // ✅ حذف نوتیفیکیشن
                     if (currentUser) {
                         await removeNotificationsForEvent(ev.id, currentUser.id);
                     }
-                    alert('This item will be auto-deleted after 28 days.');
+                    showToast('This item will be auto-deleted after 28 days.');
                     closeModal(eventDetailModal);
                     renderCalendar();
                     updateNotificationDot();
-                }).catch(() => alert('Error completing.'));
+                }).catch(() => showToast('Error completing.'));
             }
         };
     }
 }
         
-        showToast('🎉 Task marked as Done!');
+        showToast('Task marked as Done!');
         renderCalendar();
         updateNotificationDot();
-    }).catch(() => alert('Error marking task as done.'));
+    }).catch(() => showToast('Error marking task as done.'));
 }
 
 /* =========================== POSTPONE =========================== */
@@ -5536,7 +5532,7 @@ function applyPostponeOffset(minutes) {
             closeModal(document.getElementById('event-detail-modal'));
             renderCalendar();
         })
-        .catch(err => alert('Postpone failed: ' + err.message));
+        .catch(err => showToast('Postpone failed: ' + err.message));
 }
 
 // گوش‌دهندگان دکمه‌ها
@@ -5556,7 +5552,7 @@ document.getElementById('postpone-modal').addEventListener('click', function(e) 
 document.getElementById('postpone-custom-apply').addEventListener('click', function() {
     const mins = parseInt(document.getElementById('postpone-custom-input').value);
     if (isNaN(mins) || mins < 1) {
-        alert('Please enter a valid number of minutes.');
+        showToast('Please enter a valid number of minutes.');
         return;
     }
     applyPostponeOffset(mins);
