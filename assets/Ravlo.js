@@ -3352,8 +3352,11 @@ function openEventDetail(ev, occurrenceDate) {
 
 // ─── وضعیت تکمیل (Complete / Undo) ───
 var dateForCompletion = null;
-if (ev.__occurrenceDate) {
-    dateForCompletion = ev.__occurrenceDate.toISOString().split('T')[0];
+if (occurrenceDate) {
+    // استفاده از تاریخ محلی بدون تأثیر منطقه زمانی
+    const d = occurrenceDate;
+    dateForCompletion = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+
 } else if (occurrenceDate) {
     dateForCompletion = occurrenceDate.toISOString().split('T')[0];
 }
