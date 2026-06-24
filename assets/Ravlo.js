@@ -5248,58 +5248,47 @@ function renderChecklistInDetail(ev) {
     }
 
     function markTaskDone(ev) {
-    if (ev.status === 'done') return;
+    // فقط در صورت وجود تاریخِ وقوع (برای رخدادهای تکراری)
+    const occurrenceDate = ev.occurrenceDate; // ممکن است null باشد
+
+    if (occurrenceDate && ev.recurrence_type && ev.recurrence_type !== 'none') {
+        // تسک تکراری – فقط این رخداد را Done کن
+        if (!ev.completed_occurrences) ev.completed_occurrences = [];
+        if (!ev.completed_occurrences.includes(occurrenceDate)) {
+            ev.completed_occurrences.push(occurrenceDate);
+            if (!ev.completed_timestamps) ev.completed_timestamps = {};
+            ev.completed_timestamps[occurrenceDate] = new Date().toISOString();
+
+            updateEventInDB(ev.id, {
+                completed_occurrences: ev.completed_occurrences,
+                completed_timestamps: ev.completed_timestamps
+            }).then(() => {
+                if (currentUser) removeNotificationsForEvent(ev.id, currentUser.id);
+                showToast('✅ Checklist completed for this occurrence. Auto‑deleted in 28 days.');
+                closeModal(eventDetailModal);
+                renderCalendar();
+                updateNotificationDot();
+            }).catch(() => showToast('Error updating task.'));
+        }
+        return;
+    }
+
+    // تسک غیرتکراری (یا بدون تاریخ) – کل تسک را تمام کن
+    if (ev.status === 'done' || ev.status === 'completed') return;
 
     ev.status = 'done';
     ev.completed_at = new Date().toISOString();
-    
-    updateEventInDB(ev.id, { 
-        status: 'done', 
-        completed_at: ev.completed_at 
+
+    updateEventInDB(ev.id, {
+        status: 'done',
+        completed_at: ev.completed_at
     }).then(async () => {
-        // ✅ حذف نوتیفیکیشن
-        if (currentUser) {
-            await removeNotificationsForEvent(ev.id, currentUser.id);
-        }
-        
-        const completeBtn = document.getElementById('detail-complete-btn');
-        if (completeBtn) {
-            completeBtn.textContent = 'Undo';
-            completeBtn.onclick = () => {
-                ev.status = 'pending';
-                ev.completed_at = null;
-                updateEventInDB(ev.id, { status: 'pending', completed_at: null })
-                    .then(async () => {
-                        // ✅ بازسازی نوتیفیکیشن اگر امروز است
-                        if (currentUser) {
-                            const today = new Date();
-                            const evDate = new Date(ev.start_date);
-                            if (evDate.getFullYear() === today.getFullYear() &&
-                                evDate.getMonth() === today.getMonth() &&
-                                evDate.getDate() === today.getDate()) {
-                                await addNotificationToUser(
-                                    currentUser.id,
-                                    'event',
-                                    '📅 Event Today',
-                                    `${ev.title || 'Untitled'} is today!`,
-                                    '#',
-                                    ev.id
-                                );
-                            }
-                        }
-                        completeBtn.textContent = 'Done';
-                        completeBtn.onclick = () => markTaskDone(ev);
-                        renderChecklistInDetail(ev);
-                        renderCalendar();
-                        updateNotificationDot();
-                    });
-            };
-        }
-        
-        showToast('Task marked as Done!');
+        if (currentUser) await removeNotificationsForEvent(ev.id, currentUser.id);
+        showToast('🎉 Task marked as Done!');
+        closeModal(eventDetailModal);
         renderCalendar();
         updateNotificationDot();
-    }).catch(() => showToast('Error marking task as done.'));
+    }).catch(() => showToast('Error completing task.'));
 }
 
     // رویدادهای چک‌باکس
