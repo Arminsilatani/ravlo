@@ -1115,46 +1115,53 @@ async function deleteEventFromDB(id) {
 // =========================== MOVE OVERDUE TASKS TO TODAY ============================
 async function moveOverdueTasksToToday() {
     if (!currentUser) return;
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     try {
-        const { data: tasks, error } = await sb
+        // همه تسک‌های کاربر که انجام نشده باشند
+        const { data: allTasks, error } = await sb
             .from('ravlo')
             .select('id, title, start_date, status, recurrence_type')
             .eq('user_id', currentUser.id)
             .eq('type', 'task')
-            .or('recurrence_type.is.null,recurrence_type.eq.none')
             .neq('status', 'done')
             .neq('status', 'completed');
-        
+
         if (error) throw error;
-        if (!tasks || tasks.length === 0) return;
-        
+        if (!allTasks || allTasks.length === 0) return;
+
         let movedCount = 0;
-        
-        for (const task of tasks) {
+
+        for (const task of allTasks) {
+            // فقط تسک‌های غیرتکراری را جابه‌جا کن
+            const isRecurring = task.recurrence_type && task.recurrence_type !== 'none';
+            if (isRecurring) continue;
+
             if (!task.start_date) continue;
+
             const startDate = new Date(task.start_date);
             startDate.setHours(0, 0, 0, 0);
-            
+
             if (startDate < today) {
                 const newStart = new Date(today);
                 newStart.setHours(0, 0, 0, 0);
-                
-                await updateEventInDB(task.id, { 
+
+                await updateEventInDB(task.id, {
                     start_date: newStart.toISOString()
                 });
                 movedCount++;
                 console.log(`🔄 Moved overdue task: "${task.title}" to today 00:00`);
             }
         }
-        
+
         if (movedCount > 0) {
             console.log(`✅ Moved ${movedCount} overdue tasks to today at 00:00`);
             events = await fetchEvents();
             renderCalendar();
+        } else {
+            console.log('ℹ️ No overdue non-recurring tasks found.');
         }
     } catch (e) {
         console.warn('Error moving overdue tasks:', e);
