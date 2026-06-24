@@ -837,7 +837,7 @@ body.modal-open {
 .sidebar-today-item {
   display: grid;
   grid-template-columns: 24px 1fr;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
   padding: 6px 15px;
   border-radius: 8px;
