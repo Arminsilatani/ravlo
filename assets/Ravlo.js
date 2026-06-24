@@ -2015,6 +2015,75 @@ function renderDayView() {
     timelineWrapper.appendChild(timeLabels);
     timelineWrapper.appendChild(slots);
     
+    // بعد از محاسبۀ timedEvents و قبل از allDayRow
+var overdueOccurrences = [];
+if (currentUser) { // فقط وقتی کاربر لاگین کرده
+    var todayStart = new Date(vy, vm, vd, 0, 0, 0);
+    var yesterdayEnd = new Date(todayStart.getTime() - 1000);
+    events.forEach(ev => {
+        if (ev.type !== 'task') return; // فقط تسک‌ها
+        if (!ev.start_date) return;
+        if (ev.status === 'done' || ev.status === 'completed') return;
+        if (!ev.recurrence_type || ev.recurrence_type === 'none') return; // فقط تکراری‌ها
+
+        var start = new Date(ev.start_date);
+        var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
+        recDates.forEach(rd => {
+            var dateStr = rd.toISOString().split('T')[0];
+            var isCompleted = ev.completed_occurrences?.includes?.(dateStr);
+            if (!isCompleted) {
+                overdueOccurrences.push({
+                    ev: ev,
+                    date: dateStr,
+                    time: rd // تاریخ کامل با زمان
+                });
+            }
+        });
+    });
+}
+
+// ایجاد ردیف Overdue (اگر موردی وجود داشت)
+if (overdueOccurrences.length > 0) {
+    var overdueRow = document.createElement('div');
+    overdueRow.className = 'all-day-events-row overdue-row'; // کلاس جدید
+    overdueRow.style.background = 'rgba(255,100,100,0.05)';
+    overdueRow.style.borderBottom = '1px solid rgba(255,100,100,0.2)';
+    var overdueLabel = document.createElement('span');
+    overdueLabel.style.cssText = 'font-size:10px; color:#ff6b6b; text-transform:uppercase; margin-right:8px;';
+    overdueLabel.textContent = 'Overdue';
+    overdueRow.appendChild(overdueLabel);
+
+    overdueOccurrences.forEach(item => {
+        var capsule = document.createElement('span');
+        capsule.className = 'all-day-capsule overdue-capsule';
+        capsule.style.backgroundColor = item.ev.color || 'var(--accent)';
+        capsule.style.color = '#fff';
+        capsule.style.border = '1px solid ' + (item.ev.color || 'var(--accent)');
+        capsule.style.opacity = '0.8';
+
+        if (item.ev.icon) {
+            var iconSpan = document.createElement('span');
+            iconSpan.className = 'all-day-capsule-icon';
+            iconSpan.innerHTML = item.ev.icon;
+            capsule.appendChild(iconSpan);
+        }
+
+        var titleSpan = document.createElement('span');
+        titleSpan.className = 'all-day-capsule-title';
+        titleSpan.textContent = (item.ev.title || 'Untitled') + ' (' + item.date + ')';
+        capsule.appendChild(titleSpan);
+
+        capsule.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openEventDetail(item.ev, item.time);
+        });
+
+        overdueRow.appendChild(capsule);
+    });
+
+    calendarGrid.appendChild(overdueRow);
+}
+
     calendarGrid.appendChild(allDayRow);
     calendarGrid.appendChild(timelineWrapper);
 
