@@ -1113,7 +1113,6 @@ async function deleteEventFromDB(id) {
 }
 
 // =========================== MOVE OVERDUE TASKS TO TODAY ============================
-// =========================== MOVE OVERDUE TASKS TO TODAY ============================
 async function moveOverdueTasksToToday() {
     if (!currentUser) return;
     
@@ -1126,7 +1125,7 @@ async function moveOverdueTasksToToday() {
             .select('id, title, start_date, status, recurrence_type')
             .eq('user_id', currentUser.id)
             .eq('type', 'task')
-            .eq('recurrence_type', 'none')
+            .or('recurrence_type.is.null,recurrence_type.eq.none')
             .neq('status', 'done')
             .neq('status', 'completed');
         
@@ -1141,7 +1140,6 @@ async function moveOverdueTasksToToday() {
             startDate.setHours(0, 0, 0, 0);
             
             if (startDate < today) {
-                // تنظیم روی امروز ساعت ۰۰:۰۰
                 const newStart = new Date(today);
                 newStart.setHours(0, 0, 0, 0);
                 
