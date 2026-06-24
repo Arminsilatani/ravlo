@@ -2040,48 +2040,6 @@ if (currentUser) { // فقط وقتی کاربر لاگین کرده
     });
 }
 
-// ایجاد ردیف Overdue (اگر موردی وجود داشت)
-if (overdueOccurrences.length > 0) {
-    var overdueRow = document.createElement('div');
-    overdueRow.className = 'all-day-events-row overdue-row'; // کلاس جدید
-    overdueRow.style.background = 'rgba(255,100,100,0.05)';
-    overdueRow.style.borderBottom = '1px solid rgba(255,100,100,0.2)';
-    var overdueLabel = document.createElement('span');
-    overdueLabel.style.cssText = 'font-size:10px; color:#ff6b6b; text-transform:uppercase; margin-right:8px;';
-    overdueLabel.textContent = 'Overdue';
-    overdueRow.appendChild(overdueLabel);
-
-    overdueOccurrences.forEach(item => {
-        var capsule = document.createElement('span');
-        capsule.className = 'all-day-capsule overdue-capsule';
-        capsule.style.backgroundColor = item.ev.color || 'var(--accent)';
-        capsule.style.color = '#fff';
-        capsule.style.border = '1px solid ' + (item.ev.color || 'var(--accent)');
-        capsule.style.opacity = '0.8';
-
-        if (item.ev.icon) {
-            var iconSpan = document.createElement('span');
-            iconSpan.className = 'all-day-capsule-icon';
-            iconSpan.innerHTML = item.ev.icon;
-            capsule.appendChild(iconSpan);
-        }
-
-        var titleSpan = document.createElement('span');
-        titleSpan.className = 'all-day-capsule-title';
-        titleSpan.textContent = (item.ev.title || 'Untitled') + ' (' + item.date + ')';
-        capsule.appendChild(titleSpan);
-
-        capsule.addEventListener('click', function(e) {
-            e.stopPropagation();
-            openEventDetail(item.ev, new Date(item.date + 'T00:00:00'));
-        });
-
-        overdueRow.appendChild(capsule);
-    });
-
-    calendarGrid.appendChild(overdueRow);
-}
-
 // فقط اگر نمای امروز باشد، رخدادهای عقب‌افتاده را نشان بده
 const todayCheck = new Date();
 if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === todayCheck.getDate()) {
