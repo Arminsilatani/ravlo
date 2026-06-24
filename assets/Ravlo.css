@@ -2080,6 +2080,7 @@ body.modal-open {
   text-align: center;
   padding: 4px 0;
   outline: none;
+  appearance: textfield;
   -moz-appearance: textfield;
 }
 
