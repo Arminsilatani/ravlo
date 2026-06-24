@@ -826,7 +826,6 @@ function renderTodayList() {
         if (!ev.start_date) return;
         if (ev.status === 'done' || ev.status === 'completed') return;
 
-        // رخدادهای تکراری عقب‌افتاده
         if (ev.recurrence_type && ev.recurrence_type !== 'none') {
             const start = new Date(ev.start_date);
             const todayEnd = new Date(today.getTime() - 1);
@@ -842,7 +841,6 @@ function renderTodayList() {
             });
         }
 
-        // رخدادهای امروز
         const d = new Date(ev.start_date);
         if (ev.recurrence_type === 'none' || !ev.recurrence_type) {
             if (toLocalDateString(d) === todayStr) {
@@ -867,9 +865,9 @@ function renderTodayList() {
 
     let html = '';
 
-    // ۱. بخش Today (اول)
+    // 1. Today
     if (todayItems.length > 0) {
-        html += '<div style="padding:8px 16px; font-size:10px; text-transform:uppercase; color:#aaa; letter-spacing:0.5px;">Today</div>';
+        html += '<div class="sidebar-section-title">Today</div>';
         todayItems.sort((a, b) => {
             const at = a.ev.start_date ? new Date(a.ev.start_date).getTime() : 0;
             const bt = b.ev.start_date ? new Date(b.ev.start_date).getTime() : 0;
@@ -885,17 +883,16 @@ function renderTodayList() {
         });
     }
 
-    // ۲. بخش Overdue (دوم، در یک باکس قرمز)
+    // 2. Overdue
     if (overdueItems.length > 0) {
-        html += '<div style="padding:8px 16px; font-size:10px; text-transform:uppercase; color:#ff6b6b; letter-spacing:0.5px;">Overdue</div>';
-        html += '<div class="sidebar-overdue-box">';  // باکس قرمز
+        html += '<div class="sidebar-section-title overdue">Overdue</div>';
+        html += '<div class="sidebar-overdue-box">';
         overdueItems.forEach(item => {
             const color = item.ev.color || 'var(--accent)';
             html += `
                 <div class="sidebar-today-item overdue-item" data-event-id="${item.ev.id}" data-date="${item.date}" style="cursor:pointer;">
                     <span class="dot" style="background:${color}"></span>
                     <span class="title">${item.ev.title || 'Untitled'}</span>
-                    <!-- تاریخ دیگر نمایش داده نمی‌شود -->
                 </div>`;
         });
         html += '</div>';
