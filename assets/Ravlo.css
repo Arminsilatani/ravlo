@@ -353,7 +353,7 @@ body.modal-open {
   white-space: nowrap;
   letter-spacing: 0.02em;
   position: relative;
-  z-index: 10;
+  z-index: 1;
   pointer-events: auto;
 }
 
