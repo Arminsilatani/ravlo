@@ -130,27 +130,16 @@ function getAccentPinIcon() {
 // =========================== REMOVE NOTIFICATIONS FOR EVENT ============================
 async function removeNotificationsForEvent(eventId, userId) {
     try {
-        // حذف مستقیم با شرط event_id (اگر در جدول داریم)
         const { error } = await sb
             .from('notifications')
             .delete()
             .eq('user_id', userId)
             .eq('event_id', eventId);
-            
         if (error) {
-            // اگر فیلد event_id وجود ندارد، با عنوان حذف کن
-            const event = events.find(e => e.id == eventId);
-            if (event) {
-                const { error: err2 } = await sb
-                    .from('notifications')
-                    .delete()
-                    .eq('user_id', userId)
-                    .eq('type', 'event')
-                    .like('body', `%${event.title || 'Untitled'}%`);
-                if (err2) console.warn('Remove by title error:', err2);
-            }
+            console.warn('Remove notifications error:', error);
+        } else {
+            console.log(`✅ Notifications removed for event: ${eventId}`);
         }
-        console.log(`✅ Notifications removed for event: ${eventId}`);
     } catch (e) {
         console.warn('Remove notifications error:', e);
     }
@@ -2303,78 +2292,96 @@ function renderDayView() {
                     endBtn.className = 'event-action-btn';
 
                     if (item.ev.type === 'task') {
-                        // ✅ تاریخ محلی برای تسک‌ها
-                        var occDate = toLocalDateString(new Date(vy, vm, vd));
-                        var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
-                                        ? item.ev.completed_occurrences.includes(occDate)
-                                        : false;
-                        endBtn.textContent = isDone ? 'Undo' : 'Done';
-                        endBtn.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            if (isDone) {
-                                var idx = item.ev.completed_occurrences.indexOf(occDate);
-                                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
-                                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
-                                    delete item.ev.completed_timestamps[occDate];
-                                }
-                                endBtn.textContent = 'Done';
-                                evEl.style.opacity = '1';
-                                evEl.style.textDecoration = 'none';
-                            } else {
-                                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
-                                item.ev.completed_occurrences.push(occDate);
-                                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
-                                item.ev.completed_timestamps[occDate] = new Date().toISOString();
-                                endBtn.textContent = 'Undo';
-                                evEl.style.opacity = '0.6';
-                                evEl.style.textDecoration = 'line-through';
-                                showToast('Occurrence marked done. Auto‑deleted in 28 days.');
-                            }
-                            updateEventInDB(item.ev.id, {
-                                completed_occurrences: item.ev.completed_occurrences,
-                                completed_timestamps: item.ev.completed_timestamps
-                            }).catch(function() {});
-                            isDone = !isDone;
-                        });
-                        if (isDone) {
-                            evEl.style.opacity = '0.6';
-                            evEl.style.textDecoration = 'line-through';
-                        }
-                    } else {
-                        var occDate = toLocalDateString(new Date(vy, vm, vd));
-                        var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
-                                            ? item.ev.completed_occurrences.includes(occDate)
-                                            : false;
-                        endBtn.textContent = isCompleted ? 'Undo' : 'End';
-                        endBtn.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            if (isCompleted) {
-                                var idx = item.ev.completed_occurrences.indexOf(occDate);
-                                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
-                                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
-                                    delete item.ev.completed_timestamps[occDate];
-                                }
-                                endBtn.textContent = 'End';
-                                evEl.classList.remove('event-completed');
-                            } else {
-                                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
-                                item.ev.completed_occurrences.push(occDate);
-                                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
-                                item.ev.completed_timestamps[occDate] = new Date().toISOString();
-                                endBtn.textContent = 'Undo';
-                                evEl.classList.add('event-completed');
-                                showToast('Event marked done. Auto‑deleted in 28 days.');
-                            }
-                            updateEventInDB(item.ev.id, {
-                                completed_occurrences: item.ev.completed_occurrences,
-                                completed_timestamps: item.ev.completed_timestamps
-                            }).catch(function() {});
-                            isCompleted = !isCompleted;
-                        });
-                        if (isCompleted) {
-                            evEl.classList.add('event-completed');
-                        }
-                    }
+    var occDate = toLocalDateString(new Date(vy, vm, vd));
+    var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
+                    ? item.ev.completed_occurrences.includes(occDate)
+                    : false;
+    endBtn.textContent = isDone ? 'Undo' : 'Done';
+    endBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (isDone) {
+            var idx = item.ev.completed_occurrences.indexOf(occDate);
+            if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
+            if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
+                delete item.ev.completed_timestamps[occDate];
+            }
+            endBtn.textContent = 'Done';
+            evEl.style.opacity = '1';
+            evEl.style.textDecoration = 'none';
+            // بعد از Undo هم نوتیفیکیشن حذف شود (اگر وجود داشت)
+            updateEventInDB(item.ev.id, {
+                completed_occurrences: item.ev.completed_occurrences,
+                completed_timestamps: item.ev.completed_timestamps
+            }).then(() => {
+                if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
+                console.log('Undone and notifications removed.');
+            }).catch(function() {});
+        } else {
+            if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
+            item.ev.completed_occurrences.push(occDate);
+            if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
+            item.ev.completed_timestamps[occDate] = new Date().toISOString();
+            endBtn.textContent = 'Undo';
+            evEl.style.opacity = '0.6';
+            evEl.style.textDecoration = 'line-through';
+            showToast('Occurrence marked done. Auto‑deleted in 28 days.');
+            updateEventInDB(item.ev.id, {
+                completed_occurrences: item.ev.completed_occurrences,
+                completed_timestamps: item.ev.completed_timestamps
+            }).then(() => {
+                if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
+                console.log('Done and notifications removed.');
+            }).catch(function() {});
+        }
+        isDone = !isDone;
+    });
+    if (isDone) {
+        evEl.style.opacity = '0.6';
+        evEl.style.textDecoration = 'line-through';
+    }
+} else {
+    var occDate = toLocalDateString(new Date(vy, vm, vd));
+    var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
+                        ? item.ev.completed_occurrences.includes(occDate)
+                        : false;
+    endBtn.textContent = isCompleted ? 'Undo' : 'End';
+    endBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (isCompleted) {
+            var idx = item.ev.completed_occurrences.indexOf(occDate);
+            if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
+            if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
+                delete item.ev.completed_timestamps[occDate];
+            }
+            endBtn.textContent = 'End';
+            evEl.classList.remove('event-completed');
+            updateEventInDB(item.ev.id, {
+                completed_occurrences: item.ev.completed_occurrences,
+                completed_timestamps: item.ev.completed_timestamps
+            }).then(() => {
+                if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
+            }).catch(function() {});
+        } else {
+            if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
+            item.ev.completed_occurrences.push(occDate);
+            if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
+            item.ev.completed_timestamps[occDate] = new Date().toISOString();
+            endBtn.textContent = 'Undo';
+            evEl.classList.add('event-completed');
+            showToast('Event marked done. Auto‑deleted in 28 days.');
+            updateEventInDB(item.ev.id, {
+                completed_occurrences: item.ev.completed_occurrences,
+                completed_timestamps: item.ev.completed_timestamps
+            }).then(() => {
+                if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
+            }).catch(function() {});
+        }
+        isCompleted = !isCompleted;
+    });
+    if (isCompleted) {
+        evEl.classList.add('event-completed');
+    }
+}
 
                     actionsDiv.appendChild(cancelBtn);
                     actionsDiv.appendChild(endBtn);
