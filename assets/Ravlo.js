@@ -3076,7 +3076,8 @@ async function saveEvent() {
 /* =========================== EVENT DETAIL MODAL ============================ */
 function openEventDetail(ev, occurrenceDate) {
     currentDetailEventId = ev.id;
-    currentDetailEvent = ev;
+    
+    ev.__occurrenceDate = occurrenceDate;
 
     // ─── Color & title ───
     document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
@@ -3349,13 +3350,16 @@ function openEventDetail(ev, occurrenceDate) {
         };
     }
 
-    // ─── وضعیت تکمیل (Complete / Undo) ───
+// ─── وضعیت تکمیل (Complete / Undo) ───
 var dateForCompletion = null;
-if (occurrenceDate) {
+if (ev.__occurrenceDate) {
+    dateForCompletion = ev.__occurrenceDate.toISOString().split('T')[0];
+} else if (occurrenceDate) {
     dateForCompletion = occurrenceDate.toISOString().split('T')[0];
 }
+// اگر هیچکدام نبود، dateForCompletion null می‌ماند (رویداد غیرتکراری)
 var isCompleted = false;
-if (dateForCompletion && ev.recurrence_type !== 'none') {
+if (dateForCompletion && ev.recurrence_type && ev.recurrence_type !== 'none') {
     isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
                     ? ev.completed_occurrences.includes(dateForCompletion)
                     : false;
