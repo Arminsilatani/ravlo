@@ -172,7 +172,7 @@ async function checkAndCreateTodayNotifications() {
         const d = new Date(ev.start_date);
         if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
             if (ev.recurrence_type !== 'none') {
-                const dateStr = today.toISOString().split('T')[0];
+                const dateStr = toLocalDateString(today);
                 const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
                     ? ev.completed_occurrences.includes(dateStr)
                     : false;
@@ -231,6 +231,10 @@ async function addNotificationToUser(userId, type, title, body, link, eventId = 
 
 function pad(n) {
     return String(n).padStart(2, '0');
+}
+
+function toLocalDateString(date) {
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
 }
 
 function isGregDatePast(gy, gm, gd) {
@@ -813,21 +817,18 @@ function renderTodayList() {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = toLocalDateString(today);
 
-    // جمع‌آوری رخدادهای امروز (مثل قبل)
     const todayItems = [];
-    // جمع‌آوری رخدادهای عقب‌افتاده (فقط تکراری، انجام‌نشده)
     const overdueItems = [];
 
     events.forEach(ev => {
         if (!ev.start_date) return;
         if (ev.status === 'done' || ev.status === 'completed') return;
 
-        // بررسی رخدادهای تکراری در بازۀ دیروز و قبل از آن تا تاریخ شروع
         if (ev.recurrence_type && ev.recurrence_type !== 'none') {
             const start = new Date(ev.start_date);
-            const todayEnd = new Date(today.getTime() - 1); // دیروز ۲۳:۵۹:۵۹
+            const todayEnd = new Date(today.getTime() - 1);
             const recDates = getRecurrenceDates(ev, start, todayEnd);
             recDates.forEach(rd => {
                 const dateStr = rd.toISOString().split('T')[0];
@@ -840,10 +841,9 @@ function renderTodayList() {
             });
         }
 
-        // رخدادهای معمولی امروز (غیرتکراری یا تکراری که امروز رخداد دارند)
         const d = new Date(ev.start_date);
         if (ev.recurrence_type === 'none' || !ev.recurrence_type) {
-            if (d.toISOString().split('T')[0] === todayStr) {
+            if (toLocalDateString(d) === todayStr){
                 const isCompleted = ev.completed_occurrences?.includes?.(todayStr);
                 if (!isCompleted) todayItems.push({ ev, date: todayStr });
             }
@@ -852,7 +852,7 @@ function renderTodayList() {
             const todayEnd = new Date(today.getTime() + 24*60*60*1000 - 1);
             const recDates = getRecurrenceDates(ev, todayStart, todayEnd);
             recDates.forEach(rd => {
-                const dateStr = rd.toISOString().split('T')[0];
+                const dateStr = toLocalDateString(rd);
                 const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
                     ? ev.completed_occurrences.includes(dateStr)
                     : false;
@@ -955,7 +955,7 @@ async function updateNotificationDot() {
         const d = new Date(ev.start_date);
         if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
             if (ev.recurrence_type !== 'none') {
-                const dateStr = today.toISOString().split('T')[0];
+                const dateStr = toLocalDateString(today);
                 const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
                     ? ev.completed_occurrences.includes(dateStr)
                     : false;
@@ -2013,34 +2013,32 @@ function renderDayView() {
     timelineWrapper.appendChild(timeLabels);
     timelineWrapper.appendChild(slots);
     
-    // بعد از محاسبۀ timedEvents و قبل از allDayRow
 var overdueOccurrences = [];
-if (currentUser) { // فقط وقتی کاربر لاگین کرده
+if (currentUser) { 
     var todayStart = new Date(vy, vm, vd, 0, 0, 0);
     var yesterdayEnd = new Date(todayStart.getTime() - 1000);
     events.forEach(ev => {
-        if (ev.type !== 'task') return; // فقط تسک‌ها
+        if (ev.type !== 'task') return;
         if (!ev.start_date) return;
         if (ev.status === 'done' || ev.status === 'completed') return;
-        if (!ev.recurrence_type || ev.recurrence_type === 'none') return; // فقط تکراری‌ها
+        if (!ev.recurrence_type || ev.recurrence_type === 'none') return;
 
         var start = new Date(ev.start_date);
         var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
         recDates.forEach(rd => {
-            var dateStr = rd.toISOString().split('T')[0];
+            var dateStr = toLocalDateString(rd);
             var isCompleted = ev.completed_occurrences?.includes?.(dateStr);
             if (!isCompleted) {
                 overdueOccurrences.push({
                     ev: ev,
                     date: dateStr,
-                    time: rd // تاریخ کامل با زمان
+                    time: rd
                 });
             }
         });
     });
 }
 
-// فقط اگر نمای امروز باشد، رخدادهای عقب‌افتاده را نشان بده
 const todayCheck = new Date();
 if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === todayCheck.getDate()) {
     var overdueOccurrences = [];
@@ -2049,10 +2047,10 @@ if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === to
         var yesterdayEnd = new Date(todayStart.getTime() - 1000);
 
         events.forEach(ev => {
-            if (ev.type !== 'task') return;                // فقط تسک‌ها
+            if (ev.type !== 'task') return;
             if (!ev.start_date) return;
             if (ev.status === 'done' || ev.status === 'completed') return;
-            if (!ev.recurrence_type || ev.recurrence_type === 'none') return; // فقط تکراری‌ها
+            if (!ev.recurrence_type || ev.recurrence_type === 'none') return; 
 
             var start = new Date(ev.start_date);
             var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
@@ -2103,7 +2101,6 @@ if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === to
 
             capsule.addEventListener('click', function(e) {
                 e.stopPropagation();
-                // زمان را به صورت Date کامل (با ساعت ۰۰:۰۰) ارسال می‌کنیم
                 openEventDetail(item.ev, new Date(item.date + 'T00:00:00'));
             });
 
@@ -2113,7 +2110,6 @@ if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === to
         calendarGrid.appendChild(overdueRow);
     }
 }
-// اگر امروز نباشد، هیچ ردیف Overdue اضافه نمی‌شود
 
     calendarGrid.appendChild(allDayRow);
     calendarGrid.appendChild(timelineWrapper);
@@ -2302,7 +2298,6 @@ if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === to
                     actionsDiv.appendChild(leaveBtn);
 
                 } else if (item.ev.invitation_status === 'pending') {
-                    // بدون دکمه
 
                 } else {
                     var cancelBtn = document.createElement('button');
@@ -2356,7 +2351,7 @@ if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === to
                             evEl.style.textDecoration = 'line-through';
                         }
                     } else {
-                        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
+                        var occDate = toLocalDateString(new Date(vy, vm, vd));
                         var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
                                             ? item.ev.completed_occurrences.includes(occDate)
                                             : false;
