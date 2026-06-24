@@ -826,6 +826,7 @@ function renderTodayList() {
         if (!ev.start_date) return;
         if (ev.status === 'done' || ev.status === 'completed') return;
 
+        // رخدادهای تکراری عقب‌افتاده
         if (ev.recurrence_type && ev.recurrence_type !== 'none') {
             const start = new Date(ev.start_date);
             const todayEnd = new Date(today.getTime() - 1);
@@ -841,6 +842,7 @@ function renderTodayList() {
             });
         }
 
+        // رخدادهای امروز
         const d = new Date(ev.start_date);
         if (ev.recurrence_type === 'none' || !ev.recurrence_type) {
             if (toLocalDateString(d) === todayStr) {
@@ -852,7 +854,7 @@ function renderTodayList() {
             const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1);
             const recDates = getRecurrenceDates(ev, todayStart, todayEnd);
             recDates.forEach(rd => {
-                const dateStr = toLocalDateString(rd); 
+                const dateStr = toLocalDateString(rd);
                 const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
                     ? ev.completed_occurrences.includes(dateStr)
                     : false;
@@ -865,19 +867,7 @@ function renderTodayList() {
 
     let html = '';
 
-    if (overdueItems.length > 0) {
-        html += '<div style="padding:8px 16px; font-size:10px; text-transform:uppercase; color:#ff6b6b; letter-spacing:0.5px;">Overdue</div>';
-        overdueItems.forEach(item => {
-            const color = item.ev.color || 'var(--accent)';
-            html += `
-                <div class="sidebar-today-item overdue-item" data-event-id="${item.ev.id}" data-date="${item.date}" style="cursor:pointer;">
-                    <span class="dot" style="background:${color}"></span>
-                    <span class="title">${item.ev.title || 'Untitled'}</span>
-                    <span class="overdue-date">${item.date}</span>
-                </div>`;
-        });
-    }
-
+    // ۱. بخش Today (اول)
     if (todayItems.length > 0) {
         html += '<div style="padding:8px 16px; font-size:10px; text-transform:uppercase; color:#aaa; letter-spacing:0.5px;">Today</div>';
         todayItems.sort((a, b) => {
@@ -895,12 +885,29 @@ function renderTodayList() {
         });
     }
 
+    // ۲. بخش Overdue (دوم، در یک باکس قرمز)
+    if (overdueItems.length > 0) {
+        html += '<div style="padding:8px 16px; font-size:10px; text-transform:uppercase; color:#ff6b6b; letter-spacing:0.5px;">Overdue</div>';
+        html += '<div class="sidebar-overdue-box">';  // باکس قرمز
+        overdueItems.forEach(item => {
+            const color = item.ev.color || 'var(--accent)';
+            html += `
+                <div class="sidebar-today-item overdue-item" data-event-id="${item.ev.id}" data-date="${item.date}" style="cursor:pointer;">
+                    <span class="dot" style="background:${color}"></span>
+                    <span class="title">${item.ev.title || 'Untitled'}</span>
+                    <!-- تاریخ دیگر نمایش داده نمی‌شود -->
+                </div>`;
+        });
+        html += '</div>';
+    }
+
     if (html === '') {
         html = '<div style="padding:8px 16px;font-size:12px;color:#555;">No events today</div>';
     }
 
     container.innerHTML = html;
 
+    // کلیک روی آیتم‌ها
     container.querySelectorAll('.sidebar-today-item').forEach(item => {
         item.addEventListener('click', function(e) {
             const id = this.dataset.eventId;
