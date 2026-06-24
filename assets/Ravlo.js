@@ -1875,20 +1875,52 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
         hl.textContent = holiday;
         cell.appendChild(hl);
     }
+
+    // فیلتر رویدادها با در نظر گرفتن وضعیت انجام‌شده
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
+
+        // رویدادهای غیرتکراری که کل آنها انجام شده → حذف
+        if ((ev.status === 'done' || ev.status === 'completed') &&
+            (ev.recurrence_type === 'none' || !ev.recurrence_type)) {
+            return false;
+        }
+
+        // بررسی تاریخ شروع رویداد (غیرتکراری)
         var d = new Date(ev.start_date);
-        if (d.getFullYear() === ny && d.getMonth() === nm && d.getDate() === nd) return true;
+        if (d.getFullYear() === ny && d.getMonth() === nm && d.getDate() === nd) {
+            if (ev.recurrence_type !== 'none') {
+                // تکراری: اگر این تاریخ خاص انجام شده باشد، رد شود
+                var dateStr = toLocalDateString(new Date(ny, nm, nd));
+                if (ev.completed_occurrences && Array.isArray(ev.completed_occurrences) &&
+                    ev.completed_occurrences.includes(dateStr)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // بررسی رخدادهای تکراری
         if (ev.recurrence_type !== 'none') {
             const monthStart = new Date(ny, nm, 1);
             const monthEnd = new Date(ny, nm + 1, 0, 23, 59, 59);
             const recDates = getRecurrenceDates(ev, monthStart, monthEnd);
-            return recDates.some(rd => rd.getFullYear() === ny && rd.getMonth() === nm && rd.getDate() === nd);
+            return recDates.some(rd => {
+                if (rd.getFullYear() === ny && rd.getMonth() === nm && rd.getDate() === nd) {
+                    var dateStr = toLocalDateString(rd);
+                    if (ev.completed_occurrences && Array.isArray(ev.completed_occurrences) &&
+                        ev.completed_occurrences.includes(dateStr)) {
+                        return false; // این رخداد انجام شده
+                    }
+                    return true;
+                }
+                return false;
+            });
         }
         return false;
     });
 
-    // ایجاد ردیف افقی برای نقطه‌ها
+    // ردیف نقطه‌های افقی
     const dotsRow = document.createElement('div');
     dotsRow.className = 'event-dots-row';
 
