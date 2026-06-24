@@ -28,13 +28,6 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Ravlo Calendar">
 
-    <!-- :::::::::::::::::::::::::: PWA META :::::::::::::::::::::::::: -->
-    <meta name="theme-color" content="#ff6f91">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Ravlo">
-    <link rel="manifest" href="/assets/manifest.json">
-
     <!-- :::::::::::::::::::::::::: CANONICAL & HREFLANG :::::::::::::::::::::::::: -->
     <link rel="canonical" href="https://ravlo.arminsilatani.com/">
 </head>
@@ -736,18 +729,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="assets/Ravlo.js"></script>
-
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                console.log('SW registered:', reg.scope);
-            }).catch(function(err) {
-                console.warn('SW registration failed (non-fatal):', err.message);
-            });
-        });
-    }
-</script>
 
 </body>
 </html>
