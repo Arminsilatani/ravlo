@@ -877,6 +877,7 @@ body.modal-open {
     padding: 4px 0;
 }
 
+/* عنوان بخش‌های Today و Overdue در سایدبار */
 .sidebar-section-title {
   padding: 8px 16px 4px 10px;
   font-size: 10px;
