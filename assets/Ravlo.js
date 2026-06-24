@@ -1125,11 +1125,10 @@ async function updateEventInDB(id, payload) {
         showToast('Not logged in');
         return null;
     }
-    const {
-        error
-    } = await sb.from('ravlo').update(payload).eq('id', id).eq('user_id', currentUser.id);
+    const { error } = await sb.from('ravlo').update(payload).eq('id', id).eq('user_id', currentUser.id);
     if (error) {
-        showToast('Update failed: ' + error.message);
+        console.error('Update failed:', error);
+        showToast('Update failed. Check console.');
         return null;
     }
     return true;
@@ -3318,7 +3317,6 @@ function openEventDetail(ev, occurrenceDate) {
         };
     }
 
-// ─── وضعیت تکمیل (Complete / Undo) ───
 var dateForCompletion = null;
 if (occurrenceDate) {
     dateForCompletion = toLocalDateString(occurrenceDate);
