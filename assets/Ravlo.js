@@ -1157,7 +1157,6 @@ async function moveOverdueTasksToToday() {
     today.setHours(0, 0, 0, 0);
 
     try {
-        // همه تسک‌های کاربر که انجام نشده باشند
         const { data: allTasks, error } = await sb
             .from('ravlo')
             .select('id, title, start_date, status, recurrence_type')
@@ -1172,7 +1171,6 @@ async function moveOverdueTasksToToday() {
         let movedCount = 0;
 
         for (const task of allTasks) {
-            // فقط تسک‌های غیرتکراری را جابه‌جا کن
             const isRecurring = task.recurrence_type && task.recurrence_type !== 'none';
             if (isRecurring) continue;
 
@@ -1189,16 +1187,16 @@ async function moveOverdueTasksToToday() {
                     start_date: newStart.toISOString()
                 });
                 movedCount++;
-                console.log(`🔄 Moved overdue task: "${task.title}" to today 00:00`);
+                console.log(`Moved overdue task: "${task.title}" to today 00:00`);
             }
         }
 
         if (movedCount > 0) {
-            console.log(`✅ Moved ${movedCount} overdue tasks to today at 00:00`);
+            console.log(`Moved ${movedCount} overdue tasks to today at 00:00`);
             events = await fetchEvents();
             renderCalendar();
         } else {
-            console.log('ℹ️ No overdue non-recurring tasks found.');
+            console.log('ℹNo overdue non-recurring tasks found.');
         }
     } catch (e) {
         console.warn('Error moving overdue tasks:', e);
@@ -2084,6 +2082,80 @@ if (overdueOccurrences.length > 0) {
     calendarGrid.appendChild(overdueRow);
 }
 
+// فقط اگر نمای امروز باشد، رخدادهای عقب‌افتاده را نشان بده
+const todayCheck = new Date();
+if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === todayCheck.getDate()) {
+    var overdueOccurrences = [];
+    if (currentUser) {
+        var todayStart = new Date(vy, vm, vd, 0, 0, 0);
+        var yesterdayEnd = new Date(todayStart.getTime() - 1000);
+
+        events.forEach(ev => {
+            if (ev.type !== 'task') return;                // فقط تسک‌ها
+            if (!ev.start_date) return;
+            if (ev.status === 'done' || ev.status === 'completed') return;
+            if (!ev.recurrence_type || ev.recurrence_type === 'none') return; // فقط تکراری‌ها
+
+            var start = new Date(ev.start_date);
+            var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
+            recDates.forEach(rd => {
+                var dateStr = rd.toISOString().split('T')[0];
+                var isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                if (!isCompleted) {
+                    overdueOccurrences.push({
+                        ev: ev,
+                        date: dateStr,
+                        time: rd
+                    });
+                }
+            });
+        });
+    }
+
+    if (overdueOccurrences.length > 0) {
+        var overdueRow = document.createElement('div');
+        overdueRow.className = 'all-day-events-row overdue-row';
+        overdueRow.style.background = 'rgba(255,100,100,0.05)';
+        overdueRow.style.borderBottom = '1px solid rgba(255,100,100,0.2)';
+        var overdueLabel = document.createElement('span');
+        overdueLabel.style.cssText = 'font-size:10px; color:#ff6b6b; text-transform:uppercase; margin-right:8px;';
+        overdueLabel.textContent = 'Overdue';
+        overdueRow.appendChild(overdueLabel);
+
+        overdueOccurrences.forEach(item => {
+            var capsule = document.createElement('span');
+            capsule.className = 'all-day-capsule overdue-capsule';
+            capsule.style.backgroundColor = item.ev.color || 'var(--accent)';
+            capsule.style.color = '#fff';
+            capsule.style.border = '1px solid ' + (item.ev.color || 'var(--accent)');
+
+            if (item.ev.icon) {
+                var iconSpan = document.createElement('span');
+                iconSpan.className = 'all-day-capsule-icon';
+                iconSpan.innerHTML = item.ev.icon;
+                capsule.appendChild(iconSpan);
+            }
+
+            var titleSpan = document.createElement('span');
+            titleSpan.className = 'all-day-capsule-title';
+            titleSpan.textContent = (item.ev.title || 'Untitled') + ' (' + item.date + ')';
+            capsule.appendChild(titleSpan);
+
+            capsule.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // زمان را به صورت Date کامل (با ساعت ۰۰:۰۰) ارسال می‌کنیم
+                openEventDetail(item.ev, new Date(item.date + 'T00:00:00'));
+            });
+
+            overdueRow.appendChild(capsule);
+        });
+
+        calendarGrid.appendChild(overdueRow);
+    }
+}
+// اگر امروز نباشد، هیچ ردیف Overdue اضافه نمی‌شود
     calendarGrid.appendChild(allDayRow);
     calendarGrid.appendChild(timelineWrapper);
 
@@ -5248,11 +5320,9 @@ function renderChecklistInDetail(ev) {
     }
 
     function markTaskDone(ev) {
-    // فقط در صورت وجود تاریخِ وقوع (برای رخدادهای تکراری)
-    const occurrenceDate = ev.occurrenceDate; // ممکن است null باشد
+    const occurrenceDate = ev.occurrenceDate; 
 
     if (occurrenceDate && ev.recurrence_type && ev.recurrence_type !== 'none') {
-        // تسک تکراری – فقط این رخداد را Done کن
         if (!ev.completed_occurrences) ev.completed_occurrences = [];
         if (!ev.completed_occurrences.includes(occurrenceDate)) {
             ev.completed_occurrences.push(occurrenceDate);
@@ -5273,7 +5343,6 @@ function renderChecklistInDetail(ev) {
         return;
     }
 
-    // تسک غیرتکراری (یا بدون تاریخ) – کل تسک را تمام کن
     if (ev.status === 'done' || ev.status === 'completed') return;
 
     ev.status = 'done';
@@ -5291,7 +5360,6 @@ function renderChecklistInDetail(ev) {
     }).catch(() => showToast('Error completing task.'));
 }
 
-    // رویدادهای چک‌باکس
     listContainer.querySelectorAll('.neon-checkbox').forEach(cb => {
         cb.addEventListener('change', function() {
             const depth = parseInt(this.dataset.depth);
