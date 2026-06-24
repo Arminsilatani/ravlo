@@ -873,7 +873,7 @@ body.modal-open {
     background: rgba(255, 100, 100, 0.06);
     border: 1px solid rgba(255, 100, 100, 0.2);
     border-radius: 8px;
-    margin: 4px 8px;
+    margin: 4px 18px;
     padding: 4px 0;
 }
 
