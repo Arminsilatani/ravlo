@@ -1685,8 +1685,9 @@ body.modal-open {
 
 /* =========================== NEON CHECKBOX (BASE 20px) ============================ */
 .neon-checkbox {
-  appearance: none;
+  appearance: none;  
   -webkit-appearance: none;
+  -moz-appearance: none;
   position: relative;
   width: 20px;
   height: 20px;
@@ -2092,6 +2093,7 @@ body.modal-open {
 
 .picker-time-field::-webkit-outer-spin-button,
 .picker-time-field::-webkit-inner-spin-button {
+  appearance: none;
   -webkit-appearance: none;
   margin: 0;
 }
