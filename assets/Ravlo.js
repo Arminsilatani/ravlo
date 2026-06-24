@@ -2075,7 +2075,7 @@ if (overdueOccurrences.length > 0) {
 
         capsule.addEventListener('click', function(e) {
             e.stopPropagation();
-            openEventDetail(item.ev, item.time);
+            openEventDetail(item.ev, new Date(item.date + 'T00:00:00'));
         });
 
         overdueRow.appendChild(capsule);
