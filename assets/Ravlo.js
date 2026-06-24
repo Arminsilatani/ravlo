@@ -831,7 +831,7 @@ function renderTodayList() {
             const todayEnd = new Date(today.getTime() - 1);
             const recDates = getRecurrenceDates(ev, start, todayEnd);
             recDates.forEach(rd => {
-                const dateStr = rd.toISOString().split('T')[0];
+                const dateStr = toLocalDateString(rd);
                 const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
                     ? ev.completed_occurrences.includes(dateStr)
                     : false;
@@ -843,16 +843,16 @@ function renderTodayList() {
 
         const d = new Date(ev.start_date);
         if (ev.recurrence_type === 'none' || !ev.recurrence_type) {
-            if (toLocalDateString(d) === todayStr){
+            if (toLocalDateString(d) === todayStr) {
                 const isCompleted = ev.completed_occurrences?.includes?.(todayStr);
                 if (!isCompleted) todayItems.push({ ev, date: todayStr });
             }
         } else {
             const todayStart = new Date(today);
-            const todayEnd = new Date(today.getTime() + 24*60*60*1000 - 1);
+            const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1);
             const recDates = getRecurrenceDates(ev, todayStart, todayEnd);
             recDates.forEach(rd => {
-                const dateStr = toLocalDateString(rd);
+                const dateStr = toLocalDateString(rd); 
                 const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
                     ? ev.completed_occurrences.includes(dateStr)
                     : false;
@@ -863,7 +863,6 @@ function renderTodayList() {
         }
     });
 
-    // ساخت HTML
     let html = '';
 
     if (overdueItems.length > 0) {
@@ -902,7 +901,6 @@ function renderTodayList() {
 
     container.innerHTML = html;
 
-    // رویدادهای کلیک
     container.querySelectorAll('.sidebar-today-item').forEach(item => {
         item.addEventListener('click', function(e) {
             const id = this.dataset.eventId;
@@ -1960,6 +1958,80 @@ function renderDayView() {
     calendarGrid.className = 'day-view-timeline';
     calendarGrid.innerHTML = '';
 
+    // 1) ردیف Overdue (فقط اگر امروز باشد)
+    const todayCheck = new Date();
+    if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === todayCheck.getDate()) {
+        var overdueOccurrences = [];
+        if (currentUser) {
+            var todayStart = new Date(vy, vm, vd, 0, 0, 0);
+            var yesterdayEnd = new Date(todayStart.getTime() - 1000);
+
+            events.forEach(ev => {
+                if (ev.type !== 'task') return;
+                if (!ev.start_date) return;
+                if (ev.status === 'done' || ev.status === 'completed') return;
+                if (!ev.recurrence_type || ev.recurrence_type === 'none') return;
+
+                var start = new Date(ev.start_date);
+                var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
+                recDates.forEach(rd => {
+                    var dateStr = toLocalDateString(rd);   // ✅ تاریخ محلی
+                    var isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                        ? ev.completed_occurrences.includes(dateStr)
+                        : false;
+                    if (!isCompleted) {
+                        overdueOccurrences.push({
+                            ev: ev,
+                            date: dateStr,
+                            time: rd
+                        });
+                    }
+                });
+            });
+        }
+
+        if (overdueOccurrences.length > 0) {
+            var overdueRow = document.createElement('div');
+            overdueRow.className = 'all-day-events-row overdue-row';
+            overdueRow.style.background = 'rgba(255,100,100,0.05)';
+            overdueRow.style.borderBottom = '1px solid rgba(255,100,100,0.2)';
+            var overdueLabel = document.createElement('span');
+            overdueLabel.style.cssText = 'font-size:10px; color:#ff6b6b; text-transform:uppercase; margin-right:8px;';
+            overdueLabel.textContent = 'Overdue';
+            overdueRow.appendChild(overdueLabel);
+
+            overdueOccurrences.forEach(item => {
+                var capsule = document.createElement('span');
+                capsule.className = 'all-day-capsule overdue-capsule';
+                capsule.style.backgroundColor = item.ev.color || 'var(--accent)';
+                capsule.style.color = '#0d0d0d';   // متن مشکی
+                capsule.style.border = '1px solid ' + (item.ev.color || 'var(--accent)');
+
+                if (item.ev.icon) {
+                    var iconSpan = document.createElement('span');
+                    iconSpan.className = 'all-day-capsule-icon';
+                    iconSpan.innerHTML = item.ev.icon;
+                    capsule.appendChild(iconSpan);
+                }
+
+                var titleSpan = document.createElement('span');
+                titleSpan.className = 'all-day-capsule-title';
+                titleSpan.textContent = (item.ev.title || 'Untitled') + ' (' + item.date + ')';
+                capsule.appendChild(titleSpan);
+
+                capsule.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    openEventDetail(item.ev, new Date(item.date + 'T00:00:00'));
+                });
+
+                overdueRow.appendChild(capsule);
+            });
+
+            calendarGrid.appendChild(overdueRow);
+        }
+    }
+
+    // 2) ردیف رویدادهای تمام روز
     var allDayRow = document.createElement('div');
     allDayRow.className = 'all-day-events-row';
     if (allDayEvents.length === 0) {
@@ -1992,7 +2064,7 @@ function renderDayView() {
             allDayRow.appendChild(capsule);
         });
     }
-    
+
     var timelineWrapper = document.createElement('div');
     timelineWrapper.className = 'day-timeline-wrapper';
     
@@ -2013,104 +2085,6 @@ function renderDayView() {
     timelineWrapper.appendChild(timeLabels);
     timelineWrapper.appendChild(slots);
     
-var overdueOccurrences = [];
-if (currentUser) { 
-    var todayStart = new Date(vy, vm, vd, 0, 0, 0);
-    var yesterdayEnd = new Date(todayStart.getTime() - 1000);
-    events.forEach(ev => {
-        if (ev.type !== 'task') return;
-        if (!ev.start_date) return;
-        if (ev.status === 'done' || ev.status === 'completed') return;
-        if (!ev.recurrence_type || ev.recurrence_type === 'none') return;
-
-        var start = new Date(ev.start_date);
-        var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
-        recDates.forEach(rd => {
-            var dateStr = toLocalDateString(rd);
-            var isCompleted = ev.completed_occurrences?.includes?.(dateStr);
-            if (!isCompleted) {
-                overdueOccurrences.push({
-                    ev: ev,
-                    date: dateStr,
-                    time: rd
-                });
-            }
-        });
-    });
-}
-
-const todayCheck = new Date();
-if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === todayCheck.getDate()) {
-    var overdueOccurrences = [];
-    if (currentUser) {
-        var todayStart = new Date(vy, vm, vd, 0, 0, 0);
-        var yesterdayEnd = new Date(todayStart.getTime() - 1000);
-
-        events.forEach(ev => {
-            if (ev.type !== 'task') return;
-            if (!ev.start_date) return;
-            if (ev.status === 'done' || ev.status === 'completed') return;
-            if (!ev.recurrence_type || ev.recurrence_type === 'none') return; 
-
-            var start = new Date(ev.start_date);
-            var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
-            recDates.forEach(rd => {
-                var dateStr = rd.toISOString().split('T')[0];
-                var isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                    ? ev.completed_occurrences.includes(dateStr)
-                    : false;
-                if (!isCompleted) {
-                    overdueOccurrences.push({
-                        ev: ev,
-                        date: dateStr,
-                        time: rd
-                    });
-                }
-            });
-        });
-    }
-
-    if (overdueOccurrences.length > 0) {
-        var overdueRow = document.createElement('div');
-        overdueRow.className = 'all-day-events-row overdue-row';
-        overdueRow.style.background = 'rgba(255,100,100,0.05)';
-        overdueRow.style.borderBottom = '1px solid rgba(255,100,100,0.2)';
-        var overdueLabel = document.createElement('span');
-        overdueLabel.style.cssText = 'font-size:10px; color:#ff6b6b; text-transform:uppercase; margin-right:8px;';
-        overdueLabel.textContent = 'Overdue';
-        overdueRow.appendChild(overdueLabel);
-
-        overdueOccurrences.forEach(item => {
-            var capsule = document.createElement('span');
-            capsule.className = 'all-day-capsule overdue-capsule';
-            capsule.style.backgroundColor = item.ev.color || 'var(--accent)';
-            capsule.style.color = '#fff';
-            capsule.style.border = '1px solid ' + (item.ev.color || 'var(--accent)');
-
-            if (item.ev.icon) {
-                var iconSpan = document.createElement('span');
-                iconSpan.className = 'all-day-capsule-icon';
-                iconSpan.innerHTML = item.ev.icon;
-                capsule.appendChild(iconSpan);
-            }
-
-            var titleSpan = document.createElement('span');
-            titleSpan.className = 'all-day-capsule-title';
-            titleSpan.textContent = (item.ev.title || 'Untitled') + ' (' + item.date + ')';
-            capsule.appendChild(titleSpan);
-
-            capsule.addEventListener('click', function(e) {
-                e.stopPropagation();
-                openEventDetail(item.ev, new Date(item.date + 'T00:00:00'));
-            });
-
-            overdueRow.appendChild(capsule);
-        });
-
-        calendarGrid.appendChild(overdueRow);
-    }
-}
-
     calendarGrid.appendChild(allDayRow);
     calendarGrid.appendChild(timelineWrapper);
 
@@ -2296,9 +2270,8 @@ if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === to
                         });
                     });
                     actionsDiv.appendChild(leaveBtn);
-
                 } else if (item.ev.invitation_status === 'pending') {
-
+                    // هیچ دکمه‌ای
                 } else {
                     var cancelBtn = document.createElement('button');
                     cancelBtn.className = 'event-action-btn';
@@ -2314,7 +2287,8 @@ if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === to
                     endBtn.className = 'event-action-btn';
 
                     if (item.ev.type === 'task') {
-                        var occDate = new Date(vy, vm, vd).toISOString().split('T')[0];
+                        // ✅ تاریخ محلی برای تسک‌ها
+                        var occDate = toLocalDateString(new Date(vy, vm, vd));
                         var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
                                         ? item.ev.completed_occurrences.includes(occDate)
                                         : false;
@@ -2338,7 +2312,7 @@ if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === to
                                 endBtn.textContent = 'Undo';
                                 evEl.style.opacity = '0.6';
                                 evEl.style.textDecoration = 'line-through';
-                                showToast('Occurrence marked done. It will be auto‑deleted in 28 days.');
+                                showToast('Occurrence marked done. Auto‑deleted in 28 days.');
                             }
                             updateEventInDB(item.ev.id, {
                                 completed_occurrences: item.ev.completed_occurrences,
@@ -2373,7 +2347,7 @@ if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === to
                                 item.ev.completed_timestamps[occDate] = new Date().toISOString();
                                 endBtn.textContent = 'Undo';
                                 evEl.classList.add('event-completed');
-                                showToast('Event marked done. It will be auto‑deleted in 28 days.');
+                                showToast('Event marked done. Auto‑deleted in 28 days.');
                             }
                             updateEventInDB(item.ev.id, {
                                 completed_occurrences: item.ev.completed_occurrences,
@@ -2911,13 +2885,12 @@ async function saveEvent() {
             reminder_minutes: 0,
             color: selectedTagColor,
             icon: selectedIcon || null,
-            description: desc,  // فقط description خالص، بدون چک‌لیست
+            description: desc, 
             recurrence_type: recurrence.type,
             recurrence_interval: recurrence.interval,
             recurrence_days: (recurrence.type === 'weekly' || recurrence.type === 'custom') ? recurrence.days : [],
             recurrence_smart_interval: recurrence.type === 'smart' ? recurrence.smartInterval : null,
             invitees: eventType === 'event' ? currentInvitees.map(inv => inv.name) : [],
-            // چک‌لیست به صورت جداگانه ذخیره میشه
             checklist: eventType === 'task' ? currentChecklistItems : []
         };
 
@@ -3348,12 +3321,7 @@ function openEventDetail(ev, occurrenceDate) {
 // ─── وضعیت تکمیل (Complete / Undo) ───
 var dateForCompletion = null;
 if (occurrenceDate) {
-    // استفاده از تاریخ محلی بدون تأثیر منطقه زمانی
-    const d = occurrenceDate;
-    dateForCompletion = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-
-} else if (occurrenceDate) {
-    dateForCompletion = occurrenceDate.toISOString().split('T')[0];
+    dateForCompletion = toLocalDateString(occurrenceDate);
 }
 // اگر هیچکدام نبود، dateForCompletion null می‌ماند (رویداد غیرتکراری)
 var isCompleted = false;
