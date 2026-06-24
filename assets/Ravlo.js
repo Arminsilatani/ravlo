@@ -1113,6 +1113,7 @@ async function deleteEventFromDB(id) {
 }
 
 // =========================== MOVE OVERDUE TASKS TO TODAY ============================
+// =========================== MOVE OVERDUE TASKS TO TODAY ============================
 async function moveOverdueTasksToToday() {
     if (!currentUser) return;
     
@@ -1120,7 +1121,6 @@ async function moveOverdueTasksToToday() {
     today.setHours(0, 0, 0, 0);
     
     try {
-        // دریافت همه تسک‌های عادی Done نشده
         const { data: tasks, error } = await sb
             .from('ravlo')
             .select('id, title, start_date, status, recurrence_type')
@@ -1141,22 +1141,20 @@ async function moveOverdueTasksToToday() {
             startDate.setHours(0, 0, 0, 0);
             
             if (startDate < today) {
+                // تنظیم روی امروز ساعت ۰۰:۰۰
                 const newStart = new Date(today);
-                const oldHour = new Date(task.start_date).getHours();
-                const oldMinute = new Date(task.start_date).getMinutes();
-                newStart.setHours(oldHour, oldMinute, 0, 0);
+                newStart.setHours(0, 0, 0, 0);
                 
                 await updateEventInDB(task.id, { 
                     start_date: newStart.toISOString()
                 });
                 movedCount++;
-                console.log(`🔄 Moved overdue task: "${task.title}"`);
+                console.log(`🔄 Moved overdue task: "${task.title}" to today 00:00`);
             }
         }
         
         if (movedCount > 0) {
-            console.log(`✅ Moved ${movedCount} overdue tasks to today`);
-            // ریفرش رویدادها
+            console.log(`✅ Moved ${movedCount} overdue tasks to today at 00:00`);
             events = await fetchEvents();
             renderCalendar();
         }
