@@ -489,7 +489,7 @@ function hasAccess(userRole, minRole) {
 const MENU_TOOLS = [{
         label: 'Codara Service Generator',
         minRole: 'general',
-        link: 'https://codara.arminsilatani.com/',
+        link: 'https://arminsilatani.github.io/codara/',
         iconURL: 'assets/logos/Co.svg'
     },
     {
@@ -537,7 +537,7 @@ const MENU_TOOLS = [{
     {
         label: 'Zorio Image Converter',
         minRole: 'recruit',
-        link: 'https://zorio.arminsilatani.com/',
+        link: 'https://arminsilatani.github.io/zorio/',
         iconURL: 'assets/logos/Zo.svg'
     },
     {
@@ -628,25 +628,25 @@ const MENU_TOOLS = [{
     {
         label: 'Pilvo Text Editor',
         minRole: 'recruit',
-        link: 'https://pilvo.arminsilatani.com/',
+        link: 'https://arminsilatani.github.io/pilvo/',
         iconURL: 'assets/logos/Pi.svg'
     },
     {
         label: 'Tavio Prompt Library',
         minRole: 'recruit',
-        link: 'https://tavio.arminsilatani.com/',
+        link: 'https://arminsilatani.github.io/tavio/',
         iconURL: 'assets/logos/Ta.svg'
     },
     {
         label: 'Falco Favicon Generator',
         minRole: 'recruit',
-        link: 'https://falco.arminsilatani.com/',
+        link: 'https://arminsilatani.github.io/falco/',
         iconURL: 'assets/logos/Fa.svg'
     },
     {
         label: 'Lume Epoch Converter',
         minRole: 'recruit',
-        link: 'https://lume.arminsilatani.com/',
+        link: 'https://arminsilatani.github.io/lume/',
         iconURL: 'assets/logos/Lu.svg'
     },
     {
