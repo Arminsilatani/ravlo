@@ -3736,6 +3736,12 @@ body.modal-open {
   font-weight: 500;
 }
 
+.overdue-capsule,
+.overdue-capsule * {
+    color: #0d0d0d !important;
+    stroke: #0d0d0d;
+}
+
 /* =========================== CUSTOM ACCENT MAP PIN ============================ */
 .custom-pin {
   color: var(--accent);
