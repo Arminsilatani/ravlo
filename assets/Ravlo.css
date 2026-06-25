@@ -2334,7 +2334,7 @@ body.modal-open {
 .textarea-actions {
     position: absolute;
     bottom: 27px;
-    right: 15px;
+    right: 10px;
     display: flex;
     flex-direction: row-reverse; /* از راست به چپ */
     align-items: center;
