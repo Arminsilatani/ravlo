@@ -2564,54 +2564,6 @@ function setEventType(type) {
         inviteBtn.style.display = (type === 'event') ? 'flex' : 'none';
     }
 
-    if (type !== 'task') {
-        hideInlineChecklist();
-        currentChecklistItems = [];
-    }
-
-    updateAllDayAndTimeRows();
-    syncTaskTimeVisibility();
-}
-
-function setEventType(type) {
-    eventType = type;
-    const toggle = document.getElementById('event-type-toggle');
-    if (!toggle) return;
-    const labels = toggle.querySelectorAll('.event-type-label');
-    const thumb = toggle.querySelector('.event-type-thumb');
-    labels.forEach(l => l.classList.toggle('active', l.dataset.type === type));
-    const activeLabel = toggle.querySelector(`.event-type-label[data-type="${type}"]`);
-    if (activeLabel && thumb) {
-        const labelRect = activeLabel.getBoundingClientRect();
-        if (labelRect.width === 0) {
-            requestAnimationFrame(() => setEventType(type));
-            return;
-        }
-        const toggleRect = toggle.getBoundingClientRect();
-        thumb.style.left = (labelRect.left - toggleRect.left) + 'px';
-        thumb.style.width = labelRect.width + 'px';
-    }
-
-    const titleInput = document.getElementById('event-title');
-    if (titleInput) {
-        titleInput.placeholder = type === 'task' ? 'Task title' : 'Event title';
-    }
-
-    const checklistBtn = document.getElementById('toggle-checklist-mode-btn');
-    if (checklistBtn) {
-        checklistBtn.style.display = (type === 'task') ? 'flex' : 'none';
-    }
-
-    const locBtn = document.getElementById('toggle-location-btn');
-    if (locBtn) {
-        locBtn.style.display = (type === 'event') ? 'flex' : 'none';
-    }
-
-    const inviteBtn = document.getElementById('toggle-invite-btn');
-    if (inviteBtn) {
-        inviteBtn.style.display = (type === 'event') ? 'flex' : 'none';
-    }
-
     const wrapper = document.getElementById('textarea-wrapper');
     if (wrapper) {
         wrapper.classList.toggle('task-tab-active', type === 'task');
