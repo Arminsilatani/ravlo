@@ -2529,6 +2529,7 @@ function setEventType(type) {
     eventType = type;
     const toggle = document.getElementById('event-type-toggle');
     if (!toggle) return;
+    
     const labels = toggle.querySelectorAll('.event-type-label');
     const thumb = toggle.querySelector('.event-type-thumb');
     labels.forEach(l => l.classList.toggle('active', l.dataset.type === type));
@@ -2549,6 +2550,15 @@ function setEventType(type) {
         titleInput.placeholder = type === 'task' ? 'Task title' : 'Event title';
     }
 
+    // ---- مدیریت دکمه‌های پایین textarea ----
+    // دکمه‌های آیکون و رنگ همیشه نمایش داده می‌شن
+    const iconBtn = document.getElementById('toggle-icon-btn');
+    if (iconBtn) iconBtn.style.display = 'flex';
+    
+    const colorBtn = document.getElementById('toggle-color-btn');
+    if (colorBtn) colorBtn.style.display = 'flex';
+
+    // دکمه‌های شرطی
     const checklistBtn = document.getElementById('toggle-checklist-mode-btn');
     if (checklistBtn) {
         checklistBtn.style.display = (type === 'task') ? 'flex' : 'none';
@@ -2564,11 +2574,7 @@ function setEventType(type) {
         inviteBtn.style.display = (type === 'event') ? 'flex' : 'none';
     }
 
-    const wrapper = document.getElementById('textarea-wrapper');
-    if (wrapper) {
-        wrapper.classList.toggle('task-tab-active', type === 'task');
-    }
-
+    // اگر نوع تسک نیست، چک‌لیست رو مخفی کن
     if (type !== 'task') {
         hideInlineChecklist();
         currentChecklistItems = [];
