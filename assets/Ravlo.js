@@ -138,7 +138,7 @@ async function removeNotificationsForEvent(eventId, userId) {
         if (error) {
             console.warn('Remove notifications error:', error);
         } else {
-            console.log(`✅ Notifications removed for event: ${eventId}`);
+            console.log('Notifications removed for event: ' + eventId);
         }
     } catch (e) {
         console.warn('Remove notifications error:', e);
@@ -212,7 +212,7 @@ async function addNotificationToUser(userId, type, title, body, link, eventId = 
         if (eventId) payload.event_id = eventId;
         
         await sb.from('notifications').insert(payload);
-        console.log(`✅ Notification added for event: ${eventId}`);
+        console.log('Notification added for event: ' + eventId);
     } catch (e) {
         console.warn('Notification failed:', e);
     }
@@ -1303,7 +1303,7 @@ async function moveOverdueTasksToToday() {
             events = await fetchEvents();
             renderCalendar();
         } else {
-            console.log('ℹNo overdue non-recurring tasks found.');
+            console.log('No overdue non-recurring tasks found.');
         }
     } catch (e) {
         console.warn('Error moving overdue tasks:', e);
@@ -5746,12 +5746,12 @@ async function cleanupChecklistFromDescriptions() {
                 // آپدیت کردن در دیتابیس
                 await updateEventInDB(ev.id, { description: cleanDesc });
                 cleanedCount++;
-                console.log(`🧹 Cleaned checklist from event: ${ev.id}`);
+                console.log('Cleaned checklist from event: ' + ev.id);
             }
         }
         
         if (cleanedCount > 0) {
-            console.log(`✅ Cleaned ${cleanedCount} events`);
+            console.log('Cleaned ' + cleanedCount + ' events');
             // ریفرش رویدادها
             const freshEvents = await fetchEvents();
             events = freshEvents;
