@@ -2333,7 +2333,7 @@ body.modal-open {
 /* =========================== TEXTAREA BUTTONS ============================ */
 .textarea-actions {
     position: absolute;
-    bottom: 12px;
+    bottom: 20px;
     right: 12px;
     display: flex;
     flex-direction: row-reverse; /* از راست به چپ */
