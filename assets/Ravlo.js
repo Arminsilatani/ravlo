@@ -1142,6 +1142,23 @@ async function deleteEventFromDB(id) {
     return !error;
 }
 
+async function saveEventToDB(payload) {
+    if (!currentUser) {
+        alert('Not logged in');
+        return null;
+    }
+    payload.user_id = currentUser.id;
+    const {
+        data,
+        error
+    } = await sb.from('ravlo').insert([payload]).select();
+    if (error) {
+        alert('Save failed: ' + error.message);
+        return null;
+    }
+    return data?.[0];
+}
+
 // =========================== MOVE OVERDUE TASKS TO TODAY ============================
 async function moveOverdueTasksToToday() {
     if (!currentUser) return;
