@@ -1224,7 +1224,7 @@ async function createNextSmartTask(ev, newDate) {
         updateNotificationDot();
         const dateStr = newDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const timeStr = newDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-        showToast(`📅 تسک بعدی برای ${dateStr} ساعت ${timeStr} برنامه‌ریزی شد`);
+        showToast(`Next task scheduled for ${dateStr} at ${timeStr}`);
     }
 }
 
@@ -1249,10 +1249,10 @@ async function completeSmartTask(ev) {
 
         renderCalendar();
         updateNotificationDot();
-        showToast('✅ تسک تکمیل شد! تسک بعدی ساخته شد.');
+        showToast('Task completed! Next task scheduled.');
     } catch (err) {
         console.error('Error completing smart task:', err);
-        alert('خطا در تکمیل تسک');
+        alert('Error completing task');
     }
 }
 
