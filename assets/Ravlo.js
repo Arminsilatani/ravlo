@@ -1148,10 +1148,7 @@ async function saveEventToDB(payload) {
         return null;
     }
     payload.user_id = currentUser.id;
-    const {
-        data,
-        error
-    } = await sb.from('ravlo').insert([payload]).select();
+    const { data, error } = await sb.from('ravlo').insert([payload]).select();
     if (error) {
         alert('Save failed: ' + error.message);
         return null;
@@ -1459,6 +1456,7 @@ function findBestSlot(periodStart, periodEnd, events) {
     const dayEventCount = {};
     const hourEventCount = {};
 
+    // مقداردهی اولیه
     for (let d = new Date(periodStart); d <= periodEnd; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
         dayEventCount[dateStr] = 0;
@@ -1467,15 +1465,23 @@ function findBestSlot(periodStart, periodEnd, events) {
         }
     }
 
+    // شمارش رویدادها (به جز رویدادهای smart)
     events.forEach(ev => {
         if (!ev.start_date) return;
-        const start = new Date(ev.start_date);
-        if (start >= periodStart && start <= periodEnd) {
-            const dateStr = start.toISOString().split('T')[0];
-            if (dayEventCount[dateStr] !== undefined) dayEventCount[dateStr]++;
-            const hourKey = `${dateStr}-${start.getHours()}`;
-            if (hourEventCount[hourKey] !== undefined) hourEventCount[hourKey]++;
+        
+        // رویدادهای smart را فقط یک بار در نظر می‌گیریم
+        if (ev.recurrence_type === 'smart') {
+            const start = new Date(ev.start_date);
+            if (start >= periodStart && start <= periodEnd) {
+                const dateStr = start.toISOString().split('T')[0];
+                if (dayEventCount[dateStr] !== undefined) dayEventCount[dateStr]++;
+                const hourKey = `${dateStr}-${start.getHours()}`;
+                if (hourEventCount[hourKey] !== undefined) hourEventCount[hourKey]++;
+            }
+            return;
         }
+
+        // برای رویدادهای غیر smart
         if (ev.recurrence_type !== 'none') {
             const recDates = getRecurrenceDates(ev, periodStart, periodEnd);
             recDates.forEach(rd => {
@@ -1484,9 +1490,18 @@ function findBestSlot(periodStart, periodEnd, events) {
                 const hourKey = `${dateStr}-${rd.getHours()}`;
                 if (hourEventCount[hourKey] !== undefined) hourEventCount[hourKey]++;
             });
+        } else {
+            const start = new Date(ev.start_date);
+            if (start >= periodStart && start <= periodEnd) {
+                const dateStr = start.toISOString().split('T')[0];
+                if (dayEventCount[dateStr] !== undefined) dayEventCount[dateStr]++;
+                const hourKey = `${dateStr}-${start.getHours()}`;
+                if (hourEventCount[hourKey] !== undefined) hourEventCount[hourKey]++;
+            }
         }
     });
 
+    // انتخاب بهترین روز
     let minDayCount = Infinity;
     let bestDays = [];
     for (let dateStr in dayEventCount) {
@@ -1500,6 +1515,7 @@ function findBestSlot(periodStart, periodEnd, events) {
     }
     const chosenDay = bestDays[Math.floor(Math.random() * bestDays.length)];
 
+    // انتخاب بهترین ساعت
     let minHourCount = Infinity;
     let bestHours = [];
     for (let h = 10; h < 18; h++) {
@@ -1536,8 +1552,11 @@ function getRecurrenceDates(ev, fromDate, toDate) {
 
     let current = new Date(start);
     const end = toDate > maxDate ? maxDate : toDate;
+    let iterations = 0;
+    const MAX_ITERATIONS = 500;
 
-    while (current <= end) {
+    while (current <= end && iterations < MAX_ITERATIONS) {
+        iterations++;
         if (current >= fromDate && current >= start) {
             occurrences.push(new Date(current));
         }
@@ -1581,25 +1600,31 @@ function getRecurrenceDates(ev, fromDate, toDate) {
                 }
                 break;
             case 'smart':
-                const intervalDays = smartInterval === 'weekly' ? 7 :
-                    smartInterval === '10day' ? 10 : 30;
-                const nextPeriodStart = new Date(current);
-                nextPeriodStart.setDate(nextPeriodStart.getDate() + 1);
-                const nextPeriodEnd = new Date(nextPeriodStart);
-                nextPeriodEnd.setDate(nextPeriodEnd.getDate() + intervalDays - 1);
-                const slot = findBestSlot(nextPeriodStart, nextPeriodEnd, events);
-                const smartDate = new Date(slot.date);
-                smartDate.setHours(slot.hour, slot.minute, 0, 0);
-                if (smartDate <= end && smartDate >= fromDate) {
-                    occurrences.push(smartDate);
+                // فقط یک بار محاسبه می‌کنیم
+                if (iterations === 1) {
+                    const intervalDays = smartInterval === 'weekly' ? 7 :
+                        smartInterval === '10day' ? 10 : 30;
+                    const nextPeriodStart = new Date(current);
+                    nextPeriodStart.setDate(nextPeriodStart.getDate() + 1);
+                    const nextPeriodEnd = new Date(nextPeriodStart);
+                    nextPeriodEnd.setDate(nextPeriodEnd.getDate() + intervalDays - 1);
+                    
+                    // حذف رویدادهای smart از لیست برای جلوگیری از حلقه
+                    const otherEvents = events.filter(e => e.id !== ev.id && e.recurrence_type !== 'smart');
+                    const slot = findBestSlot(nextPeriodStart, nextPeriodEnd, otherEvents);
+                    const smartDate = new Date(slot.date);
+                    smartDate.setHours(slot.hour, slot.minute, 0, 0);
+                    if (smartDate <= end && smartDate >= fromDate) {
+                        occurrences.push(smartDate);
+                    }
                 }
-                current = smartDate;
+                // خارج شدن از حلقه
+                current = new Date(end);
                 break;
             default:
                 return occurrences;
         }
     }
-
     return occurrences;
 }
 
