@@ -2324,9 +2324,9 @@ body.modal-open {
 }
 
 .textarea-wrapper {
-  position: relative;
-  display: block;
-  min-height: 70px;
+    position: relative;
+    display: block;
+    min-height: 70px;
 }
 
 /* =========================== TEXTAREA BUTTONS ============================ */
