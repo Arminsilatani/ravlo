@@ -223,7 +223,11 @@ function pad(n) {
 }
 
 function toLocalDateString(date) {
-    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+    if (!(date instanceof Date) || isNaN(date)) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
 }
 
 function isGregDatePast(gy, gm, gd) {
@@ -1156,6 +1160,102 @@ async function saveEventToDB(payload) {
     return data?.[0];
 }
 
+// =========================== SMART RECURRENCE HELPERS ============================
+
+/**
+ * محاسبه تاریخ بعدی برای تسک هوشمند
+ * @param {Object} ev - تسک فعلی
+ * @returns {Date|null} تاریخ پیشنهادی برای تسک بعدی
+ */
+function getNextSmartDate(ev) {
+    const interval = ev.recurrence_smart_interval || 'weekly';
+    let intervalDays = interval === 'weekly' ? 7 : interval === '10day' ? 10 : 30;
+    let searchWindow = interval === 'weekly' ? 2 : interval === '10day' ? 3 : 7;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const periodStart = new Date(today);
+    periodStart.setDate(periodStart.getDate() + (intervalDays - searchWindow));
+    const periodEnd = new Date(today);
+    periodEnd.setDate(periodEnd.getDate() + intervalDays);
+
+    const otherEvents = events.filter(e => e.id !== ev.id && e.recurrence_type !== 'smart');
+    const slot = findBestSlot(periodStart, periodEnd, otherEvents);
+    if (!slot) return null;
+    const newDate = new Date(slot.date);
+    newDate.setHours(slot.hour, slot.minute, 0, 0);
+    return newDate;
+}
+
+/**
+ * ساخت تسک بعدی با مشخصات مشابه و تاریخ جدید
+ */
+async function createNextSmartTask(ev, newDate) {
+    if (!currentUser) return;
+    const payload = {
+        title: ev.title || 'Untitled',
+        description: ev.description || '',
+        type: ev.type || 'task',
+        all_day: ev.all_day || false,
+        color: ev.color || '#f5f5f5',
+        icon: ev.icon || null,
+        checklist: ev.checklist || [],
+        invitees: [],
+        invitee_ids: [],
+        location: ev.location || null,
+        start_date: newDate.toISOString(),
+        end_date: ev.end_date ? new Date(newDate.getTime() + (new Date(ev.end_date) - new Date(ev.start_date))).toISOString() : null,
+        recurrence_type: 'smart',
+        recurrence_interval: ev.recurrence_interval || 1,
+        recurrence_days: [],
+        recurrence_smart_interval: ev.recurrence_smart_interval || 'weekly',
+        reminder_minutes: 0,
+        status: 'pending',
+        completed_occurrences: [],
+        completed_timestamps: {},
+        parent_event_id: null,
+        invitation_status: null
+    };
+
+    const saved = await saveEventToDB(payload);
+    if (saved) {
+        events.push(saved);
+        renderCalendar();
+        updateNotificationDot();
+        const dateStr = newDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = newDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+        showToast(`📅 تسک بعدی برای ${dateStr} ساعت ${timeStr} برنامه‌ریزی شد`);
+    }
+}
+
+/**
+ * تکمیل تسک هوشمند: اتمام تسک فعلی و ساخت تسک بعدی
+ */
+async function completeSmartTask(ev) {
+    if (ev.status === 'done') return;
+    ev.status = 'done';
+    ev.completed_at = new Date().toISOString();
+
+    try {
+        await updateEventInDB(ev.id, { status: 'done', completed_at: ev.completed_at });
+        if (currentUser) {
+            await removeNotificationsForEvent(ev.id, currentUser.id);
+        }
+
+        const nextDate = getNextSmartDate(ev);
+        if (nextDate) {
+            await createNextSmartTask(ev, nextDate);
+        }
+
+        renderCalendar();
+        updateNotificationDot();
+        showToast('✅ تسک تکمیل شد! تسک بعدی ساخته شد.');
+    } catch (err) {
+        console.error('Error completing smart task:', err);
+        alert('خطا در تکمیل تسک');
+    }
+}
+
 // =========================== MOVE OVERDUE TASKS TO TODAY ============================
 async function moveOverdueTasksToToday() {
     if (!currentUser) return;
@@ -1542,9 +1642,18 @@ function getRecurrenceDates(ev, fromDate, toDate) {
 
     const start = new Date(ev.start_date);
     const type = ev.recurrence_type;
+
+    // ── برای smart فقط تاریخ شروع را برگردان ──
+    if (type === 'smart') {
+        if (start >= fromDate && start <= toDate) {
+            return [new Date(start)];
+        }
+        return [];
+    }
+
+    // ── برای بقیه انواع ──
     const interval = ev.recurrence_interval || 1;
     const days = ev.recurrence_days || [];
-    const smartInterval = ev.recurrence_smart_interval || 'weekly';
     const occurrences = [];
 
     const maxDate = new Date(start);
@@ -1598,28 +1707,6 @@ function getRecurrenceDates(ev, fromDate, toDate) {
                     }
                     if (!found) current.setDate(current.getDate() + 7 * interval);
                 }
-                break;
-            case 'smart':
-                // فقط یک بار محاسبه می‌کنیم
-                if (iterations === 1) {
-                    const intervalDays = smartInterval === 'weekly' ? 7 :
-                        smartInterval === '10day' ? 10 : 30;
-                    const nextPeriodStart = new Date(current);
-                    nextPeriodStart.setDate(nextPeriodStart.getDate() + 1);
-                    const nextPeriodEnd = new Date(nextPeriodStart);
-                    nextPeriodEnd.setDate(nextPeriodEnd.getDate() + intervalDays - 1);
-                    
-                    // حذف رویدادهای smart از لیست برای جلوگیری از حلقه
-                    const otherEvents = events.filter(e => e.id !== ev.id && e.recurrence_type !== 'smart');
-                    const slot = findBestSlot(nextPeriodStart, nextPeriodEnd, otherEvents);
-                    const smartDate = new Date(slot.date);
-                    smartDate.setHours(slot.hour, slot.minute, 0, 0);
-                    if (smartDate <= end && smartDate >= fromDate) {
-                        occurrences.push(smartDate);
-                    }
-                }
-                // خارج شدن از حلقه
-                current = new Date(end);
                 break;
             default:
                 return occurrences;
@@ -2001,6 +2088,7 @@ function renderDayView() {
         vm = viewDate.getMonth(),
         vd = viewDate.getDate();
 
+    // ─── دریافت رویدادهای این روز ───
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
         var d = new Date(ev.start_date);
@@ -2014,9 +2102,11 @@ function renderDayView() {
         return false;
     });
 
+    // ─── جدا کردن All‑Day ───
     var allDayEvents = dayEvents.filter(ev => ev.all_day === true);
     var timedEvents = dayEvents.filter(ev => ev.all_day !== true);
 
+    // ─── محاسبه ارتفاع ساعات ───
     var occupiedHours = new Array(24).fill(false);
     timedEvents.forEach(ev => {
         var start = new Date(ev.start_date);
@@ -2034,10 +2124,11 @@ function renderDayView() {
     var hourHeights = occupiedHours.map(occ => occ ? 60 : 20);
     var totalHeight = hourHeights.reduce((sum, h) => sum + h, 0);
 
+    // ─── پاک کردن گرید ───
     calendarGrid.className = 'day-view-timeline';
     calendarGrid.innerHTML = '';
 
-    // 1) ردیف Overdue (فقط اگر امروز باشد)
+    // ─── 1) ردیف Overdue (فقط اگر امروز باشد) ───
     const todayCheck = new Date();
     if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === todayCheck.getDate()) {
         var overdueOccurrences = [];
@@ -2050,11 +2141,12 @@ function renderDayView() {
                 if (!ev.start_date) return;
                 if (ev.status === 'done' || ev.status === 'completed') return;
                 if (!ev.recurrence_type || ev.recurrence_type === 'none') return;
+                if (ev.recurrence_type === 'smart') return; // smart tasks handled separately
 
                 var start = new Date(ev.start_date);
                 var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
                 recDates.forEach(rd => {
-                    var dateStr = toLocalDateString(rd);   // ✅ تاریخ محلی
+                    var dateStr = toLocalDateString(rd);
                     var isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
                         ? ev.completed_occurrences.includes(dateStr)
                         : false;
@@ -2083,7 +2175,7 @@ function renderDayView() {
                 var capsule = document.createElement('span');
                 capsule.className = 'all-day-capsule overdue-capsule';
                 capsule.style.backgroundColor = item.ev.color || 'var(--accent)';
-                capsule.style.color = '#0d0d0d';   // متن مشکی
+                capsule.style.color = '#0d0d0d';
                 capsule.style.border = '1px solid ' + (item.ev.color || 'var(--accent)');
 
                 if (item.ev.icon) {
@@ -2110,43 +2202,43 @@ function renderDayView() {
         }
     }
 
-    // 2) ردیف رویدادهای تمام روز
-    var allDayRow = document.createElement('div');
-    allDayRow.className = 'all-day-events-row';
-    if (allDayEvents.length === 0) {
-        allDayRow.style.display = 'none';
-    } else {
+    // ─── 2) ردیف رویدادهای تمام روز ───
+    if (allDayEvents.length > 0) {
+        var allDayRow = document.createElement('div');
+        allDayRow.className = 'all-day-events-row';
         allDayEvents.forEach(ev => {
             var capsule = document.createElement('span');
             capsule.className = 'all-day-capsule';
             capsule.style.backgroundColor = ev.color || 'var(--accent)';
             capsule.style.color = '#fff';
             capsule.style.border = '1px solid ' + (ev.color || 'var(--accent)');
-            
+
             if (ev.icon) {
                 var iconSpan = document.createElement('span');
                 iconSpan.className = 'all-day-capsule-icon';
                 iconSpan.innerHTML = ev.icon;
                 capsule.appendChild(iconSpan);
             }
-            
+
             var titleSpan = document.createElement('span');
             titleSpan.className = 'all-day-capsule-title';
             titleSpan.textContent = ev.title || 'Untitled';
             capsule.appendChild(titleSpan);
-            
+
             capsule.addEventListener('click', function(e) {
                 e.stopPropagation();
                 openEventDetail(ev, new Date(vy, vm, vd));
             });
-            
+
             allDayRow.appendChild(capsule);
         });
+        calendarGrid.appendChild(allDayRow);
     }
 
+    // ─── 3) تایم‌لاین ───
     var timelineWrapper = document.createElement('div');
     timelineWrapper.className = 'day-timeline-wrapper';
-    
+
     var timeLabels = document.createElement('div');
     timeLabels.className = 'time-labels';
     for (var h = 0; h < 24; h++) {
@@ -2160,13 +2252,12 @@ function renderDayView() {
     var slots = document.createElement('div');
     slots.className = 'time-slots';
     slots.style.height = totalHeight + 'px';
-    
+
     timelineWrapper.appendChild(timeLabels);
     timelineWrapper.appendChild(slots);
-    
-    calendarGrid.appendChild(allDayRow);
     calendarGrid.appendChild(timelineWrapper);
 
+    // ─── خطوط افقی ───
     var cumulativeTop = 0;
     for (var h = 0; h < 24; h++) {
         var lineEl = document.createElement('div');
@@ -2182,6 +2273,7 @@ function renderDayView() {
         cumulativeTop += hourHeights[h];
     }
 
+    // ─── رندر رویدادهای زمان‌دار ───
     requestAnimationFrame(function() {
         var eventsWithMinutes = timedEvents.map(ev => {
             var start = new Date(ev.start_date);
@@ -2212,23 +2304,26 @@ function renderDayView() {
 
         var laneCount = lanes.length;
         const SLOT_PADDING = 10;
+        var slotsWidth = slots.clientWidth || 600;
+
         lanes.forEach((laneEvents, laneIndex) => {
             laneEvents.forEach(item => {
                 var startMin = item.startMin;
                 var endMin = item.endMin;
                 if (endMin <= startMin) endMin = startMin + 15;
 
+                // محاسبه top
                 var topPx = 0;
                 for (var h = 0; h < 24; h++) {
                     if (h < Math.floor(startMin / 60)) {
                         topPx += hourHeights[h];
                     } else if (h === Math.floor(startMin / 60)) {
-                        var minuteInHour = startMin % 60;
-                        topPx += (minuteInHour / 60) * hourHeights[h];
+                        topPx += (startMin % 60) / 60 * hourHeights[h];
                         break;
                     }
                 }
 
+                // محاسبه ارتفاع
                 var heightPx = 0;
                 var curMin = startMin;
                 while (curMin < endMin && curMin < 24 * 60) {
@@ -2239,82 +2334,62 @@ function renderDayView() {
                     curMin += minsToEnd;
                 }
 
-                var slotsWidth = slots.clientWidth;
-                if (slotsWidth === 0) slotsWidth = 600;
-
                 var gapPx = 15;
                 var totalGap = gapPx * (laneCount - 1);
                 var availableWidth = slotsWidth - 2 * SLOT_PADDING - totalGap;
                 var laneWidthPx = availableWidth / laneCount;
-
                 var leftPx = SLOT_PADDING + laneIndex * (laneWidthPx + gapPx);
 
                 var evEl = document.createElement('div');
                 evEl.className = 'time-slot-event';
+                evEl.style.position = 'absolute';
+                evEl.style.top = topPx + 'px';
+                evEl.style.height = Math.max(heightPx, 28) + 'px';
+                evEl.style.left = leftPx + 'px';
+                evEl.style.width = laneWidthPx + 'px';
+                evEl.style.borderRadius = '6px';
+                evEl.style.padding = '6px 15px';
+                evEl.style.fontSize = '12px';
+                evEl.style.color = '#f5f5f5';
+                evEl.style.overflow = 'hidden';
+                evEl.style.boxSizing = 'border-box';
+                evEl.style.cursor = 'pointer';
+                evEl.style.zIndex = '2';
+                evEl.style.transition = 'background 0.2s';
 
+                // استایل
                 if (item.ev.invitation_status === 'pending') {
                     evEl.classList.add('event-invited');
-                    if (item.ev.color) {
-                        evEl.style.border = '2px solid ' + item.ev.color;
-                        evEl.style.backgroundColor = item.ev.color + '26';
-                    } else {
-                        evEl.style.border = '2px solid var(--accent)';
-                        evEl.style.backgroundColor = 'rgba(255, 111, 145, 0.15)';
-                    }
+                    var borderColor = item.ev.color || 'var(--accent)';
+                    evEl.style.border = '2px solid ' + borderColor;
+                    evEl.style.backgroundColor = borderColor + '26';
                 } else {
                     if (item.ev.status === 'completed' || item.ev.status === 'done') {
                         evEl.classList.add('event-completed');
                     }
                     if (item.ev.color) {
                         evEl.style.border = '2px solid ' + item.ev.color;
-                        if (item.ev.location && item.ev.location.lat) {
-                            evEl.style.backgroundColor = 'transparent';
-                        } else {
-                            evEl.style.backgroundColor = item.ev.color + '26';
-                        }
+                        evEl.style.backgroundColor = item.ev.color + '26';
                     } else {
                         evEl.style.border = '2px solid var(--accent)';
-                        evEl.style.backgroundColor = 'rgba(255, 111, 145, 0.15)';
+                        evEl.style.backgroundColor = 'rgba(255,111,145,0.15)';
                     }
                 }
 
-                evEl.style.top = topPx + 'px';
-                evEl.style.height = Math.max(heightPx, 28) + 'px';
-                evEl.style.left = leftPx + 'px';
-                evEl.style.width = laneWidthPx + 'px';
-
-                if (item.ev.location && item.ev.location.lat && isLeafletReady()) {
-                    evEl.style.position = 'relative';
-                    var mapBg = document.createElement('div');
-                    mapBg.className = 'event-map-bg';
-                    evEl.appendChild(mapBg);
-                    var overlay = document.createElement('div');
-                    overlay.className = 'event-map-overlay';
-                    overlay.style.backgroundColor = (item.ev.color || '#ff6f91') + '40';
-                    evEl.appendChild(overlay);
-                    (function(container, lat, lng) {
-                        requestAnimationFrame(function() {
-                            var miniMap = L.map(container, {
-                                center: [lat, lng],
-                                zoom: 15,
-                                attributionControl: false,
-                                zoomControl: false,
-                                dragging: false,
-                                scrollWheelZoom: false,
-                                doubleClickZoom: false,
-                                touchZoom: false,
-                                keyboard: false,
-                                interactive: false
-                            });
-                            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                                maxZoom: 19
-                            }).addTo(miniMap);
-                        });
-                    })(mapBg, item.ev.location.lat, item.ev.location.lng);
-                }
-
+                // عنوان
                 var titleSpan = document.createElement('div');
                 titleSpan.className = 'event-title';
+                titleSpan.style.fontWeight = '400';
+                titleSpan.style.whiteSpace = 'nowrap';
+                titleSpan.style.overflow = 'hidden';
+                titleSpan.style.textOverflow = 'ellipsis';
+                titleSpan.style.color = '#1a1a1a';
+                titleSpan.style.background = 'rgba(255,255,255,0.85)';
+                titleSpan.style.display = 'inline-block';
+                titleSpan.style.padding = '2px 6px';
+                titleSpan.style.borderRadius = '4px';
+                titleSpan.style.lineHeight = '1.3';
+
                 if (item.ev.icon) {
                     var iconWrapper = document.createElement('span');
                     iconWrapper.className = 'event-icon';
@@ -2326,136 +2401,166 @@ function renderDayView() {
                 }
                 evEl.appendChild(titleSpan);
 
+                // نشان دعوت
                 if (item.ev.invitation_status === 'pending') {
-                    var invitedBadge = document.createElement('span');
-                    invitedBadge.className = 'invited-badge';
-                    invitedBadge.textContent = 'Invited';
-                    evEl.appendChild(invitedBadge);
+                    var badge = document.createElement('span');
+                    badge.className = 'invited-badge';
+                    badge.style.position = 'absolute';
+                    badge.style.top = '4px';
+                    badge.style.right = '8px';
+                    badge.style.background = '#666';
+                    badge.style.color = 'white';
+                    badge.style.fontSize = '10px';
+                    badge.style.padding = '2px 6px';
+                    badge.style.borderRadius = '8px';
+                    badge.style.zIndex = '2';
+                    badge.textContent = 'Invited';
+                    evEl.appendChild(badge);
                 }
 
+                // ─── دکمه‌های اکشن ───
                 var actionsDiv = document.createElement('div');
                 actionsDiv.className = 'event-actions';
+                actionsDiv.style.position = 'absolute';
+                actionsDiv.style.bottom = '4px';
+                actionsDiv.style.right = '6px';
+                actionsDiv.style.display = 'flex';
+                actionsDiv.style.gap = '6px';
+                actionsDiv.style.zIndex = '3';
+                actionsDiv.style.opacity = '0.6';
+                actionsDiv.style.transition = 'opacity 0.2s';
 
                 if (item.ev.parent_event_id && item.ev.invitation_status === 'accepted') {
                     var leaveBtn = document.createElement('button');
                     leaveBtn.className = 'event-action-btn';
                     leaveBtn.textContent = 'Leave';
+                    leaveBtn.style.cssText = 'background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;line-height:1.2;';
                     leaveBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        showConfirmModal('Leave this event? It will be removed from your calendar.', async function() {
+                        showConfirmModal('Leave this event?', async function() {
                             await deleteEventFromDB(item.ev.id);
                             events = events.filter(e => e.id !== item.ev.id);
                             renderCalendar();
                         });
                     });
                     actionsDiv.appendChild(leaveBtn);
-                } else if (item.ev.invitation_status === 'pending') {
-                    // هیچ دکمه‌ای
-                } else {
+                } else if (item.ev.invitation_status !== 'pending') {
+                    // دکمه Cancel
                     var cancelBtn = document.createElement('button');
                     cancelBtn.className = 'event-action-btn';
                     cancelBtn.textContent = 'Cancel';
+                    cancelBtn.style.cssText = 'background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;line-height:1.2;';
                     cancelBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        showConfirmModal('Are you sure you want to delete this event?', function() {
+                        showConfirmModal('Delete this event?', function() {
                             deleteEventById(item.ev.id);
                         });
                     });
 
+                    // دکمه Done / End / Undo
                     var endBtn = document.createElement('button');
                     endBtn.className = 'event-action-btn';
+                    endBtn.style.cssText = 'background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;line-height:1.2;';
 
-                    if (item.ev.type === 'task') {
-    var occDate = toLocalDateString(new Date(vy, vm, vd));
-    var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
-                    ? item.ev.completed_occurrences.includes(occDate)
-                    : false;
-    endBtn.textContent = isDone ? 'Undo' : 'Done';
-    endBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (isDone) {
-            var idx = item.ev.completed_occurrences.indexOf(occDate);
-            if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
-            if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
-                delete item.ev.completed_timestamps[occDate];
-            }
-            endBtn.textContent = 'Done';
-            evEl.style.opacity = '1';
-            evEl.style.textDecoration = 'none';
-            // بعد از Undo هم نوتیفیکیشن حذف شود (اگر وجود داشت)
-            updateEventInDB(item.ev.id, {
-                completed_occurrences: item.ev.completed_occurrences,
-                completed_timestamps: item.ev.completed_timestamps
-            }).then(() => {
-                if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
-                console.log('Undone and notifications removed.');
-            }).catch(function() {});
-        } else {
-            if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
-            item.ev.completed_occurrences.push(occDate);
-            if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
-            item.ev.completed_timestamps[occDate] = new Date().toISOString();
-            endBtn.textContent = 'Undo';
-            evEl.style.opacity = '0.6';
-            evEl.style.textDecoration = 'line-through';
-            showToast('Occurrence marked done. Auto‑deleted in 28 days.');
-            updateEventInDB(item.ev.id, {
-                completed_occurrences: item.ev.completed_occurrences,
-                completed_timestamps: item.ev.completed_timestamps
-            }).then(() => {
-                if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
-                console.log('Done and notifications removed.');
-            }).catch(function() {});
-        }
-        isDone = !isDone;
-    });
-    if (isDone) {
-        evEl.style.opacity = '0.6';
-        evEl.style.textDecoration = 'line-through';
-    }
-} else {
-    var occDate = toLocalDateString(new Date(vy, vm, vd));
-    var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
-                        ? item.ev.completed_occurrences.includes(occDate)
-                        : false;
-    endBtn.textContent = isCompleted ? 'Undo' : 'End';
-    endBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (isCompleted) {
-            var idx = item.ev.completed_occurrences.indexOf(occDate);
-            if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
-            if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
-                delete item.ev.completed_timestamps[occDate];
-            }
-            endBtn.textContent = 'End';
-            evEl.classList.remove('event-completed');
-            updateEventInDB(item.ev.id, {
-                completed_occurrences: item.ev.completed_occurrences,
-                completed_timestamps: item.ev.completed_timestamps
-            }).then(() => {
-                if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
-            }).catch(function() {});
-        } else {
-            if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
-            item.ev.completed_occurrences.push(occDate);
-            if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
-            item.ev.completed_timestamps[occDate] = new Date().toISOString();
-            endBtn.textContent = 'Undo';
-            evEl.classList.add('event-completed');
-            showToast('Event marked done. Auto‑deleted in 28 days.');
-            updateEventInDB(item.ev.id, {
-                completed_occurrences: item.ev.completed_occurrences,
-                completed_timestamps: item.ev.completed_timestamps
-            }).then(() => {
-                if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
-            }).catch(function() {});
-        }
-        isCompleted = !isCompleted;
-    });
-    if (isCompleted) {
-        evEl.classList.add('event-completed');
-    }
-}
+                    // ── تسک هوشمند ──
+                    if (item.ev.type === 'task' && item.ev.recurrence_type === 'smart') {
+                        endBtn.textContent = 'Done';
+                        endBtn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            completeSmartTask(item.ev);
+                        });
+                    }
+                    // ── تسک عادی ──
+                    else if (item.ev.type === 'task') {
+                        var occDate = toLocalDateString(new Date(vy, vm, vd));
+                        var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
+                                        ? item.ev.completed_occurrences.includes(occDate)
+                                        : false;
+                        endBtn.textContent = isDone ? 'Undo' : 'Done';
+                        endBtn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            if (isDone) {
+                                var idx = item.ev.completed_occurrences.indexOf(occDate);
+                                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
+                                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
+                                    delete item.ev.completed_timestamps[occDate];
+                                }
+                                endBtn.textContent = 'Done';
+                                evEl.style.opacity = '1';
+                                evEl.style.textDecoration = 'none';
+                                updateEventInDB(item.ev.id, {
+                                    completed_occurrences: item.ev.completed_occurrences,
+                                    completed_timestamps: item.ev.completed_timestamps
+                                }).then(() => {
+                                    if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
+                                }).catch(function() {});
+                            } else {
+                                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
+                                item.ev.completed_occurrences.push(occDate);
+                                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
+                                item.ev.completed_timestamps[occDate] = new Date().toISOString();
+                                endBtn.textContent = 'Undo';
+                                evEl.style.opacity = '0.6';
+                                evEl.style.textDecoration = 'line-through';
+                                showToast('Occurrence marked done. Auto‑deleted in 28 days.');
+                                updateEventInDB(item.ev.id, {
+                                    completed_occurrences: item.ev.completed_occurrences,
+                                    completed_timestamps: item.ev.completed_timestamps
+                                }).then(() => {
+                                    if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
+                                }).catch(function() {});
+                            }
+                            isDone = !isDone;
+                        });
+                        if (isDone) {
+                            evEl.style.opacity = '0.6';
+                            evEl.style.textDecoration = 'line-through';
+                        }
+                    }
+                    // ── ایونت ──
+                    else {
+                        var occDate = toLocalDateString(new Date(vy, vm, vd));
+                        var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
+                                            ? item.ev.completed_occurrences.includes(occDate)
+                                            : false;
+                        endBtn.textContent = isCompleted ? 'Undo' : 'End';
+                        endBtn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            if (isCompleted) {
+                                var idx = item.ev.completed_occurrences.indexOf(occDate);
+                                if (idx > -1) item.ev.completed_occurrences.splice(idx, 1);
+                                if (item.ev.completed_timestamps && item.ev.completed_timestamps[occDate]) {
+                                    delete item.ev.completed_timestamps[occDate];
+                                }
+                                endBtn.textContent = 'End';
+                                evEl.classList.remove('event-completed');
+                                updateEventInDB(item.ev.id, {
+                                    completed_occurrences: item.ev.completed_occurrences,
+                                    completed_timestamps: item.ev.completed_timestamps
+                                }).then(() => {
+                                    if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
+                                }).catch(function() {});
+                            } else {
+                                if (!item.ev.completed_occurrences) item.ev.completed_occurrences = [];
+                                item.ev.completed_occurrences.push(occDate);
+                                if (!item.ev.completed_timestamps) item.ev.completed_timestamps = {};
+                                item.ev.completed_timestamps[occDate] = new Date().toISOString();
+                                endBtn.textContent = 'Undo';
+                                evEl.classList.add('event-completed');
+                                showToast('Event marked done. Auto‑deleted in 28 days.');
+                                updateEventInDB(item.ev.id, {
+                                    completed_occurrences: item.ev.completed_occurrences,
+                                    completed_timestamps: item.ev.completed_timestamps
+                                }).then(() => {
+                                    if (currentUser) removeNotificationsForEvent(item.ev.id, currentUser.id);
+                                }).catch(function() {});
+                            }
+                            isCompleted = !isCompleted;
+                        });
+                        if (isCompleted) {
+                            evEl.classList.add('event-completed');
+                        }
+                    }
 
                     actionsDiv.appendChild(cancelBtn);
                     actionsDiv.appendChild(endBtn);
@@ -2463,6 +2568,7 @@ function renderDayView() {
 
                 evEl.appendChild(actionsDiv);
 
+                // کلیک اصلی
                 evEl.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (item.ev.invitation_status === 'pending') {
@@ -2472,10 +2578,21 @@ function renderDayView() {
                     }
                 });
 
+                // هاور
+                evEl.addEventListener('mouseenter', function() {
+                    var acts = this.querySelector('.event-actions');
+                    if (acts) acts.style.opacity = '1';
+                });
+                evEl.addEventListener('mouseleave', function() {
+                    var acts = this.querySelector('.event-actions');
+                    if (acts) acts.style.opacity = '0.6';
+                });
+
                 slots.appendChild(evEl);
             });
         });
 
+        // ─── خط زمان فعلی ───
         var now = new Date();
         if (now.getFullYear() === vy && now.getMonth() === vm && now.getDate() === vd) {
             var nowMin = now.getHours() * 60 + now.getMinutes();
@@ -2490,12 +2607,27 @@ function renderDayView() {
             }
             var line = document.createElement('div');
             line.className = 'current-time-line';
-            line.style.top = nowTopPx + 'px';
+            line.style.position = 'absolute';
             line.style.left = '0';
             line.style.right = '-10px';
+            line.style.height = '1px';
+            line.style.background = 'var(--accent)';
+            line.style.zIndex = '3';
+            line.style.pointerEvents = 'none';
+            line.style.top = nowTopPx + 'px';
+            var dot = document.createElement('span');
+            dot.style.position = 'absolute';
+            dot.style.left = '-5px';
+            dot.style.top = '-4px';
+            dot.style.width = '9px';
+            dot.style.height = '9px';
+            dot.style.background = 'var(--accent)';
+            dot.style.borderRadius = '50%';
+            line.appendChild(dot);
             slots.appendChild(line);
         }
 
+        // ─── کلیک روی فضای خالی ───
         slots.addEventListener('click', function(e) {
             if (e.target !== slots) return;
             var rect = slots.getBoundingClientRect();
@@ -2503,8 +2635,7 @@ function renderDayView() {
             var acc = 0, clickMin = 0;
             for (var h = 0; h < 24; h++) {
                 if (y < acc + hourHeights[h]) {
-                    var offsetInHour = y - acc;
-                    clickMin = h * 60 + (offsetInHour / hourHeights[h]) * 60;
+                    clickMin = h * 60 + ((y - acc) / hourHeights[h]) * 60;
                     break;
                 }
                 acc += hourHeights[h];
@@ -2514,12 +2645,12 @@ function renderDayView() {
             minutes = Math.round(minutes / 15) * 15;
             if (minutes === 60) { minutes = 0; hours++; }
             if (hours >= 24) hours = 23;
-
             var clickDate = new Date(vy, vm, vd, hours, minutes, 0, 0);
             openNewEventAtTime(clickDate);
         });
     });
 
+    // ─── عنوان ───
     currentMonthYearEl.textContent = viewDate.toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
@@ -3099,7 +3230,6 @@ async function saveEvent() {
 /* =========================== EVENT DETAIL MODAL ============================ */
 function openEventDetail(ev, occurrenceDate) {
     currentDetailEventId = ev.id;
-    
     ev.__occurrenceDate = occurrenceDate;
 
     // ─── Color & title ───
@@ -3128,18 +3258,14 @@ function openEventDetail(ev, occurrenceDate) {
     }
 
     const descIcon = document.getElementById('detail-desc-icon');
-    if (descIcon) {
-        descIcon.style.color = ev.color || 'var(--accent)';
-    }
+    if (descIcon) descIcon.style.color = ev.color || 'var(--accent)';
     const calIcon = document.getElementById('detail-calendar-icon');
     calIcon.style.color = ev.color || 'var(--accent)';
 
     // ─── Date and time ───
     const start = ev.start_date ? new Date(ev.start_date) : null;
     const end = ev.end_date ? new Date(ev.end_date) : null;
-    let dateText = '';
-    let timeText = '';
-    let durationParen = '';
+    let dateText = '', timeText = '', durationParen = '';
 
     if (start) {
         dateText = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -3180,20 +3306,15 @@ function openEventDetail(ev, occurrenceDate) {
     // ─── Description ───
     const descContainer = document.getElementById('detail-description-container');
     const descText = document.getElementById('detail-description-text');
-    
-    // پاک کردن چک‌لیست از توضیحات در حین نمایش
     let cleanDescription = ev.description || '';
     if (cleanDescription) {
         const lines = cleanDescription.split('\n');
-        const filteredLines = lines.filter(line => 
-            !line.trim().startsWith('☑') && 
-            !line.trim().startsWith('☐') &&
-            !line.trim().startsWith('- [x]') && 
-            !line.trim().startsWith('- [ ]')
+        const filteredLines = lines.filter(line =>
+            !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
+            !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
         );
         cleanDescription = filteredLines.join('\n').trim();
     }
-    
     if (cleanDescription) {
         descContainer.style.display = 'block';
         descText.textContent = cleanDescription;
@@ -3201,8 +3322,7 @@ function openEventDetail(ev, occurrenceDate) {
         descContainer.style.display = 'none';
     }
 
-    // ─── CHECKLIST SECTION (برای تسک‌ها) ───
-    // اطمینان از وجود container
+    // ─── CHECKLIST ───
     let checklistContainer = document.getElementById('detail-checklist-container');
     if (!checklistContainer) {
         const descContainer2 = document.getElementById('detail-description-container');
@@ -3211,7 +3331,6 @@ function openEventDetail(ev, occurrenceDate) {
             checklistContainer.id = 'detail-checklist-container';
             checklistContainer.className = 'detail-checklist-container';
             checklistContainer.style.display = 'none';
-            
             const header = document.createElement('div');
             header.className = 'detail-checklist-header';
             header.innerHTML = `
@@ -3224,63 +3343,46 @@ function openEventDetail(ev, occurrenceDate) {
                 <span style="font-weight:600;font-size:14px;">Checklist</span>
             `;
             checklistContainer.appendChild(header);
-            
             const listItems = document.createElement('div');
             listItems.id = 'detail-checklist-items';
             listItems.className = 'detail-checklist-items';
             checklistContainer.appendChild(listItems);
-            
             descContainer2.parentNode.insertBefore(checklistContainer, descContainer2.nextSibling);
         }
     }
-
-    // رندر چک‌لیست
     if (checklistContainer) {
         renderChecklistInDetail(ev);
     }
 
-    // ─── Attendees section (only events) ───
+    // ─── Attendees ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
             inviteesSection.style.display = 'block';
             const attendIcon = document.getElementById('detail-attendees-icon');
             if (attendIcon) attendIcon.style.color = ev.color || 'var(--accent)';
-
             const attendeesList = document.getElementById('detail-attendees-list');
             attendeesList.innerHTML = '';
             const invitees = ev.invitees || [];
-
             if (invitees.length === 0) {
-                attendeesList.innerHTML = `
-                    <div class="attendee-empty">
-                        <div class="attendee-avatar empty-plus">+</div>
-                        <span class="attendee-empty-text">Invite more people</span>
-                    </div>`;
+                attendeesList.innerHTML = `<div class="attendee-empty"><div class="attendee-avatar empty-plus">+</div><span class="attendee-empty-text">Invite more people</span></div>`;
             } else if (invitees.length <= 3) {
                 const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
                 invitees.forEach((name, i) => {
                     const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
-                    const item = document.createElement('div');
-                    item.className = 'attendee-item';
-                    item.innerHTML = `
-                        <div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div>
-                        <span class="attendee-name">${name}</span>`;
-                    attendeesList.appendChild(item);
+                    attendeesList.innerHTML += `<div class="attendee-item"><div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div><span class="attendee-name">${name}</span></div>`;
                 });
             } else {
                 const colors = ['#f97316','#e11d48'];
                 const firstTwo = invitees.slice(0,2);
                 const restCount = invitees.length - 2;
-                const overlapRow = document.createElement('div');
-                overlapRow.className = 'attendees-overlap-row';
+                let html = '<div class="attendees-overlap-row">';
                 firstTwo.forEach((name, i) => {
                     const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
-                    overlapRow.innerHTML += `
-                        <div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
+                    html += `<div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
                 });
-                overlapRow.innerHTML += `<span class="attendee-extra-count">+${restCount} more</span>`;
-                attendeesList.appendChild(overlapRow);
+                html += `<span class="attendee-extra-count">+${restCount} more</span></div>`;
+                attendeesList.innerHTML = html;
             }
         } else {
             inviteesSection.style.display = 'none';
@@ -3296,7 +3398,6 @@ function openEventDetail(ev, occurrenceDate) {
             mapContainer.style.display = 'block';
             const coordsText = document.getElementById('detail-location-coords-text');
             if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-
             const overlay = document.getElementById('detail-map-address-overlay');
             if (ev.location.address) {
                 const addr = ev.location.address;
@@ -3311,7 +3412,6 @@ function openEventDetail(ev, occurrenceDate) {
             } else if (overlay) {
                 overlay.style.display = 'none';
             }
-
             setTimeout(() => {
                 const detailMapDiv = document.getElementById('detail-location-map');
                 if (detailMapDiv) {
@@ -3343,8 +3443,7 @@ function openEventDetail(ev, occurrenceDate) {
                     if (mapDivForClick) {
                         mapDivForClick.style.cursor = 'pointer';
                         mapDivForClick.addEventListener('click', () => {
-                            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-                            window.open(url, '_blank');
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
                         });
                     }
                 }
@@ -3359,10 +3458,10 @@ function openEventDetail(ev, occurrenceDate) {
     const oldAddr = document.getElementById('detail-address-container');
     if (oldAddr) oldAddr.style.display = 'none';
 
-    // ─── تشخیص مهمان بودن ───
+    // ─── تشخیص مهمان ───
     const isInvitee = !!ev.parent_event_id;
 
-    // ─── دکمه Edit (فقط سازنده) ───
+    // ─── دکمه Edit ───
     const editBtn = document.getElementById('detail-edit-btn-top');
     if (editBtn) {
         editBtn.style.display = isInvitee ? 'none' : '';
@@ -3373,119 +3472,128 @@ function openEventDetail(ev, occurrenceDate) {
         };
     }
 
-var dateForCompletion = null;
-if (occurrenceDate) {
-    dateForCompletion = toLocalDateString(occurrenceDate);
-}
-// اگر هیچکدام نبود، dateForCompletion null می‌ماند (رویداد غیرتکراری)
-var isCompleted = false;
-if (dateForCompletion && ev.recurrence_type && ev.recurrence_type !== 'none') {
-    isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                    ? ev.completed_occurrences.includes(dateForCompletion)
-                    : false;
-} else {
-    isCompleted = (ev.status === 'completed' || ev.status === 'done');
-}
-
-const completeBtn = document.getElementById('detail-complete-btn');
-if (completeBtn) {
-    completeBtn.style.display = isInvitee ? 'none' : '';
-
-    if (isCompleted) {
-        completeBtn.textContent = 'Undo';
-        completeBtn.onclick = () => {
-            if (dateForCompletion && ev.recurrence_type !== 'none') {
-                var idx = ev.completed_occurrences.indexOf(dateForCompletion);
-                if (idx > -1) ev.completed_occurrences.splice(idx, 1);
-                if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
-                    delete ev.completed_timestamps[dateForCompletion];
-                }
-                updateEventInDB(ev.id, {
-                    completed_occurrences: ev.completed_occurrences,
-                    completed_timestamps: ev.completed_timestamps
-                }).then(async () => {
-                    if (currentUser && ev.type === 'task') {
-                        const today = new Date();
-                        const evDate = new Date(ev.start_date);
-                        if (evDate.getFullYear() === today.getFullYear() &&
-                            evDate.getMonth() === today.getMonth() &&
-                            evDate.getDate() === today.getDate()) {
-                            await addNotificationToUser(
-                                currentUser.id,
-                                'event',
-                                'Event today',
-                                `${ev.title || 'Untitled'} is today!`,
-                                '#'
-                            );
-                        }
-                    }
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error undoing.'));
-            } else {
-                updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
-                    ev.status = 'pending';
-                    ev.completed_at = null;
-                    if (currentUser && ev.type === 'task') {
-                        const today = new Date();
-                        const evDate = new Date(ev.start_date);
-                        if (evDate.getFullYear() === today.getFullYear() &&
-                            evDate.getMonth() === today.getMonth() &&
-                            evDate.getDate() === today.getDate()) {
-                            await addNotificationToUser(
-                                currentUser.id,
-                                'event',
-                                'Event today',
-                                `${ev.title || 'Untitled'} is today!`,
-                                '#'
-                            );
-                        }
-                    }
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error undoing.'));
-            }
-        };
-    } else {
-        completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
-        completeBtn.onclick = () => {
-            if (dateForCompletion && ev.recurrence_type !== 'none') {
-                if (!ev.completed_occurrences) ev.completed_occurrences = [];
-                ev.completed_occurrences.push(dateForCompletion);
-                if (!ev.completed_timestamps) ev.completed_timestamps = {};
-                ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
-                updateEventInDB(ev.id, {
-                    completed_occurrences: ev.completed_occurrences,
-                    completed_timestamps: ev.completed_timestamps
-                }).then(async () => {
-                    if (currentUser) {
-                        await removeNotificationsForEvent(ev.id, currentUser.id);
-                    }
-                    showToast('Occurrence marked done. Auto‑deleted in 28 days.');
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error completing.'));
-            } else {
-                var newStatus = ev.type === 'task' ? 'done' : 'completed';
-                var payload = { status: newStatus, completed_at: new Date().toISOString() };
-                updateEventInDB(ev.id, payload).then(async () => {
-                    ev.status = newStatus;
-                    ev.completed_at = payload.completed_at;
-                    if (currentUser) {
-                        await removeNotificationsForEvent(ev.id, currentUser.id);
-                    }
-                    showToast('Item marked done. Auto‑deleted in 28 days.');
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error completing.'));
-            }
-        };
+    // ─── وضعیت تکمیل ───
+    var dateForCompletion = null;
+    if (occurrenceDate) {
+        dateForCompletion = toLocalDateString(occurrenceDate);
     }
-}
+    var isCompleted = false;
+    if (dateForCompletion && ev.recurrence_type && ev.recurrence_type !== 'none') {
+        isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                        ? ev.completed_occurrences.includes(dateForCompletion)
+                        : false;
+    } else {
+        isCompleted = (ev.status === 'completed' || ev.status === 'done');
+    }
+
+    const completeBtn = document.getElementById('detail-complete-btn');
+    if (completeBtn) {
+        completeBtn.style.display = isInvitee ? 'none' : '';
+
+        // ── تسک هوشمند ──
+        if (ev.type === 'task' && ev.recurrence_type === 'smart') {
+            completeBtn.textContent = 'Done';
+            completeBtn.onclick = function() {
+                closeModal(eventDetailModal);
+                completeSmartTask(ev);
+            };
+        }
+        // ── غیر هوشمند ──
+        else if (isCompleted) {
+            completeBtn.textContent = 'Undo';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    var idx = ev.completed_occurrences.indexOf(dateForCompletion);
+                    if (idx > -1) ev.completed_occurrences.splice(idx, 1);
+                    if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
+                        delete ev.completed_timestamps[dateForCompletion];
+                    }
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(async () => {
+                        if (currentUser && ev.type === 'task') {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    'Event today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#'
+                                );
+                            }
+                        }
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error undoing.'));
+                } else {
+                    updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
+                        ev.status = 'pending';
+                        ev.completed_at = null;
+                        if (currentUser && ev.type === 'task') {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    'Event today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#'
+                                );
+                            }
+                        }
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error undoing.'));
+                }
+            };
+        } else {
+            completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    if (!ev.completed_occurrences) ev.completed_occurrences = [];
+                    ev.completed_occurrences.push(dateForCompletion);
+                    if (!ev.completed_timestamps) ev.completed_timestamps = {};
+                    ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(async () => {
+                        if (currentUser) {
+                            await removeNotificationsForEvent(ev.id, currentUser.id);
+                        }
+                        showToast('Occurrence marked done. Auto‑deleted in 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error completing.'));
+                } else {
+                    var newStatus = ev.type === 'task' ? 'done' : 'completed';
+                    var payload = { status: newStatus, completed_at: new Date().toISOString() };
+                    updateEventInDB(ev.id, payload).then(async () => {
+                        ev.status = newStatus;
+                        ev.completed_at = payload.completed_at;
+                        if (currentUser) {
+                            await removeNotificationsForEvent(ev.id, currentUser.id);
+                        }
+                        showToast('Item marked done. Auto‑deleted in 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error completing.'));
+                }
+            };
+        }
+    }
 
     // ─── دکمه Delete / Leave ───
     const cancelBtn = document.getElementById('detail-cancel-btn');
@@ -3493,7 +3601,7 @@ if (completeBtn) {
         if (isInvitee) {
             cancelBtn.textContent = 'Leave Event';
             cancelBtn.onclick = () => {
-                showConfirmModal('Leave this event? It will be removed from your calendar.', async () => {
+                showConfirmModal('Leave this event?', async () => {
                     await deleteEventFromDB(ev.id);
                     events = events.filter(e => e.id !== ev.id);
                     closeModal(eventDetailModal);
