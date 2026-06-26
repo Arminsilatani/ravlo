@@ -3572,6 +3572,10 @@ a:hover {
   color: inherit;
 }
 
+#sidebar-new-event .sidebar-icon {
+    transform: translateY(-4px);
+}
+
 /* =========================== MEDIA QUERIES ============================ */
 @media (max-width: 768px) {
   .header-inner {
