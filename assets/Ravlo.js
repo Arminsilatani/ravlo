@@ -525,7 +525,7 @@ async function updateNotificationDot() {
     const comp = getSidebarComponent();
     if (!comp) return;
 
-    let hasNotifications = false;   // ← اول تعریف شود
+    let hasNotifications = false; 
 
     // 1. Check unread notifications in DB
     if (currentUser) {
