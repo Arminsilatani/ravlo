@@ -3536,3 +3536,90 @@ customElements.whenDefined('sidebar-component').then(() => {
     getSidebarComponent(); // sets up event listeners
     syncSidebarComponent();
 });
+// =========================== EMERGENCY EVENT LISTENERS ============================
+// View tabs (Day/Month/Year)
+document.querySelectorAll('#view-tabs .view-tab').forEach(btn => {
+    btn.addEventListener('click', function() {
+        viewMode = this.dataset.view;
+        localStorage.setItem('ravlo-view-mode', viewMode);
+        renderCalendar();
+        animateTabIndicator();
+    });
+});
+
+// Navigation arrows
+document.getElementById('prev-month')?.addEventListener('click', function() {
+    if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() - 1);
+    else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() - 1);
+    else if (viewMode === 'day') currentDate.setDate(currentDate.getDate() - 1);
+    renderCalendar();
+});
+document.getElementById('next-month')?.addEventListener('click', function() {
+    if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() + 1);
+    else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() + 1);
+    else if (viewMode === 'day') currentDate.setDate(currentDate.getDate() + 1);
+    renderCalendar();
+});
+document.getElementById('current-month-year-btn')?.addEventListener('click', openTitlePicker);
+
+// Event type toggle (Event/Task)
+document.getElementById('event-type-toggle')?.addEventListener('click', function(e) {
+    const label = e.target.closest('.event-type-label');
+    if (label) setEventType(label.dataset.type);
+});
+
+// Save event button
+document.getElementById('save-event')?.addEventListener('click', saveEvent);
+
+// Open recurrence modal
+document.getElementById('open-recurrence-btn')?.addEventListener('click', openRecurrenceModal);
+
+// Close modals on outside click
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal(modal);
+    });
+});
+document.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const modal = this.closest('.modal');
+        if (modal) closeModal(modal);
+    });
+});
+
+// Add event button (from sidebar)
+document.getElementById('sidebar-new-event')?.addEventListener('click', function() {
+    if (!currentUser) {
+        openModal(authOverlay);
+        authError.textContent = 'Please sign in to add events.';
+        return;
+    }
+    document.getElementById('event-title').value = '';
+    document.getElementById('event-start').value = '';
+    document.getElementById('event-end').value = '';
+    document.getElementById('event-start-greg').value = '';
+    document.getElementById('greg-trigger-text').textContent = 'Select date';
+    document.getElementById('greg-picker-trigger').classList.remove('has-value');
+    editingEventId = null;
+    recurrence = { type: 'none', interval: 1, days: [] };
+    currentInvitees = [];
+    updateRecurrencePreview();
+    selectedTagColor = '#f5f5f5';
+    currentLocationCoords = null;
+    document.getElementById('location-coords-input').value = '';
+    document.getElementById('location-section').style.display = 'none';
+    document.getElementById('toggle-location-btn')?.classList.remove('active');
+    document.getElementById('toggle-invite-btn')?.classList.remove('active');
+    eventType = 'event';
+    document.getElementById('event-type-toggle').style.display = '';
+    const gregCheck = document.getElementById('event-all-day-greg');
+    if (gregCheck) gregCheck.checked = false;
+    document.getElementById('event-description').value = '';
+    currentChecklistItems = [];
+    hideInlineChecklist();
+    document.getElementById('toggle-checklist-mode-btn').style.display = 'none';
+    document.getElementById('toggle-checklist-mode-btn').classList.remove('active');
+    updateAllDayAndTimeRows();
+    openModal(eventModal);
+    requestAnimationFrame(() => setEventType('event'));
+});
