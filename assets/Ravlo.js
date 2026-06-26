@@ -496,14 +496,14 @@ function getSidebarComponent() {
 
 function syncSidebarComponent() {
     const comp = getSidebarComponent();
-    if (!comp) return;
+    if (!comp || typeof comp.setUser !== 'function') return; // <-- safe check
     if (currentUser) {
         comp.setUser(currentUser, currentProfile);
     } else {
         comp.clearUser();
     }
     comp.setEvents(events);
-    updateNotificationDot(); // will set the dot on the component
+    updateNotificationDot();
 }
 
 async function updateNotificationDot() {
