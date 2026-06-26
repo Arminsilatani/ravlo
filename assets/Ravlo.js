@@ -509,7 +509,7 @@ function getSidebarComponent() {
 
 function syncSidebarComponent() {
     const comp = getSidebarComponent();
-    if (!comp || typeof comp.setUser !== 'function') return; // <-- safe check
+    if (!comp || typeof comp.setUser !== 'function') return;
     if (currentUser) {
         comp.setUser(currentUser, currentProfile);
     } else {
