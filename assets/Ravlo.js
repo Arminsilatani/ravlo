@@ -515,6 +515,8 @@ function syncSidebarComponent() {
     } else {
         comp.clearUser();
     }
+    const { todayItems, overdueItems } = getTodayAndOverdueItems();
+    comp.setTodayList(todayItems, overdueItems);
     comp.setEvents(events);
     updateNotificationDot();
 }
