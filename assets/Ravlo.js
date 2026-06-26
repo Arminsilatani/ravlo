@@ -639,6 +639,117 @@ function getTodayAndOverdueItems() {
 }
 
 /* =========================== MODAL HELPERS ============================ */
+// =========================== INLINE CHECKLIST HELPERS ============================
+function hideInlineChecklist() {
+    const editor = document.getElementById('checklist-inline-editor');
+    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
+    if (editor) editor.style.display = 'none';
+    if (toggleBtn) toggleBtn.classList.remove('active');
+}
+
+function showInlineChecklist() {
+    const editor = document.getElementById('checklist-inline-editor');
+    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
+    if (editor) editor.style.display = 'block';
+    if (toggleBtn) toggleBtn.classList.add('active');
+    renderInlineChecklistItems(currentChecklistItems);
+}
+
+function renderInlineChecklistItems(items) {
+    const container = document.getElementById('checklist-inline-items');
+    if (!container) return;
+    container.innerHTML = '';
+
+    items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'checklist-inline-row';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'neon-checkbox';
+        cb.checked = item.done;
+        cb.addEventListener('change', function() {
+            item.done = this.checked;
+        });
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'checklist-text';
+        textSpan.textContent = item.text;
+        textSpan.setAttribute('contenteditable', 'true');
+        textSpan.addEventListener('input', function() {
+            item.text = this.textContent.trim();
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-item-btn';
+        delBtn.innerHTML = '✕';
+        delBtn.addEventListener('click', () => {
+            currentChecklistItems.splice(index, 1);
+            renderInlineChecklistItems(currentChecklistItems);
+        });
+
+        const addSubBtn = document.createElement('button');
+        addSubBtn.className = 'add-subtask-btn';
+        addSubBtn.innerHTML = '+';
+        addSubBtn.title = 'Add subtask';
+        addSubBtn.addEventListener('click', () => {
+            if (!item.subtasks) item.subtasks = [];
+            item.subtasks.push({
+                text: '',
+                done: false
+            });
+            renderInlineChecklistItems(currentChecklistItems);
+            const subRows = container.querySelectorAll('.subtask-row .checklist-text');
+            if (subRows.length > 0) {
+                const last = subRows[subRows.length - 1];
+                last.focus();
+            }
+        });
+
+        row.appendChild(cb);
+        row.appendChild(textSpan);
+        row.appendChild(addSubBtn);
+        row.appendChild(delBtn);
+        container.appendChild(row);
+
+        if (item.subtasks && item.subtasks.length > 0) {
+            item.subtasks.forEach((sub, subIndex) => {
+                const subRow = document.createElement('div');
+                subRow.className = 'checklist-inline-row subtask-row';
+
+                const subCb = document.createElement('input');
+                subCb.type = 'checkbox';
+                subCb.className = 'neon-checkbox';
+                subCb.checked = sub.done;
+                subCb.addEventListener('change', function() {
+                    sub.done = this.checked;
+                });
+
+                const subText = document.createElement('span');
+                subText.className = 'checklist-text';
+                subText.textContent = sub.text;
+                subText.setAttribute('contenteditable', 'true');
+                subText.addEventListener('input', function() {
+                    sub.text = this.textContent.trim();
+                });
+
+                const subDelBtn = document.createElement('button');
+                subDelBtn.className = 'delete-item-btn';
+                subDelBtn.innerHTML = '✕';
+                subDelBtn.addEventListener('click', () => {
+                    item.subtasks.splice(subIndex, 1);
+                    renderInlineChecklistItems(currentChecklistItems);
+                });
+
+                subRow.appendChild(subCb);
+                subRow.appendChild(subText);
+                subRow.appendChild(subDelBtn);
+                container.appendChild(subRow);
+            });
+        }
+    });
+}
+
 function openModal(modal) {
     if (!modal) return;
     modal.style.display = 'flex';
