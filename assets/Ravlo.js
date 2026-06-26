@@ -522,6 +522,7 @@ function syncSidebarComponent() {
 async function updateNotificationDot() {
     const comp = getSidebarComponent();
     if (!comp) return;
+    console.log('updateNotificationDot called, hasNotifications:', hasNotifications, 'events length:', events.length);
 
     let hasNotifications = false;
 
@@ -561,6 +562,12 @@ async function updateNotificationDot() {
                 return false;
             });
         }
+        console.log('About to set dot to', hasNotifications);
+if (comp && typeof comp.setNotificationDot === 'function') {
+    comp.setNotificationDot(hasNotifications);
+} else {
+    console.warn('setNotificationDot not available on component');
+}
     }
     if (comp && typeof comp.setNotificationDot === 'function') {
     comp.setNotificationDot(hasNotifications);
