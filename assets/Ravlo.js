@@ -2,7 +2,7 @@
  ****************************************************
  *  Author: Armin Silatani
  *  Date: 2026-06-23
- *  Version: 0.0.0 (Refactored with Web Component sidebar)
+ *  Version: 0.0.0
  ****************************************************
  */
 
@@ -81,9 +81,6 @@ const tabIndicator = document.createElement('div');
 tabIndicator.className = 'indicator';
 if (viewTabsEl) viewTabsEl.appendChild(tabIndicator);
 
-// ─── SIDEBAR COMPONENT REFERENCE ───
-const sidebarComponent = document.querySelector('sidebar-component');
-
 // Gregorian picker DOM references
 const gregPickerPopup = document.getElementById('greg-picker-popup');
 const gregPickerTrigger = document.getElementById('greg-picker-trigger');
@@ -110,7 +107,6 @@ var gregState = {
 };
 var GREG_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 var currentDetailEvent = null;
-
 /* :::::::::::::::::::::::::: LAZY PIN ICON :::::::::::::::::::::::::: */
 let accentPinIcon = null;
 
@@ -177,6 +173,7 @@ async function checkAndCreateTodayNotifications() {
     });
     
     for (const ev of todayEvents) {
+        // چک کن که نوتیفیکیشن قبلاً وجود دارد یا نه
         const { data: existing } = await sb
             .from('notifications')
             .select('id')
@@ -376,8 +373,11 @@ function renderChecklistModalItems() {
 function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'ravlo-toast';
+
+    // SVG ring
     const r = 10;
     const circumference = 2 * Math.PI * r;
+
     toast.innerHTML = `
         <svg width="24" height="24" viewBox="0 0 24 24" class="toast-ring">
             <circle cx="12" cy="12" r="${r}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
@@ -388,11 +388,16 @@ function showToast(message) {
         </svg>
         <span>${message}</span>
     `;
+
     document.body.appendChild(toast);
+
+    // Start ring animation after a tiny delay to ensure transition triggers
     requestAnimationFrame(() => {
         const ring = toast.querySelector('.toast-ring circle:last-child');
         if (ring) ring.style.strokeDashoffset = circumference;
     });
+
+    // Remove after 4 seconds
     setTimeout(() => toast.remove(), 4000);
 }
 
@@ -430,18 +435,25 @@ const ICON_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" 
 
 /* =========================== PROFILE & AUTH ============================ */
 
+/* ------------------------- PROFILE BUILDER ------------------------- */
 async function buildCurrentProfile(user) {
     if (!user) return null;
-    const { data: profileRow, error } = await sb
+    const {
+        data: profileRow,
+        error
+    } = await sb
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
+
     if (error && error.code !== 'PGRST116') {
         console.warn('Profile fetch warning:', error.message);
     }
+
     const md = user.user_metadata || {};
     const p = profileRow || {};
+
     return {
         id: user.id,
         first_name: p.first_name ?? md.first_name ?? md.given_name ?? '',
@@ -462,17 +474,501 @@ function normalizeRole(role) {
 function hasAccess(userRole, minRole) {
     const normalizedUserRole = normalizeRole(userRole);
     const normalizedMinRole = normalizeRole(minRole || 'recruit');
+
     const userIndex = ROLE_HIERARCHY.indexOf(normalizedUserRole);
     const minIndex = ROLE_HIERARCHY.indexOf(normalizedMinRole);
+
     if (minIndex === -1) {
         console.warn('[RBAC] Invalid minRole:', minRole);
         return false;
     }
+
     if (userIndex === -1) return false;
+
     return userIndex >= minIndex;
 }
 
+/* =========================== SIDEBAR MENU & TODAY LIST ============================ */
+
+const MENU_TOOLS = [{
+        label: 'Codara Service Generator',
+        minRole: 'general',
+        link: 'https://arminsilatani.github.io/codara/',
+        iconURL: 'assets/logos/Co.svg'
+    },
+    {
+        label: 'Nolvo Sitemap Builder',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/No.svg'
+    },
+    {
+        label: 'Qerlo Shortener',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Qe.svg'
+    },
+    {
+        label: 'Tivra Minify',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ti.svg'
+    },
+    {
+        label: 'Semora Schema Generator',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Se.svg'
+    },
+    {
+        label: 'Brilo Speed Check',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Br.svg'
+    },
+    {
+        label: 'Sorbi Robots Builder',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/So.svg'
+    },
+    {
+        label: 'Velto Meta Inspector',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ve.svg'
+    },
+    {
+        label: 'Zorio Image Converter',
+        minRole: 'recruit',
+        link: 'https://arminsilatani.github.io/zorio/',
+        iconURL: 'assets/logos/Zo.svg'
+    },
+    {
+        label: 'Galvo Video Converter',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ga.svg'
+    },
+    {
+        label: 'Xelpo Pass Generator',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Xe.svg'
+    },
+    {
+        label: 'Dirmo DNS Checker',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Di.svg'
+    },
+    {
+        label: 'Lemro Keyword Research',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Le.svg'
+    },
+    {
+        label: 'Hirvo Density',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Hi.svg'
+    },
+    {
+        label: 'Jorvi Redirect',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Jo.svg'
+    },
+    {
+        label: 'Mirto CRM',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Mi.svg'
+    },
+    {
+        label: 'Ravlo Calendar',
+        minRole: 'sergeant',
+        link: '',
+        iconURL: 'assets/logos/Ra.svg',
+        isSelf: true
+    },
+    {
+        label: 'Rinvo Accounting',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ri.svg'
+    },
+    {
+        label: 'Yelmo Brand Namer',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ye.svg'
+    },
+    {
+        label: 'Cedro Flashcards',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ce.svg'
+    },
+    {
+        label: 'Fresca Colors Tool',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Fr.svg'
+    },
+    {
+        label: 'Ubiro Beer Cost',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ub.svg'
+    },
+    {
+        label: 'Refacto Code Beautifier',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Re.svg'
+    },
+    {
+        label: 'Pilvo Text Editor',
+        minRole: 'recruit',
+        link: 'https://arminsilatani.github.io/pilvo/',
+        iconURL: 'assets/logos/Pi.svg'
+    },
+    {
+        label: 'Tavio Prompt Library',
+        minRole: 'recruit',
+        link: 'https://arminsilatani.github.io/tavio/',
+        iconURL: 'assets/logos/Ta.svg'
+    },
+    {
+        label: 'Falco Favicon Generator',
+        minRole: 'recruit',
+        link: 'https://arminsilatani.github.io/falco/',
+        iconURL: 'assets/logos/Fa.svg'
+    },
+    {
+        label: 'Lume Epoch Converter',
+        minRole: 'recruit',
+        link: 'https://arminsilatani.github.io/lume/',
+        iconURL: 'assets/logos/Lu.svg'
+    },
+    {
+        label: 'Valeno Expiry Date Reminder',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Va.svg'
+    },
+    {
+        label: 'Alviano Recipe Manager',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Al.svg'
+    },
+    {
+        label: 'Mavero Workout Tracker',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Ma.svg'
+    },
+    {
+        label: 'Tempozio Time Tracker',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Te.svg'
+    },
+    {
+        label: 'Belluno Wishlist',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Be.svg'
+    },
+    {
+        label: 'Nuvello Wallpaper App',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Nu.svg'
+    },
+    {
+        label: 'Fiora Period Tracker',
+        minRole: 'general',
+        link: '',
+        iconURL: 'assets/logos/Fi.svg'
+    },
+];
+
+function renderSidebarMenu() {
+    const container = document.getElementById('sidebar-menu-items');
+    const newEventBtn = document.getElementById('sidebar-new-event');
+    if (newEventBtn) newEventBtn.classList.remove('hidden');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const role = normalizeRole(currentUserRole);
+
+    MENU_TOOLS.forEach(tool => {
+        if (tool.isSelf) return;
+
+        const allowed = hasAccess(role, tool.minRole);
+
+        const btn = document.createElement('button');
+        btn.className = 'sidebar-item' + (allowed ? '' : ' disabled');
+        btn.disabled = !allowed;
+
+        btn.innerHTML = `
+            <span class="sidebar-icon">
+                <img src="${tool.iconURL}" width="20" height="20" alt="${tool.label}">
+            </span>
+            <span>${tool.label}</span>
+            ${!tool.link ? '<span class="coming-soon-tooltip">Coming Soon</span>' : ''}
+        `;
+
+        btn.addEventListener('click', () => {
+            if (!currentUser) {
+                openModal(authOverlay);
+                authError.textContent = 'Please sign in to use this tool.';
+                return;
+            }
+            const canUseNow = hasAccess(currentUserRole, tool.minRole);
+            if (!canUseNow) {
+                showToast('Your access level is too low to use this tool.');
+                return;
+            }
+            if (tool.link) {
+                window.open(tool.link, '_blank');
+            }
+            const closeRow = document.getElementById('sidebar-close-row');
+            if (closeRow) closeRow.click();
+        });
+
+        container.appendChild(btn);
+    });
+}
+
+function updateDashboardLink() {
+    const dashboard = document.getElementById('sidebar-dashboard');
+    if (!dashboard) return;
+
+    if (!currentProfile) {
+        dashboard.classList.add('hidden');
+        return;
+    }
+
+    dashboard.classList.remove('hidden');
+
+    const iconSpan = dashboard.querySelector('.sidebar-icon');
+    const textSpan = dashboard.querySelector('.sidebar-dashboard-text') || dashboard.querySelector('span:last-child');
+
+    const fullName = [currentProfile.first_name, currentProfile.last_name]
+        .filter(Boolean)
+        .join(' ') || 'Dashboard';
+
+    if (textSpan) textSpan.textContent = fullName;
+
+    const avatarContent = iconSpan?.querySelector('.avatar-content');
+    if (avatarContent) {
+        if (currentProfile.photo_url) {
+            avatarContent.innerHTML = `<img src="${currentProfile.photo_url}" alt="Profile"
+                width="20" height="20"
+                style="border-radius:50%; object-fit:cover;"
+                onerror="this.outerHTML='<span class=\\'avatar-initial\\'>${fullName.charAt(0)}</span>';">`;
+        } else {
+            const initial = fullName.charAt(0).toUpperCase();
+            avatarContent.innerHTML = `<span class="avatar-initial">${initial}</span>`;
+        }
+    }
+}
+
+function updateAuthUI() {
+    const loginBtn = document.getElementById('sidebar-login');
+    const logoutBtn = document.getElementById('sidebar-logout');
+    if (!loginBtn || !logoutBtn) return;
+    if (currentUser) {
+        loginBtn.classList.add('hidden');
+        logoutBtn.classList.remove('hidden');
+    } else {
+        loginBtn.classList.remove('hidden');
+        logoutBtn.classList.add('hidden');
+    }
+    renderSidebarMenu();
+    updateDashboardLink();
+    renderTodayList();
+    setTimeout(async () => {
+        await updateNotificationDot();
+    }, 300);
+}
+
+function renderTodayList() {
+    const container = document.getElementById('sidebar-today-list');
+    if (!container) return;
+
+    if (!currentUser || events.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = toLocalDateString(today);
+
+    const todayItems = [];
+    const overdueItems = [];
+
+    events.forEach(ev => {
+        if (!ev.start_date) return;
+        if (ev.status === 'done' || ev.status === 'completed') return;
+
+        // رخدادهای تکراری عقب‌افتاده
+        if (ev.recurrence_type && ev.recurrence_type !== 'none') {
+            const start = new Date(ev.start_date);
+            const todayEnd = new Date(today.getTime() - 1);
+            const recDates = getRecurrenceDates(ev, start, todayEnd);
+            recDates.forEach(rd => {
+                const dateStr = toLocalDateString(rd);
+                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                if (!isCompleted && dateStr < todayStr) {
+                    overdueItems.push({ ev, date: dateStr });
+                }
+            });
+        }
+
+        // رخدادهای امروز
+        const d = new Date(ev.start_date);
+        if (ev.recurrence_type === 'none' || !ev.recurrence_type) {
+            if (toLocalDateString(d) === todayStr) {
+                const isCompleted = ev.completed_occurrences?.includes?.(todayStr);
+                if (!isCompleted) todayItems.push({ ev, date: todayStr });
+            }
+        } else {
+            const todayStart = new Date(today);
+            const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1);
+            const recDates = getRecurrenceDates(ev, todayStart, todayEnd);
+            recDates.forEach(rd => {
+                const dateStr = toLocalDateString(rd);
+                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                if (!isCompleted && dateStr === todayStr) {
+                    todayItems.push({ ev, date: dateStr });
+                }
+            });
+        }
+    });
+
+    let html = '';
+
+    // ۱. بخش Today (اول)
+    if (todayItems.length > 0) {
+        html += '<div style="padding:8px 16px; font-size:10px; text-transform:uppercase; color:#aaa; letter-spacing:0.5px;">Today</div>';
+        todayItems.sort((a, b) => {
+            const at = a.ev.start_date ? new Date(a.ev.start_date).getTime() : 0;
+            const bt = b.ev.start_date ? new Date(b.ev.start_date).getTime() : 0;
+            return at - bt;
+        });
+        todayItems.forEach(item => {
+            const color = item.ev.color || 'var(--accent)';
+            html += `
+                <div class="sidebar-today-item" data-event-id="${item.ev.id}" style="cursor:pointer;">
+                    <span class="dot" style="background:${color}"></span>
+                    <span class="title">${item.ev.title || 'Untitled'}</span>
+                </div>`;
+        });
+    }
+
+    // ۲. بخش Overdue (دوم، در یک باکس قرمز)
+    if (overdueItems.length > 0) {
+        html += '<div style="padding:8px 16px; font-size:10px; text-transform:uppercase; color:#ff6b6b; letter-spacing:0.5px;">Overdue</div>';
+        html += '<div class="sidebar-overdue-box">';  // باکس قرمز
+        overdueItems.forEach(item => {
+            const color = item.ev.color || 'var(--accent)';
+            html += `
+                <div class="sidebar-today-item overdue-item" data-event-id="${item.ev.id}" data-date="${item.date}" style="cursor:pointer;">
+                    <span class="dot" style="background:${color}"></span>
+                    <span class="title">${item.ev.title || 'Untitled'}</span>
+                    <!-- تاریخ دیگر نمایش داده نمی‌شود -->
+                </div>`;
+        });
+        html += '</div>';
+    }
+
+    if (html === '') {
+        html = '<div style="padding:8px 16px;font-size:12px;color:#555;">No events today</div>';
+    }
+
+    container.innerHTML = html;
+
+    // کلیک روی آیتم‌ها
+    container.querySelectorAll('.sidebar-today-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            const id = this.dataset.eventId;
+            const date = this.dataset.date;
+            const event = events.find(ev => ev.id == id);
+            if (event) {
+                const closeBtn = document.getElementById('sidebar-close-btn');
+                if (closeBtn) closeBtn.click();
+                openEventDetail(event, date ? new Date(date + 'T00:00:00') : new Date());
+            }
+        });
+    });
+}
+
+async function updateNotificationDot() {
+    const dot = document.getElementById('avatar-notif-dot');
+    if (!dot) return;
+    if (!currentUser) {
+        dot.style.display = 'none';
+        return;
+    }
+
+    try {
+        const { data, error } = await sb
+            .from('notifications')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('is_read', false);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            dot.style.display = 'block';
+            return;
+        }
+    } catch (e) {
+        console.warn('Could not fetch notifications:', e);
+    }
+
+    // 2. اگر نوتیفیکیشن دیتابیس نبود، چک کردن رویدادهای امروز
+    const today = new Date();
+    const ty = today.getFullYear(),
+        tm = today.getMonth(),
+        td = today.getDate();
+    
+    const hasTodayEvents = events.some(ev => {
+        if (!ev.start_date) return false;
+        if (ev.status === 'done' || ev.status === 'completed') return false;
+        
+        const d = new Date(ev.start_date);
+        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
+            if (ev.recurrence_type !== 'none') {
+                const dateStr = toLocalDateString(today);
+                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                    ? ev.completed_occurrences.includes(dateStr)
+                    : false;
+                return !isCompleted;
+            }
+            return true;
+        }
+        return false;
+    });
+    
+    dot.style.display = hasTodayEvents ? 'block' : 'none';
+}
+
 /* =========================== MODAL HELPERS ============================ */
+
 function openModal(modal) {
     if (!modal) return;
     modal.style.display = 'flex';
@@ -487,10 +983,14 @@ function closeModal(modal) {
 /* ------------------------- LOADER HELPERS ------------------------- */
 function getLoaderHTML(type) {
     switch (type) {
-        case 'dots': return `<div class="ravlo-loader" data-loader="dots"><span></span><span></span><span></span></div>`;
-        case 'bar': return `<div class="ravlo-loader" data-loader="bar"><div></div></div>`;
-        case 'grid': return `<div class="lds-grid">${Array(9).fill('<div></div>').join('')}</div>`;
-        default: return `<div class="ravlo-loader" data-loader="spinner"></div>`;
+        case 'dots':
+            return `<div class="ravlo-loader" data-loader="dots"><span></span><span></span><span></span></div>`;
+        case 'bar':
+            return `<div class="ravlo-loader" data-loader="bar"><div></div></div>`;
+        case 'grid':
+            return `<div class="lds-grid">${Array(9).fill('<div></div>').join('')}</div>`;
+        default:
+            return `<div class="ravlo-loader" data-loader="spinner"></div>`;
     }
 }
 
@@ -509,6 +1009,7 @@ function showLoader(container, type = 'spinner') {
         target.appendChild(overlay);
         return;
     }
+
     target.classList.add('ravlo-loading-container');
     target.style.position = target.style.position || 'relative';
     target.innerHTML = getLoaderHTML(type);
@@ -543,20 +1044,36 @@ function showConfirmModal(message, onConfirm) {
     const modal = document.getElementById('confirm-modal');
     const msgEl = document.getElementById('confirm-modal-message');
     if (!modal || !msgEl) return;
+
     msgEl.textContent = message;
     openModal(modal);
+
     const yesBtn = document.getElementById('confirm-modal-yes');
     const noBtn = document.getElementById('confirm-modal-no');
+
     function cleanup() {
         closeModal(modal);
         yesBtn.removeEventListener('click', handleYes);
         noBtn.removeEventListener('click', handleNo);
     }
-    function handleYes() { cleanup(); if (typeof onConfirm === 'function') onConfirm(); }
-    function handleNo() { cleanup(); }
+
+    function handleYes() {
+        cleanup();
+        if (typeof onConfirm === 'function') onConfirm();
+    }
+
+    function handleNo() {
+        cleanup();
+    }
+
     yesBtn.addEventListener('click', handleYes);
     noBtn.addEventListener('click', handleNo);
-    modal.addEventListener('click', function(e) { if (e.target === modal) cleanup(); });
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            cleanup();
+        }
+    });
 }
 
 /* =========================== DATABASE HELPERS ============================ */
@@ -589,37 +1106,67 @@ async function fetchEvents() {
                 const oldMinute = new Date(ev.start_date).getMinutes();
                 newStart.setHours(oldHour, oldMinute, 0, 0);
                 
-                await updateEventInDB(ev.id, { start_date: newStart.toISOString() });
+                await updateEventInDB(ev.id, { 
+                    start_date: newStart.toISOString()
+                });
+                
                 ev.start_date = newStart.toISOString();
+                console.log(`🔄 Task "${ev.title}" moved to today (was before today)`);
             }
         }
     }
+    
     return data || [];
 }
 
+
 async function updateEventInDB(id, payload) {
-    if (!currentUser) { showToast('Not logged in'); return null; }
+    if (!currentUser) {
+        showToast('Not logged in');
+        return null;
+    }
     const { error } = await sb.from('ravlo').update(payload).eq('id', id).eq('user_id', currentUser.id);
-    if (error) { console.error('Update failed:', error); showToast('Update failed. Check console.'); return null; }
+    if (error) {
+        console.error('Update failed:', error);
+        showToast('Update failed. Check console.');
+        return null;
+    }
     return true;
 }
 
 async function deleteEventFromDB(id) {
-    if (!currentUser) { showToast('Not logged in'); return; }
-    const { error } = await sb.from('ravlo').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (!currentUser) {
+        showToast('Not logged in');
+        return;
+    }
+    const {
+        error
+    } = await sb.from('ravlo').delete().eq('id', id).eq('user_id', currentUser.id);
     if (error) showToast('Delete failed: ' + error.message);
     return !error;
 }
 
 async function saveEventToDB(payload) {
-    if (!currentUser) { alert('Not logged in'); return null; }
+    if (!currentUser) {
+        alert('Not logged in');
+        return null;
+    }
     payload.user_id = currentUser.id;
     const { data, error } = await sb.from('ravlo').insert([payload]).select();
-    if (error) { alert('Save failed: ' + error.message); return null; }
+    if (error) {
+        alert('Save failed: ' + error.message);
+        return null;
+    }
     return data?.[0];
 }
 
 // =========================== SMART RECURRENCE HELPERS ============================
+
+/**
+ * محاسبه تاریخ بعدی برای تسک هوشمند
+ * @param {Object} ev - تسک فعلی
+ * @returns {Date|null} تاریخ پیشنهادی برای تسک بعدی
+ */
 function getNextSmartDate(ev) {
     const interval = ev.recurrence_smart_interval || 'weekly';
     let intervalDays = interval === 'weekly' ? 7 : interval === '10day' ? 10 : 30;
@@ -640,6 +1187,9 @@ function getNextSmartDate(ev) {
     return newDate;
 }
 
+/**
+ * ساخت تسک بعدی با مشخصات مشابه و تاریخ جدید
+ */
 async function createNextSmartTask(ev, newDate) {
     if (!currentUser) return;
     const payload = {
@@ -678,6 +1228,9 @@ async function createNextSmartTask(ev, newDate) {
     }
 }
 
+/**
+ * تکمیل تسک هوشمند: اتمام تسک فعلی و ساخت تسک بعدی
+ */
 async function completeSmartTask(ev) {
     if (ev.status === 'done') return;
     ev.status = 'done';
@@ -758,6 +1311,7 @@ async function moveOverdueTasksToToday() {
 }
 
 /* =========================== AUTH FLOW ============================ */
+
 async function showApp() {
     showGlobalLoader();
     closeModal(authOverlay);
@@ -768,7 +1322,7 @@ async function showApp() {
         await cleanupOldCompletions();
         await cleanupChecklistFromDescriptions();
         await moveOverdueTasksToToday();
-        await checkAndCreateTodayNotifications();
+        await checkAndCreateTodayNotifications(); // ✅ اضافه کن
     }
     renderCalendar();
     animateTabIndicator();
@@ -786,7 +1340,7 @@ async function logout() {
     currentProfile = null;
     events = [];
     renderCalendar();
-    syncSidebarWithUser();
+    updateAuthUI();
     closeModal(eventModal);
     closeModal(eventDetailModal);
     hideGlobalLoader();
@@ -860,168 +1414,6 @@ function parseCoordinates(str) {
     }
     return null;
 }
-
-/* --------- LOCATION MODAL HANDLERS (with place name search) --------- */
-let locationSearchTimer = null;
-
-document.getElementById('toggle-location-btn')?.addEventListener('click', function() {
-    const btn = this;
-    if (btn.classList.contains('active')) {
-        currentLocationCoords = null;
-        currentLocationName = '';
-        currentLocationAddress = null;
-        document.getElementById('location-coords-input').value = '';
-        if (locationMarker) {
-            locationMap.removeLayer(locationMarker);
-            locationMarker = null;
-        }
-        btn.classList.remove('active');
-        closeModal(document.getElementById('location-modal'));
-        return;
-    }
-
-    const searchInput = document.getElementById('location-search-input');
-    const suggestions = document.getElementById('location-suggestions');
-    const infoEl = document.getElementById('selected-location-info');
-
-    searchInput.value = '';
-    suggestions.innerHTML = '';
-    suggestions.style.display = 'none';
-    infoEl.textContent = '';
-
-    if (currentLocationName && currentLocationCoords) {
-        searchInput.value = currentLocationName;
-        infoEl.textContent = `${currentLocationName} (${currentLocationCoords.lat.toFixed(5)}, ${currentLocationCoords.lng.toFixed(5)})`;
-    } else if (currentLocationCoords) {
-        infoEl.textContent = `${currentLocationCoords.lat.toFixed(5)}, ${currentLocationCoords.lng.toFixed(5)}`;
-    }
-
-    openModal(document.getElementById('location-modal'));
-
-    setTimeout(() => {
-        initLocationMap('location-modal-map');
-        if (locationMap) {
-            locationMap.invalidateSize();
-            if (locationMarker) locationMap.removeLayer(locationMarker);
-            if (currentLocationCoords) {
-                updateMapFromCoords(currentLocationCoords.lat, currentLocationCoords.lng);
-            }
-        }
-    }, 200);
-});
-
-document.getElementById('location-search-input')?.addEventListener('input', function() {
-    clearTimeout(locationSearchTimer);
-    const query = this.value.trim();
-    const suggestionsList = document.getElementById('location-suggestions');
-
-    if (query.length < 2) {
-        suggestionsList.innerHTML = '';
-        suggestionsList.style.display = 'none';
-        return;
-    }
-
-    locationSearchTimer = setTimeout(async () => {
-        try {
-            const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`;
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
-            }
-            const data = await response.json();
-            suggestionsList.innerHTML = '';
-            if (!data.features || data.features.length === 0) {
-                suggestionsList.innerHTML = '<li style="color:#888;">No results found</li>';
-                suggestionsList.style.display = 'block';
-                return;
-            }
-            data.features.forEach(place => {
-                const li = document.createElement('li');
-                const props = place.properties;
-                const mainName = props.name || props.street || 'Unnamed place';
-                const city = props.city || props.state || '';
-                const country = props.country || '';
-                let shortAddress = [city, country].filter(Boolean).join(', ');
-                li.innerHTML = `<span style="font-weight:600; color:#fff;">${mainName}</span>` +
-                    (shortAddress ? `<br><span style="font-size:11px; color:#888;">${shortAddress}</span>` : '');
-                const [lng, lat] = place.geometry.coordinates;
-                li.addEventListener('click', () => {
-                    document.getElementById('location-search-input').value = mainName;
-                    document.getElementById('selected-location-info').textContent =
-                        `${mainName} (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
-                    suggestionsList.innerHTML = '';
-                    suggestionsList.style.display = 'none';
-                    updateMapFromCoords(lat, lng);
-                    currentLocationCoords = { lat, lng };
-                    currentLocationName = mainName;
-                    currentLocationAddress = { city: city, country: country };
-                });
-                suggestionsList.appendChild(li);
-            });
-            suggestionsList.style.display = 'block';
-        } catch (err) {
-            console.error('Photon Geocoding error:', err);
-            let errorMsg = 'Error fetching data. ';
-            if (err.message.includes('Failed to fetch')) {
-                errorMsg += 'Please check your internet connection.';
-            } else {
-                errorMsg += err.message;
-            }
-            suggestionsList.innerHTML = `<li style="color:#ff6b6b;">⚠️ ${errorMsg}</li>`;
-            suggestionsList.style.display = 'block';
-        }
-    }, 300);
-});
-
-document.addEventListener('click', (e) => {
-    const suggestions = document.getElementById('location-suggestions');
-    const searchInput = document.getElementById('location-search-input');
-    if (suggestions && !suggestions.contains(e.target) && e.target !== searchInput) {
-        suggestions.style.display = 'none';
-    }
-});
-
-document.getElementById('location-done-btn')?.addEventListener('click', () => {
-    if (currentLocationAddress) {
-        // already set
-    } else if (currentLocationName) {
-        // name only
-    } else if (currentLocationCoords) {
-        // coords only
-    } else {
-        showToast('Please select a location.');
-        return;
-    }
-    closeModal(document.getElementById('location-modal'));
-    document.getElementById('toggle-location-btn')?.classList.add('active');
-});
-
-document.getElementById('location-modal-close')?.addEventListener('click', () => {
-    closeModal(document.getElementById('location-modal'));
-});
-
-// Clear location (old inline)
-document.getElementById('clear-location-btn')?.addEventListener('click', function() {
-    document.getElementById('location-coords-input').value = '';
-    currentLocationCoords = null;
-    currentLocationName = '';
-    if (locationMarker) {
-        locationMap.removeLayer(locationMarker);
-        locationMarker = null;
-    }
-    document.getElementById('toggle-location-btn')?.classList.remove('active');
-});
-
-// Coordinate input (old one)
-document.getElementById('location-coords-input')?.addEventListener('input', function() {
-    const coords = parseCoordinates(this.value.trim());
-    if (coords) {
-        currentLocationCoords = coords;
-        updateMapFromCoords(coords.lat, coords.lng);
-    } else {
-        currentLocationCoords = null;
-    }
-});
 
 /* =========================== RECURRENCE LOGIC ============================ */
 
@@ -1116,14 +1508,29 @@ function renderRecurrenceDays() {
     const container = document.getElementById('rec-days-container');
     if (!container) return;
 
-    const daysOfWeek = [
-        { label: 'Su', value: 0 },
-        { label: 'Mo', value: 1 },
-        { label: 'Tu', value: 2 },
-        { label: 'We', value: 3 },
-        { label: 'Th', value: 4 },
-        { label: 'Fr', value: 5 },
-        { label: 'Sa', value: 6 }
+    const daysOfWeek = [{
+            label: 'Su',
+            value: 0
+        }, {
+            label: 'Mo',
+            value: 1
+        }, {
+            label: 'Tu',
+            value: 2
+        },
+        {
+            label: 'We',
+            value: 3
+        }, {
+            label: 'Th',
+            value: 4
+        }, {
+            label: 'Fr',
+            value: 5
+        }, {
+            label: 'Sa',
+            value: 6
+        }
     ];
 
     container.innerHTML = '';
@@ -1149,6 +1556,7 @@ function findBestSlot(periodStart, periodEnd, events) {
     const dayEventCount = {};
     const hourEventCount = {};
 
+    // مقداردهی اولیه
     for (let d = new Date(periodStart); d <= periodEnd; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
         dayEventCount[dateStr] = 0;
@@ -1157,9 +1565,11 @@ function findBestSlot(periodStart, periodEnd, events) {
         }
     }
 
+    // شمارش رویدادها (به جز رویدادهای smart)
     events.forEach(ev => {
         if (!ev.start_date) return;
-
+        
+        // رویدادهای smart را فقط یک بار در نظر می‌گیریم
         if (ev.recurrence_type === 'smart') {
             const start = new Date(ev.start_date);
             if (start >= periodStart && start <= periodEnd) {
@@ -1171,6 +1581,7 @@ function findBestSlot(periodStart, periodEnd, events) {
             return;
         }
 
+        // برای رویدادهای غیر smart
         if (ev.recurrence_type !== 'none') {
             const recDates = getRecurrenceDates(ev, periodStart, periodEnd);
             recDates.forEach(rd => {
@@ -1190,6 +1601,7 @@ function findBestSlot(periodStart, periodEnd, events) {
         }
     });
 
+    // انتخاب بهترین روز
     let minDayCount = Infinity;
     let bestDays = [];
     for (let dateStr in dayEventCount) {
@@ -1203,6 +1615,7 @@ function findBestSlot(periodStart, periodEnd, events) {
     }
     const chosenDay = bestDays[Math.floor(Math.random() * bestDays.length)];
 
+    // انتخاب بهترین ساعت
     let minHourCount = Infinity;
     let bestHours = [];
     for (let h = 10; h < 18; h++) {
@@ -1230,6 +1643,7 @@ function getRecurrenceDates(ev, fromDate, toDate) {
     const start = new Date(ev.start_date);
     const type = ev.recurrence_type;
 
+    // ── برای smart فقط تاریخ شروع را برگردان ──
     if (type === 'smart') {
         if (start >= fromDate && start <= toDate) {
             return [new Date(start)];
@@ -1237,6 +1651,7 @@ function getRecurrenceDates(ev, fromDate, toDate) {
         return [];
     }
 
+    // ── برای بقیه انواع ──
     const interval = ev.recurrence_interval || 1;
     const days = ev.recurrence_days || [];
     const occurrences = [];
@@ -1300,159 +1715,206 @@ function getRecurrenceDates(ev, fromDate, toDate) {
     return occurrences;
 }
 
-// =========================== SMART RECURRENCE HELPERS ============================
-function getNextSmartDate(ev) {
-    const interval = ev.recurrence_smart_interval || 'weekly';
-    let intervalDays = interval === 'weekly' ? 7 : interval === '10day' ? 10 : 30;
-    let searchWindow = interval === 'weekly' ? 2 : interval === '10day' ? 3 : 7;
+/* =========================== GREGORIAN PICKER ============================ */
 
+function renderYearPanel(container, selectedYear, fromYear, toYear, persian, onSelect) {
+    container.innerHTML = '';
+    var now = new Date();
+    var thisYear = persian ? toJalali(now.getFullYear(), now.getMonth(), now.getDate()).jy : now.getFullYear();
+    for (var y = fromYear; y <= toYear; y++) {
+        var btn = document.createElement('button');
+        btn.className = 'py-btn';
+        btn.textContent = persian ? toPersianNumerals(y) : y;
+        if (y === selectedYear) btn.classList.add('selected');
+        if (y === thisYear) btn.classList.add('current-year');
+        (function(year) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                onSelect(year);
+            });
+        })(y);
+        container.appendChild(btn);
+    }
+    setTimeout(() => {
+        var s = container.querySelector('.selected');
+        if (s) s.scrollIntoView({
+            block: 'center'
+        });
+    }, 0);
+}
+
+function isToday(gy, gm, gd) {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const periodStart = new Date(today);
-    periodStart.setDate(periodStart.getDate() + (intervalDays - searchWindow));
-    const periodEnd = new Date(today);
-    periodEnd.setDate(periodEnd.getDate() + intervalDays);
-
-    const otherEvents = events.filter(e => e.id !== ev.id && e.recurrence_type !== 'smart');
-    const slot = findBestSlot(periodStart, periodEnd, otherEvents);
-    if (!slot) return null;
-    const newDate = new Date(slot.date);
-    newDate.setHours(slot.hour, slot.minute, 0, 0);
-    return newDate;
+    return today.getFullYear() === gy && today.getMonth() === gm && today.getDate() === gd;
 }
 
-async function createNextSmartTask(ev, newDate) {
-    if (!currentUser) return;
-    const payload = {
-        title: ev.title || 'Untitled',
-        description: ev.description || '',
-        type: ev.type || 'task',
-        all_day: ev.all_day || false,
-        color: ev.color || '#f5f5f5',
-        icon: ev.icon || null,
-        checklist: ev.checklist || [],
-        invitees: [],
-        invitee_ids: [],
-        location: ev.location || null,
-        start_date: newDate.toISOString(),
-        end_date: ev.end_date ? new Date(newDate.getTime() + (new Date(ev.end_date) - new Date(ev.start_date))).toISOString() : null,
-        recurrence_type: 'smart',
-        recurrence_interval: ev.recurrence_interval || 1,
-        recurrence_days: [],
-        recurrence_smart_interval: ev.recurrence_smart_interval || 'weekly',
-        reminder_minutes: 0,
-        status: 'pending',
-        completed_occurrences: [],
-        completed_timestamps: {},
-        parent_event_id: null,
-        invitation_status: null
-    };
+function setDefaultTimeForToday(prefix, gy, gm, gd, force = false) {
+    const hourEl = document.getElementById(prefix + '-hour');
+    const minEl = document.getElementById(prefix + '-minute');
+    const endHourEl = document.getElementById(prefix + '-end-hour');
+    const endMinEl = document.getElementById(prefix + '-end-minute');
+    if (!hourEl || !minEl) return;
 
-    const saved = await saveEventToDB(payload);
-    if (saved) {
-        events.push(saved);
-        renderCalendar();
-        updateNotificationDot();
-        const dateStr = newDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        const timeStr = newDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-        showToast(`Next task scheduled for ${dateStr} at ${timeStr}`);
+    if (!isToday(gy, gm, gd)) {
+        if (!hourEl.value && !minEl.value) {
+            hourEl.value = '09';
+            minEl.value = '00';
+            if (endHourEl) endHourEl.value = '10';
+            if (endMinEl) endMinEl.value = '00';
+        }
+        return;
+    }
+
+    const now = new Date();
+    let curHour = now.getHours();
+    let curMin = now.getMinutes();
+    let startMin = Math.ceil((curMin + 1) / 15) * 15;
+    let startHour = curHour + 1;
+    if (startMin >= 60) {
+        startMin = 0;
+        startHour++;
+    }
+    startHour = startHour % 24;
+
+    if (force || !hourEl.value || !minEl.value ||
+        parseInt(hourEl.value) < startHour ||
+        (parseInt(hourEl.value) === startHour && parseInt(minEl.value) < startMin)) {
+        hourEl.value = String(startHour).padStart(2, '0');
+        minEl.value = String(startMin).padStart(2, '0');
+        if (endHourEl) endHourEl.value = String((startHour + 1) % 24).padStart(2, '0');
+        if (endMinEl) endMinEl.value = String(startMin).padStart(2, '0');
     }
 }
 
-async function completeSmartTask(ev) {
-    if (ev.status === 'done') return;
-    ev.status = 'done';
-    ev.completed_at = new Date().toISOString();
+function updateAllDayAndTimeRows() {
+    const gregAllDayRow = document.getElementById('all-day-greg-row');
+    const gregTimeRow = document.querySelector('#greg-picker-popup .picker-time-row');
+    const gregCheck = document.getElementById('event-all-day-greg');
 
-    try {
-        await updateEventInDB(ev.id, { status: 'done', completed_at: ev.completed_at });
-        if (currentUser) {
-            await removeNotificationsForEvent(ev.id, currentUser.id);
-        }
+    if (titlePickerActive) {
+        if (gregAllDayRow) gregAllDayRow.style.display = 'none';
+        if (gregTimeRow) gregTimeRow.style.display = 'none';
+        return;
+    }
 
-        const nextDate = getNextSmartDate(ev);
-        if (nextDate) {
-            await createNextSmartTask(ev, nextDate);
-        }
+    if (eventType === 'task') {
+        if (gregAllDayRow) gregAllDayRow.style.display = 'none';
+    } else {
+        if (gregAllDayRow) gregAllDayRow.style.display = 'flex';
+    }
 
-        renderCalendar();
-        updateNotificationDot();
-        showToast('Task completed! Next task scheduled.');
-    } catch (err) {
-        console.error('Error completing smart task:', err);
-        alert('Error completing task');
+    if (gregCheck && gregTimeRow) {
+        gregTimeRow.style.display = gregCheck.checked ? 'none' : '';
     }
 }
 
-// Recurrence modal listeners
-document.getElementById('recurrence-select')?.addEventListener('change', function() {
-    recurrence.type = this.value;
-    if (recurrence.type === 'smart' && eventType !== 'task') {
-        recurrence.type = 'none';
-        this.value = 'none';
+function syncTaskTimeVisibility() {
+    const isTask = (eventType === 'task');
+    const timeRow = document.querySelector('#greg-picker-popup .picker-time-row');
+    if (!timeRow) return;
+    const groups = timeRow.querySelectorAll('.time-group');
+    if (groups.length >= 2) {
+        groups[1].style.display = isTask ? 'none' : '';
+        const sep = timeRow.querySelector('.time-range-sep');
+        if (sep) sep.style.display = isTask ? 'none' : '';
     }
-    if ((this.value === 'weekly' || this.value === 'custom') && recurrence.days.length === 0) {
-        const dayOfWeek = new Date().getDay();
-        recurrence.days = [dayOfWeek];
-    }
-    if (this.value === 'none') {
-        recurrence.days = [];
-        recurrence.interval = 1;
-    }
-    updateRecurrenceModalUI();
-});
+}
 
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.interval-btn');
-    if (!btn) return;
-    const spinner = btn.closest('.rec-interval-spinner');
-    if (!spinner) return;
-    const input = spinner.querySelector('.interval-input');
-    if (input) {
-        let val = parseInt(input.value, 10) || 1;
-        const min = 1;
-        if (btn.classList.contains('interval-plus')) {
-            val += 1;
-        } else if (btn.classList.contains('interval-minus')) {
-            val = Math.max(min, val - 1);
+function openGregPicker(gy, gm, gd) {
+    var now = new Date();
+    gregState.gy = gy !== undefined ? gy : now.getFullYear();
+    gregState.gm = gm !== undefined ? gm : now.getMonth();
+    gregState.selectedGd = gd || null;
+    renderGregPicker();
+    gregPickerPopup.classList.add('open');
+
+    if (gregState.selectedGd !== null) {
+        setDefaultTimeForToday('greg', gregState.gy, gregState.gm, gregState.selectedGd, true);
+    } else {
+        setDefaultTimeForToday('greg', now.getFullYear(), now.getMonth(), now.getDate(), true);
+    }
+    updateAllDayAndTimeRows();
+    syncTaskTimeVisibility();
+}
+
+function renderGregPicker() {
+    var gy = gregState.gy,
+        gm = gregState.gm;
+    gregMonthBtn.textContent = GREG_MONTH_NAMES[gm];
+    gregYearBtn.textContent = gy;
+    gregMonthPopup.classList.remove('open');
+    gregYearPopup.classList.remove('open');
+    var today = new Date(),
+        daysInMonth = new Date(gy, gm + 1, 0).getDate(),
+        firstDay = new Date(gy, gm, 1).getDay();
+    gregDaysEl.innerHTML = '';
+    var prevDays = new Date(gy, gm, 0).getDate();
+    for (var i = 0; i < firstDay; i++) {
+        var el = document.createElement('div');
+        el.className = 'picker-day other';
+        el.textContent = prevDays - firstDay + 1 + i;
+        gregDaysEl.appendChild(el);
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+        var el = document.createElement('div');
+        el.className = 'picker-day';
+        el.textContent = d;
+        if (d === today.getDate() && gm === today.getMonth() && gy === today.getFullYear()) el.classList.add('today');
+        if (d === gregState.selectedGd) el.classList.add('selected');
+        if (isGregDatePast(gy, gm, d)) {
+            el.classList.add('past');
+        } else {
+            (function(day) {
+                el.addEventListener('click', function() {
+                    gregState.selectedGd = day;
+                    renderGregPicker();
+                    setDefaultTimeForToday('greg', gregState.gy, gregState.gm, gregState.selectedGd, false);
+                });
+            })(d);
         }
-        input.value = val;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
+        gregDaysEl.appendChild(el);
     }
-    const display = spinner.querySelector('.interval-display');
-    if (display) {
-        let val = parseInt(display.textContent, 10) || 1;
-        const min = 1;
-        if (btn.classList.contains('interval-plus')) {
-            val += 1;
-        } else if (btn.classList.contains('interval-minus')) {
-            val = Math.max(min, val - 1);
-        }
-        display.textContent = val;
-        recurrence.interval = val;
-    }
-});
+}
 
-document.getElementById('recurrence-done-btn')?.addEventListener('click', () => {
-    const smartRadio = document.querySelector('input[name="smartInterval"]:checked');
-    if (recurrence.type === 'smart' && smartRadio) {
-        recurrence.smartInterval = smartRadio.value;
+function openGregMonthPopup() {
+    if (gregMonthPopup.classList.contains('open')) {
+        gregMonthPopup.classList.remove('open');
+        return;
     }
-    closeModal(document.getElementById('recurrence-modal'));
-    updateRecurrencePreview();
-});
+    gregYearPopup.classList.remove('open');
+    gregMonthPopup.innerHTML = '';
+    var grid = document.createElement('div');
+    grid.className = 'month-grid';
+    for (var i = 0; i < 12; i++) {
+        var item = document.createElement('div');
+        item.className = 'month-item' + (i === gregState.gm ? ' selected' : '');
+        item.textContent = GREG_MONTH_NAMES[i];
+        (function(idx) {
+            item.addEventListener('click', function(e) {
+                e.stopPropagation();
+                gregState.gm = idx;
+                renderGregPicker();
+            });
+        })(i);
+        grid.appendChild(item);
+    }
+    gregMonthPopup.appendChild(grid);
+    gregMonthPopup.classList.add('open');
+}
 
-document.getElementById('recurrence-modal-close')?.addEventListener('click', () => {
-    closeModal(document.getElementById('recurrence-modal'));
-    updateRecurrencePreview();
-});
-document.getElementById('recurrence-modal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeModal(this);
-        updateRecurrencePreview();
+function openGregYearPopup() {
+    if (gregYearPopup.classList.contains('open')) {
+        gregYearPopup.classList.remove('open');
+        return;
     }
-});
-document.getElementById('open-recurrence-btn')?.addEventListener('click', openRecurrenceModal);
+    gregMonthPopup.classList.remove('open');
+    gregYearPopup.classList.add('open');
+    renderYearPanel(gregYearPanel, gregState.gy, 2000, 2040, false, function(y) {
+        gregState.gy = y;
+        renderGregPicker();
+    });
+}
+
 
 /* ------------------------- RENDER DISPATCHER ------------------------- */
 function syncViewTabsUI() {
@@ -1543,17 +2005,21 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
         cell.appendChild(hl);
     }
 
+    // فیلتر رویدادها با در نظر گرفتن وضعیت انجام‌شده
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
 
+        // رویدادهای غیرتکراری که کل آنها انجام شده → حذف
         if ((ev.status === 'done' || ev.status === 'completed') &&
             (ev.recurrence_type === 'none' || !ev.recurrence_type)) {
             return false;
         }
 
+        // بررسی تاریخ شروع رویداد (غیرتکراری)
         var d = new Date(ev.start_date);
         if (d.getFullYear() === ny && d.getMonth() === nm && d.getDate() === nd) {
             if (ev.recurrence_type !== 'none') {
+                // تکراری: اگر این تاریخ خاص انجام شده باشد، رد شود
                 var dateStr = toLocalDateString(new Date(ny, nm, nd));
                 if (ev.completed_occurrences && Array.isArray(ev.completed_occurrences) &&
                     ev.completed_occurrences.includes(dateStr)) {
@@ -1563,6 +2029,7 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
             return true;
         }
 
+        // بررسی رخدادهای تکراری
         if (ev.recurrence_type !== 'none') {
             const monthStart = new Date(ny, nm, 1);
             const monthEnd = new Date(ny, nm + 1, 0, 23, 59, 59);
@@ -1572,7 +2039,7 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
                     var dateStr = toLocalDateString(rd);
                     if (ev.completed_occurrences && Array.isArray(ev.completed_occurrences) &&
                         ev.completed_occurrences.includes(dateStr)) {
-                        return false;
+                        return false; // این رخداد انجام شده
                     }
                     return true;
                 }
@@ -1582,6 +2049,7 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
         return false;
     });
 
+    // ردیف نقطه‌های افقی
     const dotsRow = document.createElement('div');
     dotsRow.className = 'event-dots-row';
 
@@ -2187,7 +2655,6 @@ function renderDayView() {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 }
-
 /* ------------------------- YEAR VIEW ------------------------- */
 function renderYearView() {
     calendarGrid.className = 'year-grid';
@@ -2229,208 +2696,348 @@ function makeYearMonthCard_Greg(year, month, today) {
     return card;
 }
 
-/* =========================== GREGORIAN PICKER ============================ */
-function renderYearPanel(container, selectedYear, fromYear, toYear, persian, onSelect) {
-    container.innerHTML = '';
-    var now = new Date();
-    var thisYear = persian ? toJalali(now.getFullYear(), now.getMonth(), now.getDate()).jy : now.getFullYear();
-    for (var y = fromYear; y <= toYear; y++) {
-        var btn = document.createElement('button');
-        btn.className = 'py-btn';
-        btn.textContent = persian ? toPersianNumerals(y) : y;
-        if (y === selectedYear) btn.classList.add('selected');
-        if (y === thisYear) btn.classList.add('current-year');
-        (function(year) {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                onSelect(year);
-            });
-        })(y);
-        container.appendChild(btn);
-    }
-    setTimeout(() => {
-        var s = container.querySelector('.selected');
-        if (s) s.scrollIntoView({
-            block: 'center'
-        });
-    }, 0);
-}
+/* =========================== EVENT TYPE & TIME ============================ */
 
-function isToday(gy, gm, gd) {
-    const today = new Date();
-    return today.getFullYear() === gy && today.getMonth() === gm && today.getDate() === gd;
-}
-
-function setDefaultTimeForToday(prefix, gy, gm, gd, force = false) {
-    const hourEl = document.getElementById(prefix + '-hour');
-    const minEl = document.getElementById(prefix + '-minute');
-    const endHourEl = document.getElementById(prefix + '-end-hour');
-    const endMinEl = document.getElementById(prefix + '-end-minute');
-    if (!hourEl || !minEl) return;
-
-    if (!isToday(gy, gm, gd)) {
-        if (!hourEl.value && !minEl.value) {
-            hourEl.value = '09';
-            minEl.value = '00';
-            if (endHourEl) endHourEl.value = '10';
-            if (endMinEl) endMinEl.value = '00';
+function setEventType(type) {
+    eventType = type;
+    const toggle = document.getElementById('event-type-toggle');
+    if (!toggle) return;
+    
+    const labels = toggle.querySelectorAll('.event-type-label');
+    const thumb = toggle.querySelector('.event-type-thumb');
+    labels.forEach(l => l.classList.toggle('active', l.dataset.type === type));
+    const activeLabel = toggle.querySelector(`.event-type-label[data-type="${type}"]`);
+    if (activeLabel && thumb) {
+        const labelRect = activeLabel.getBoundingClientRect();
+        if (labelRect.width === 0) {
+            requestAnimationFrame(() => setEventType(type));
+            return;
         }
-        return;
+        const toggleRect = toggle.getBoundingClientRect();
+        thumb.style.left = (labelRect.left - toggleRect.left) + 'px';
+        thumb.style.width = labelRect.width + 'px';
     }
 
-    const now = new Date();
-    let curHour = now.getHours();
-    let curMin = now.getMinutes();
-    let startMin = Math.ceil((curMin + 1) / 15) * 15;
-    let startHour = curHour + 1;
-    if (startMin >= 60) {
-        startMin = 0;
-        startHour++;
-    }
-    startHour = startHour % 24;
-
-    if (force || !hourEl.value || !minEl.value ||
-        parseInt(hourEl.value) < startHour ||
-        (parseInt(hourEl.value) === startHour && parseInt(minEl.value) < startMin)) {
-        hourEl.value = String(startHour).padStart(2, '0');
-        minEl.value = String(startMin).padStart(2, '0');
-        if (endHourEl) endHourEl.value = String((startHour + 1) % 24).padStart(2, '0');
-        if (endMinEl) endMinEl.value = String(startMin).padStart(2, '0');
-    }
-}
-
-function updateAllDayAndTimeRows() {
-    const gregAllDayRow = document.getElementById('all-day-greg-row');
-    const gregTimeRow = document.querySelector('#greg-picker-popup .picker-time-row');
-    const gregCheck = document.getElementById('event-all-day-greg');
-
-    if (titlePickerActive) {
-        if (gregAllDayRow) gregAllDayRow.style.display = 'none';
-        if (gregTimeRow) gregTimeRow.style.display = 'none';
-        return;
+    const titleInput = document.getElementById('event-title');
+    if (titleInput) {
+        titleInput.placeholder = type === 'task' ? 'Task title' : 'Event title';
     }
 
-    if (eventType === 'task') {
-        if (gregAllDayRow) gregAllDayRow.style.display = 'none';
-    } else {
-        if (gregAllDayRow) gregAllDayRow.style.display = 'flex';
+    // ---- مدیریت دکمه‌های پایین textarea ----
+    // دکمه‌های آیکون و رنگ همیشه نمایش داده می‌شن
+    const iconBtn = document.getElementById('toggle-icon-btn');
+    if (iconBtn) iconBtn.style.display = 'flex';
+    
+    const colorBtn = document.getElementById('toggle-color-btn');
+    if (colorBtn) colorBtn.style.display = 'flex';
+
+    // دکمه‌های شرطی
+    const checklistBtn = document.getElementById('toggle-checklist-mode-btn');
+    if (checklistBtn) {
+        checklistBtn.style.display = (type === 'task') ? 'flex' : 'none';
     }
 
-    if (gregCheck && gregTimeRow) {
-        gregTimeRow.style.display = gregCheck.checked ? 'none' : '';
+    const locBtn = document.getElementById('toggle-location-btn');
+    if (locBtn) {
+        locBtn.style.display = (type === 'event') ? 'flex' : 'none';
     }
-}
 
-function syncTaskTimeVisibility() {
-    const isTask = (eventType === 'task');
-    const timeRow = document.querySelector('#greg-picker-popup .picker-time-row');
-    if (!timeRow) return;
-    const groups = timeRow.querySelectorAll('.time-group');
-    if (groups.length >= 2) {
-        groups[1].style.display = isTask ? 'none' : '';
-        const sep = timeRow.querySelector('.time-range-sep');
-        if (sep) sep.style.display = isTask ? 'none' : '';
+    const inviteBtn = document.getElementById('toggle-invite-btn');
+    if (inviteBtn) {
+        inviteBtn.style.display = (type === 'event') ? 'flex' : 'none';
     }
-}
 
-function openGregPicker(gy, gm, gd) {
-    var now = new Date();
-    gregState.gy = gy !== undefined ? gy : now.getFullYear();
-    gregState.gm = gm !== undefined ? gm : now.getMonth();
-    gregState.selectedGd = gd || null;
-    renderGregPicker();
-    gregPickerPopup.classList.add('open');
-
-    if (gregState.selectedGd !== null) {
-        setDefaultTimeForToday('greg', gregState.gy, gregState.gm, gregState.selectedGd, true);
-    } else {
-        setDefaultTimeForToday('greg', now.getFullYear(), now.getMonth(), now.getDate(), true);
+    // اگر نوع تسک نیست، چک‌لیست رو مخفی کن
+    if (type !== 'task') {
+        hideInlineChecklist();
+        currentChecklistItems = [];
     }
+
     updateAllDayAndTimeRows();
     syncTaskTimeVisibility();
 }
 
-function renderGregPicker() {
-    var gy = gregState.gy,
-        gm = gregState.gm;
-    gregMonthBtn.textContent = GREG_MONTH_NAMES[gm];
-    gregYearBtn.textContent = gy;
-    gregMonthPopup.classList.remove('open');
-    gregYearPopup.classList.remove('open');
-    var today = new Date(),
-        daysInMonth = new Date(gy, gm + 1, 0).getDate(),
-        firstDay = new Date(gy, gm, 1).getDay();
-    gregDaysEl.innerHTML = '';
-    var prevDays = new Date(gy, gm, 0).getDate();
-    for (var i = 0; i < firstDay; i++) {
-        var el = document.createElement('div');
-        el.className = 'picker-day other';
-        el.textContent = prevDays - firstDay + 1 + i;
-        gregDaysEl.appendChild(el);
+/* ------------------------- TIME VALIDATION & SPINNER ------------------------- */
+function getSelectedGregFor(prefix) {
+    if (prefix === 'greg') {
+        if (gregState.selectedGd === null) return null;
+        return {
+            gy: gregState.gy,
+            gm: gregState.gm,
+            gd: gregState.selectedGd
+        };
     }
-    for (var d = 1; d <= daysInMonth; d++) {
-        var el = document.createElement('div');
-        el.className = 'picker-day';
-        el.textContent = d;
-        if (d === today.getDate() && gm === today.getMonth() && gy === today.getFullYear()) el.classList.add('today');
-        if (d === gregState.selectedGd) el.classList.add('selected');
-        if (isGregDatePast(gy, gm, d)) {
-            el.classList.add('past');
-        } else {
-            (function(day) {
-                el.addEventListener('click', function() {
-                    gregState.selectedGd = day;
-                    renderGregPicker();
-                    setDefaultTimeForToday('greg', gregState.gy, gregState.gm, gregState.selectedGd, false);
-                });
-            })(d);
+    return null;
+}
+
+function validateTimeInput(prefix, isEnd = false) {
+    const hourEl = document.getElementById(prefix + (isEnd ? '-end-hour' : '-hour'));
+    const minEl = document.getElementById(prefix + (isEnd ? '-end-minute' : '-minute'));
+    if (!hourEl || !minEl) return;
+
+    const g = getSelectedGregFor(prefix);
+    if (!g) return;
+
+    let hour = parseInt(hourEl.value, 10);
+    let minute = parseInt(minEl.value, 10);
+    if (isNaN(hour) || isNaN(minute)) return;
+
+    minute = Math.round(minute / 15) * 15;
+    if (minute === 60) {
+        minute = 0;
+        hour++;
+    }
+
+    if (!isEnd && isToday(g.gy, g.gm, g.gd)) {
+        const now = new Date();
+        const curHour = now.getHours();
+        const curMinute = now.getMinutes();
+        const nowTotal = curHour * 60 + curMinute;
+        const selTotal = hour * 60 + minute;
+        if (selTotal <= nowTotal) {
+            let newMin = Math.ceil((curMinute + 1) / 15) * 15;
+            let newHour = curHour + 1;
+            if (newMin >= 60) {
+                newMin = 0;
+                newHour++;
+            }
+            newHour = newHour % 24;
+            hour = newHour;
+            minute = newMin;
         }
-        gregDaysEl.appendChild(el);
     }
+
+    const startHourEl = document.getElementById(prefix + '-hour');
+    const startMinEl = document.getElementById(prefix + '-minute');
+    if (startHourEl && startMinEl) {
+        const startH = parseInt(startHourEl.value, 10);
+        const startM = parseInt(startMinEl.value, 10);
+        if (!isNaN(startH) && !isNaN(startM)) {
+            const startTotal = startH * 60 + startM;
+            const endTotal = hour * 60 + minute;
+            if (endTotal <= startTotal) {
+                hour = (startH + 1) % 24;
+                minute = startM;
+            }
+        }
+    }
+
+    hourEl.value = String(hour).padStart(2, '0');
+    minEl.value = String(minute).padStart(2, '0');
 }
 
-function openGregMonthPopup() {
-    if (gregMonthPopup.classList.contains('open')) {
-        gregMonthPopup.classList.remove('open');
-        return;
+function syncEndTimeOnStartChange(prefix) {
+    const startHour = document.getElementById(prefix + '-hour');
+    const startMin = document.getElementById(prefix + '-minute');
+    const endHour = document.getElementById(prefix + '-end-hour');
+    const endMin = document.getElementById(prefix + '-end-minute');
+    if (!startHour || !startMin || !endHour || !endMin) return;
+
+    const sh = parseInt(startHour.value, 10);
+    const sm = parseInt(startMin.value, 10);
+    if (isNaN(sh) || isNaN(sm)) return;
+
+    const eh = parseInt(endHour.value, 10);
+    const em = parseInt(endMin.value, 10);
+    if (!isNaN(eh) && !isNaN(em)) {
+        if (eh > sh || (eh === sh && em > sm)) return;
     }
-    gregYearPopup.classList.remove('open');
-    gregMonthPopup.innerHTML = '';
-    var grid = document.createElement('div');
-    grid.className = 'month-grid';
-    for (var i = 0; i < 12; i++) {
-        var item = document.createElement('div');
-        item.className = 'month-item' + (i === gregState.gm ? ' selected' : '');
-        item.textContent = GREG_MONTH_NAMES[i];
-        (function(idx) {
-            item.addEventListener('click', function(e) {
-                e.stopPropagation();
-                gregState.gm = idx;
-                renderGregPicker();
-            });
-        })(i);
-        grid.appendChild(item);
-    }
-    gregMonthPopup.appendChild(grid);
-    gregMonthPopup.classList.add('open');
+    endHour.value = String((sh + 1) % 24).padStart(2, '0');
+    endMin.value = String(sm).padStart(2, '0');
 }
 
-function openGregYearPopup() {
-    if (gregYearPopup.classList.contains('open')) {
-        gregYearPopup.classList.remove('open');
+/* ------------------------- OPEN NEW EVENT AT TIME ------------------------- */
+function openNewEventAtTime(date) {
+    if (!currentUser) {
+        openModal(authOverlay);
+        authError.textContent = 'Please sign in to add events.';
         return;
     }
-    gregMonthPopup.classList.remove('open');
-    gregYearPopup.classList.add('open');
-    renderYearPanel(gregYearPanel, gregState.gy, 2000, 2040, false, function(y) {
-        gregState.gy = y;
-        renderGregPicker();
-    });
+
+    editingEventId = null;
+    eventTitleInput.value = '';
+    eventType = 'event';
+    setEventType('event');
+    document.getElementById('event-type-toggle').style.display = '';
+
+    var year = date.getFullYear();
+    var month = date.getMonth();
+    var day = date.getDate();
+    var hours = date.getHours();
+    var mins = date.getMinutes();
+
+    var dateStr = year + '-' + pad(month + 1) + '-' + pad(day);
+    eventStartGreg.value = dateStr;
+    eventStartInput.value = dateStr + 'T' + pad(hours) + ':' + pad(mins);
+    gregDateRow.style.display = 'block';
+    gregTriggerText.textContent = GREG_MONTH_NAMES[month] + ' ' + day + ', ' + year + '  ' + pad(hours) + ':' + pad(mins);
+    gregPickerTrigger.classList.add('has-value');
+
+    eventEndInput.value = '';
+    selectedTagColor = '#f5f5f5';
+    recurrence = {
+        type: 'none',
+        interval: 1,
+        days: []
+    };
+    updateRecurrencePreview();
+    hideInlineChecklist();
+    currentChecklistItems = [];
+    currentInvitees = [];
+    document.getElementById('location-section').style.display = 'none';
+    document.getElementById('toggle-location-btn')?.classList.remove('active');
+    document.getElementById('toggle-invite-btn')?.classList.remove('active');
+    document.getElementById('toggle-color-btn')?.classList.remove('active');
+    document.getElementById('toggle-icon-btn')?.classList.remove('active');
+
+    openModal(eventModal);
+}
+
+function openTitlePicker() {
+    titlePickerActive = true;
+
+    const gregAllDayRow = document.getElementById('all-day-greg-row');
+    const gregTimeRow = document.querySelector('#greg-picker-popup .picker-time-row');
+    if (gregAllDayRow) gregAllDayRow.style.display = 'none';
+    if (gregTimeRow) gregTimeRow.style.display = 'none';
+
+    document.getElementById('greg-today-btn').style.display = 'block';
+
+    openGregPicker(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+}
+
+async function openEditModal(ev) {
+    if (!ev) return;
+    editingEventId = ev.id;
+    document.getElementById('event-type-toggle').style.display = 'none';
+
+    if (eventTitleInput) eventTitleInput.value = ev.title || '';
+
+    if (ev.start_date) {
+        const startDate = new Date(ev.start_date);
+        const y = startDate.getFullYear();
+        const m = startDate.getMonth();
+        const d = startDate.getDate();
+        const hours = startDate.getHours();
+        const mins = startDate.getMinutes();
+
+        if (eventStartGreg) eventStartGreg.value = `${y}-${pad(m + 1)}-${pad(d)}`;
+        if (eventStartInput) eventStartInput.value = ev.start_date;
+        if (gregTriggerText) {
+            gregTriggerText.textContent = `${GREG_MONTH_NAMES[m]} ${d}, ${y}  ${pad(hours)}:${pad(mins)}`;
+            gregPickerTrigger.classList.add('has-value');
+        }
+    } else {
+        if (eventStartInput) eventStartInput.value = '';
+        if (eventStartGreg) eventStartGreg.value = '';
+        if (gregTriggerText) gregTriggerText.textContent = 'Select date';
+        if (gregPickerTrigger) gregPickerTrigger.classList.remove('has-value');
+    }
+
+    if (eventEndInput) {
+        eventEndInput.value = ev.end_date || '';
+    }
+
+    const gregCheck = document.getElementById('event-all-day-greg');
+    if (gregCheck) gregCheck.checked = ev.all_day || false;
+
+    setEventType(ev.type || 'event');
+    const inviteBtn = document.getElementById('toggle-invite-btn');
+    if (inviteBtn && ev.type === 'event') {
+        inviteBtn.style.display = 'flex';
+    }
+
+    const locBtn = document.getElementById('toggle-location-btn');
+    if (locBtn && ev.type === 'event') {
+        locBtn.style.display = 'flex';
+    }
+
+    selectedTagColor = ev.color || '#f5f5f5';
+    const colorBtn = document.getElementById('toggle-color-btn');
+    if (colorBtn) {
+        colorBtn.classList.toggle('active', selectedTagColor !== '#f5f5f5');
+    }
+
+    const descField = document.getElementById('event-description');
+    if (descField) descField.value = ev.description || '';
+
+    recurrence.type = ev.recurrence_type || 'none';
+    recurrence.interval = ev.recurrence_interval || 1;
+    recurrence.days = ev.recurrence_days || [];
+    recurrence.smartInterval = ev.recurrence_smart_interval || 'weekly';
+    updateRecurrencePreview();
+
+    if (ev.type === 'task' && ev.checklist && ev.checklist.length) {
+        currentChecklistItems = JSON.parse(JSON.stringify(ev.checklist));
+        const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
+        if (toggleBtn) {
+            toggleBtn.style.display = 'flex';
+        }
+    } else {
+        currentChecklistItems = [];
+        hideInlineChecklist();
+        const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
+        if (toggleBtn) toggleBtn.style.display = 'none';
+    }
+
+    // Load location
+    if (ev.location && (ev.location.lat || ev.location.name)) {
+        currentLocationCoords = ev.location.lat && ev.location.lng ? {
+            lat: ev.location.lat,
+            lng: ev.location.lng
+        } : null;
+        currentLocationName = ev.location.name || '';
+        currentLocationAddress = ev.location?.address || null;
+        document.getElementById('location-section').style.display = 'none';
+        const locBtn = document.getElementById('toggle-location-btn');
+        if (locBtn) locBtn.classList.add('active');
+    } else {
+        currentLocationCoords = null;
+        currentLocationName = '';
+        currentLocationAddress = null;
+        document.getElementById('location-coords-input').value = '';
+        document.getElementById('location-section').style.display = 'none';
+        const locBtn = document.getElementById('toggle-location-btn');
+        if (locBtn) locBtn.classList.remove('active');
+    }
+
+    // Load invitees
+    // Load invitees from invitee_ids (ecosystem)
+    currentInvitees = [];
+    if (ev.invitee_ids && Array.isArray(ev.invitee_ids) && ev.invitee_ids.length > 0) {
+        try {
+            const {
+                data: profiles
+            } = await sb.from('profiles')
+                .select('id, first_name, last_name')
+                .in('id', ev.invitee_ids);
+            if (profiles) {
+                currentInvitees = profiles.map(p => ({
+                    id: p.id,
+                    name: [p.first_name, p.last_name].filter(Boolean).join(' ') || 'User'
+                }));
+            }
+        } catch (e) {
+            currentInvitees = ev.invitee_ids.map(id => ({
+                id,
+                name: 'Unknown'
+            }));
+        }
+    }
+    if (currentInvitees.length > 0) {
+        const inviteBtn = document.getElementById('toggle-invite-btn');
+        if (inviteBtn) inviteBtn.classList.add('active');
+    }
+
+    if (gregDateRow) gregDateRow.style.display = 'block';
+    updateAllDayAndTimeRows();
+    openModal(eventModal);
 }
 
 /* =========================== EVENT SAVE ============================ */
 async function saveEvent() {
     try {
+        // ── 1. Get form values ──────────────────────────────
         var title = '';
         if (eventTitleInput) title = eventTitleInput.value.trim();
 
@@ -2454,6 +3061,7 @@ async function saveEvent() {
         var descEl = document.getElementById('event-description');
         if (descEl) desc = descEl.value.trim();
 
+        // ── 2. Build main payload ─────────────────────────
         var payload = {
             title: title,
             start_date: new Date(start).toISOString(),
@@ -2463,7 +3071,7 @@ async function saveEvent() {
             reminder_minutes: 0,
             color: selectedTagColor,
             icon: selectedIcon || null,
-            description: desc,
+            description: desc, 
             recurrence_type: recurrence.type,
             recurrence_interval: recurrence.interval,
             recurrence_days: (recurrence.type === 'weekly' || recurrence.type === 'custom') ? recurrence.days : [],
@@ -2472,6 +3080,7 @@ async function saveEvent() {
             checklist: eventType === 'task' ? currentChecklistItems : []
         };
 
+        // ── 3. Location (فقط برای event) ──────────────────
         if (eventType === 'event' && (currentLocationCoords || currentLocationName)) {
             payload.location = {
                 lat: currentLocationCoords?.lat || null,
@@ -2483,28 +3092,43 @@ async function saveEvent() {
             payload.location = null;
         }
 
+        // ── 4. Completed occurrences ──────────────────────
         if (!editingEventId) {
             payload.completed_occurrences = [];
             payload.completed_timestamps = {};
         }
 
+        // ── 5. Invitee IDs ────────────────────────────────
         payload.invitee_ids = currentInvitees.map(inv => inv.id);
 
+        // ── 6. Save to database ───────────────────────────
         showGlobalLoader();
 
         if (editingEventId) {
+            // Update existing event
             await updateEventInDB(editingEventId, payload);
-            var idx = events.findIndex(function(ev) { return ev.id == editingEventId; });
+            var idx = events.findIndex(function(ev) {
+                return ev.id == editingEventId;
+            });
             if (idx !== -1) {
-                if (events[idx].completed_occurrences) payload.completed_occurrences = events[idx].completed_occurrences;
-                if (events[idx].completed_timestamps) payload.completed_timestamps = events[idx].completed_timestamps;
+                // حفظ کردن completed_occurrences و completed_timestamps موجود
+                if (events[idx].completed_occurrences) {
+                    payload.completed_occurrences = events[idx].completed_occurrences;
+                }
+                if (events[idx].completed_timestamps) {
+                    payload.completed_timestamps = events[idx].completed_timestamps;
+                }
                 Object.assign(events[idx], payload);
             }
             editingEventId = null;
         } else {
+            // Create new event
             var saved = await saveEventToDB(payload);
             if (saved) {
+                // Push to local events array
                 events.push(saved);
+
+                // ── 7. Create invitee rows (if any) ─────────
                 if (currentInvitees.length > 0) {
                     for (const invitee of currentInvitees) {
                         const invitePayload = {
@@ -2518,10 +3142,19 @@ async function saveEvent() {
                             completed_timestamps: {},
                             checklist: eventType === 'task' ? currentChecklistItems : []
                         };
-                        const { error: invErr } = await sb.rpc('insert_invited_event', { payload: invitePayload });
+
+                        const {
+                            error: invErr
+                        } = await sb
+                            .rpc('insert_invited_event', {
+                                payload: invitePayload
+                            });
+
                         if (invErr) console.warn('Failed to insert invitee row:', JSON.stringify(invErr, null, 2));
                     }
                 }
+
+                // ── 8. Send notifications ─────────────────
                 const eventTitle = title || 'Untitled event';
                 currentInvitees.forEach(inv => {
                     addNotificationToUser(inv.id, 'event', 'You have been invited to an event',
@@ -2530,9 +3163,11 @@ async function saveEvent() {
             }
         }
 
+        // ── 9. Clean up UI ────────────────────────────────
         hideGlobalLoader();
         closeModal(eventModal);
 
+        // Reset form fields
         if (eventTitleInput) eventTitleInput.value = '';
         if (eventStartInput) eventStartInput.value = '';
         if (eventEndInput) eventEndInput.value = '';
@@ -2540,9 +3175,11 @@ async function saveEvent() {
         if (gregTriggerText) gregTriggerText.textContent = 'Select date';
         if (gregPickerTrigger) gregPickerTrigger.classList.remove('has-value');
 
+        // Reset checklist
         currentChecklistItems = [];
         hideInlineChecklist();
 
+        // Reset location
         currentLocationCoords = null;
         currentLocationName = '';
         currentLocationAddress = null;
@@ -2550,25 +3187,37 @@ async function saveEvent() {
         document.getElementById('location-section').style.display = 'none';
         document.getElementById('toggle-location-btn')?.classList.remove('active');
 
+        // Reset invitees
         currentInvitees = [];
         document.getElementById('toggle-invite-btn')?.classList.remove('active');
 
+        // Reset color
         selectedTagColor = '#f5f5f5';
         document.getElementById('toggle-color-btn')?.classList.remove('active');
 
+        // Reset icon
         selectedIcon = null;
         updateIconButton();
         document.getElementById('toggle-icon-btn')?.classList.remove('active');
 
-        recurrence = { type: 'none', interval: 1, days: [], smartInterval: 'weekly' };
+        // Reset recurrence
+        recurrence = {
+            type: 'none',
+            interval: 1,
+            days: [],
+            smartInterval: 'weekly'
+        };
         updateRecurrencePreview();
 
+        // Reset event type to default
         eventType = 'event';
         setEventType('event');
 
+        // Re-render calendar
         renderCalendar();
         updateNotificationDot();
 
+        // Show success message
         showToast(editingEventId ? 'Event updated successfully!' : 'Event created successfully!');
 
     } catch (err) {
@@ -2583,6 +3232,7 @@ function openEventDetail(ev, occurrenceDate) {
     currentDetailEventId = ev.id;
     ev.__occurrenceDate = occurrenceDate;
 
+    // ─── Color & title ───
     document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
     const colorDot = document.getElementById('detail-color-dot');
     colorDot.style.backgroundColor = ev.color || '#f5f5f5';
@@ -2612,6 +3262,7 @@ function openEventDetail(ev, occurrenceDate) {
     const calIcon = document.getElementById('detail-calendar-icon');
     calIcon.style.color = ev.color || 'var(--accent)';
 
+    // ─── Date and time ───
     const start = ev.start_date ? new Date(ev.start_date) : null;
     const end = ev.end_date ? new Date(ev.end_date) : null;
     let dateText = '', timeText = '', durationParen = '';
@@ -2644,6 +3295,7 @@ function openEventDetail(ev, occurrenceDate) {
     document.getElementById('detail-time-text').textContent = timeText;
     document.getElementById('detail-duration-paren').textContent = durationParen;
 
+    // ─── Hide horizontal dividers for tasks ───
     const dividers = eventDetailModal.querySelectorAll('.detail-divider-h');
     if (ev.type === 'task') {
         dividers.forEach(hr => hr.style.display = 'none');
@@ -2651,6 +3303,7 @@ function openEventDetail(ev, occurrenceDate) {
         dividers.forEach(hr => hr.style.display = '');
     }
 
+    // ─── Description ───
     const descContainer = document.getElementById('detail-description-container');
     const descText = document.getElementById('detail-description-text');
     let cleanDescription = ev.description || '';
@@ -2805,8 +3458,10 @@ function openEventDetail(ev, occurrenceDate) {
     const oldAddr = document.getElementById('detail-address-container');
     if (oldAddr) oldAddr.style.display = 'none';
 
+    // ─── تشخیص مهمان ───
     const isInvitee = !!ev.parent_event_id;
 
+    // ─── دکمه Edit ───
     const editBtn = document.getElementById('detail-edit-btn-top');
     if (editBtn) {
         editBtn.style.display = isInvitee ? 'none' : '';
@@ -2817,6 +3472,7 @@ function openEventDetail(ev, occurrenceDate) {
         };
     }
 
+    // ─── وضعیت تکمیل ───
     var dateForCompletion = null;
     if (occurrenceDate) {
         dateForCompletion = toLocalDateString(occurrenceDate);
@@ -2834,13 +3490,16 @@ function openEventDetail(ev, occurrenceDate) {
     if (completeBtn) {
         completeBtn.style.display = isInvitee ? 'none' : '';
 
+        // ── تسک هوشمند ──
         if (ev.type === 'task' && ev.recurrence_type === 'smart') {
             completeBtn.textContent = 'Done';
             completeBtn.onclick = function() {
                 closeModal(eventDetailModal);
                 completeSmartTask(ev);
             };
-        } else if (isCompleted) {
+        }
+        // ── غیر هوشمند ──
+        else if (isCompleted) {
             completeBtn.textContent = 'Undo';
             completeBtn.onclick = () => {
                 if (dateForCompletion && ev.recurrence_type !== 'none') {
@@ -2936,6 +3595,7 @@ function openEventDetail(ev, occurrenceDate) {
         }
     }
 
+    // ─── دکمه Delete / Leave ───
     const cancelBtn = document.getElementById('detail-cancel-btn');
     if (cancelBtn) {
         if (isInvitee) {
@@ -2974,7 +3634,9 @@ function openEventDetail(ev, occurrenceDate) {
     openModal(eventDetailModal);
 }
 
+
 /* =========================== DELETE CONFIRMATION ============================ */
+
 async function deleteEventById(id) {
     showGlobalLoader();
     try {
@@ -2982,7 +3644,7 @@ async function deleteEventById(id) {
         if (ok) {
             events = events.filter(ev => ev.id != id);
             renderCalendar();
-            updateNotificationDot();
+            updateNotificationDot()
         }
     } catch (err) {
         console.error('Delete failed:', err);
@@ -2999,7 +3661,10 @@ function showDeleteConfirmation(eventId) {
     if (confirm) {
         confirm.classList.remove('hidden');
         confirm.dataset.eventId = eventId;
-        setTimeout(() => confirm.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+        setTimeout(() => confirm.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+        }), 100);
     }
 }
 
@@ -3012,6 +3677,858 @@ function hideDeleteConfirmation() {
         delete confirm.dataset.eventId;
     }
 }
+
+// =========================== HIDE INLINE CHECKLIST ============================
+function hideInlineChecklist() {
+    const editor = document.getElementById('checklist-inline-editor');
+    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
+    if (editor) editor.style.display = 'none';
+    if (toggleBtn) toggleBtn.classList.remove('active');
+}
+
+// =========================== SHOW INLINE CHECKLIST ============================
+function showInlineChecklist() {
+    const editor = document.getElementById('checklist-inline-editor');
+    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
+    if (editor) editor.style.display = 'block';
+    if (toggleBtn) toggleBtn.classList.add('active');
+    renderInlineChecklistItems(currentChecklistItems);
+}
+
+// =========================== RENDER INLINE CHECKLIST ITEMS ============================
+function renderInlineChecklistItems(items) {
+    const container = document.getElementById('checklist-inline-items');
+    if (!container) return;
+    container.innerHTML = '';
+
+    items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'checklist-inline-row';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'neon-checkbox';
+        cb.checked = item.done;
+        cb.addEventListener('change', function() {
+            item.done = this.checked;
+        });
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'checklist-text';
+        textSpan.textContent = item.text;
+        textSpan.setAttribute('contenteditable', 'true');
+        textSpan.addEventListener('input', function() {
+            item.text = this.textContent.trim();
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-item-btn';
+        delBtn.innerHTML = '✕';
+        delBtn.addEventListener('click', () => {
+            currentChecklistItems.splice(index, 1);
+            renderInlineChecklistItems(currentChecklistItems);
+        });
+
+        const addSubBtn = document.createElement('button');
+        addSubBtn.className = 'add-subtask-btn';
+        addSubBtn.innerHTML = '+';
+        addSubBtn.title = 'Add subtask';
+        addSubBtn.addEventListener('click', () => {
+            if (!item.subtasks) item.subtasks = [];
+            item.subtasks.push({
+                text: '',
+                done: false
+            });
+            renderInlineChecklistItems(currentChecklistItems);
+            const subRows = container.querySelectorAll('.subtask-row .checklist-text');
+            if (subRows.length > 0) {
+                const last = subRows[subRows.length - 1];
+                last.focus();
+                const range = document.createRange();
+                range.selectNodeContents(last);
+                range.collapse(false);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        });
+
+        row.appendChild(cb);
+        row.appendChild(textSpan);
+        row.appendChild(addSubBtn);
+        row.appendChild(delBtn);
+        container.appendChild(row);
+
+        if (item.subtasks && item.subtasks.length > 0) {
+            item.subtasks.forEach((sub, subIndex) => {
+                const subRow = document.createElement('div');
+                subRow.className = 'checklist-inline-row subtask-row';
+
+                const subCb = document.createElement('input');
+                subCb.type = 'checkbox';
+                subCb.className = 'neon-checkbox';
+                subCb.checked = sub.done;
+                subCb.addEventListener('change', function() {
+                    sub.done = this.checked;
+                });
+
+                const subText = document.createElement('span');
+                subText.className = 'checklist-text';
+                subText.textContent = sub.text;
+                subText.setAttribute('contenteditable', 'true');
+                subText.addEventListener('input', function() {
+                    sub.text = this.textContent.trim();
+                });
+
+                const subDelBtn = document.createElement('button');
+                subDelBtn.className = 'delete-item-btn';
+                subDelBtn.innerHTML = '✕';
+                subDelBtn.addEventListener('click', () => {
+                    item.subtasks.splice(subIndex, 1);
+                    renderInlineChecklistItems(currentChecklistItems);
+                });
+
+                subRow.appendChild(subCb);
+                subRow.appendChild(subText);
+                subRow.appendChild(subDelBtn);
+                container.appendChild(subRow);
+            });
+        }
+    });
+}
+
+/* =========================== NAVIGATION ============================ */
+
+function navigatePrev() {
+    if (viewMode === 'year') {
+        currentDate.setFullYear(currentDate.getFullYear() - 1);
+    } else if (viewMode === 'month') {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+    } else if (viewMode === 'day') {
+        currentDate.setDate(currentDate.getDate() - 1);
+    }
+    renderCalendar();
+}
+
+function navigateNext() {
+    if (viewMode === 'year') {
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+    } else if (viewMode === 'month') {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+    } else if (viewMode === 'day') {
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    renderCalendar();
+}
+
+function handleTodayClick() {
+    const today = new Date();
+    currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    gregPickerPopup.classList.remove('open');
+    titlePickerActive = false;
+    document.getElementById('greg-today-btn').style.display = 'none';
+    renderCalendar();
+}
+
+/* =========================== GSAP ANIMATIONS ============================ */
+
+function animateTabIndicator() {
+    const activeTab = viewTabsEl.querySelector('.view-tab.active');
+    if (!activeTab || !tabIndicator) return;
+    const tabRect = activeTab.getBoundingClientRect(),
+        containerRect = viewTabsEl.getBoundingClientRect();
+    gsap.to(tabIndicator, {
+        left: tabRect.left - containerRect.left,
+        width: tabRect.width,
+        duration: 0.4,
+        ease: 'power2.out'
+    });
+}
+
+/* =========================== EVENT LISTENERS ============================ */
+
+/* --------- LOGOUT --------- */
+document.getElementById('sidebar-logout')?.addEventListener('click', () => {
+    openModal(document.getElementById('logout-confirm-modal'));
+});
+document.getElementById('logout-confirm-yes')?.addEventListener('click', () => {
+    closeModal(document.getElementById('logout-confirm-modal'));
+    logout();
+});
+document.getElementById('logout-confirm-no')?.addEventListener('click', () => {
+    closeModal(document.getElementById('logout-confirm-modal'));
+});
+document.getElementById('logout-confirm-modal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+        closeModal(e.currentTarget);
+    }
+});
+
+/* --------- TODAY BUTTON --------- */
+document.getElementById('greg-today-btn')?.addEventListener('click', handleTodayClick);
+
+/* --------- AUTH OVERLAY CLICK --------- */
+authOverlay.addEventListener('click', (e) => {
+    if (e.target === authOverlay) closeModal(authOverlay);
+});
+
+/* --------- STEP-BASED AUTH FLOW --------- */
+let authEmail = '';
+
+function showStep(stepId) {
+    document.querySelectorAll('.auth-step').forEach(el => el.classList.add('hidden'));
+    document.getElementById(stepId)?.classList.remove('hidden');
+}
+
+document.getElementById('auth-continue-btn')?.addEventListener('click', async function() {
+    const email = document.getElementById('auth-email').value.trim();
+    const errorEl = document.getElementById('auth-error');
+    if (!email) {
+        errorEl.textContent = 'Please enter an email.';
+        return;
+    }
+    authEmail = email;
+
+    showGlobalLoader();
+    try {
+        const {
+            data: exists,
+            error: rpcError
+        } = await sb.rpc('check_email_exists', {
+            email_to_check: email
+        });
+        if (rpcError) throw rpcError;
+        if (exists) {
+            document.getElementById('auth-user-email').textContent = email;
+            showStep('step-2-login');
+        } else {
+            showStep('step-2-register');
+            document.getElementById('reg-form-fields').style.display = '';
+            document.getElementById('reg-success').style.display = 'none';
+        }
+        document.getElementById('auth-error').textContent = '';
+    } catch (e) {
+        console.error(e);
+        errorEl.textContent = 'Something went wrong. Try again.';
+    } finally {
+        hideGlobalLoader();
+    }
+});
+
+document.getElementById('auth-signin-btn')?.addEventListener('click', async function() {
+    const email = authEmail;
+    const password = document.getElementById('auth-password').value;
+    const errorEl = document.getElementById('auth-error-login');
+    if (!email || !password) {
+        errorEl.textContent = 'Please enter your password.';
+        return;
+    }
+
+    showGlobalLoader();
+    const {
+        data,
+        error
+    } = await sb.auth.signInWithPassword({
+        email,
+        password
+    });
+    hideGlobalLoader();
+    if (error) {
+        errorEl.textContent = error.message;
+        return;
+    }
+
+    currentUser = data.user;
+    currentProfile = await buildCurrentProfile(currentUser);
+    currentUserRole = currentProfile?.role || 'recruit';
+    closeModal(authOverlay);
+    updateAuthUI();
+    events = await fetchEvents();
+    renderCalendar();
+    updateNotificationDot()
+});
+
+document.getElementById('auth-forgot-link')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    document.getElementById('forgot-email').value = authEmail;
+    showStep('step-forgot');
+});
+
+document.getElementById('auth-send-reset-btn')?.addEventListener('click', async function() {
+    const email = document.getElementById('forgot-email').value.trim();
+    if (!email) return;
+    showGlobalLoader();
+    const {
+        error
+    } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+    });
+    hideGlobalLoader();
+    if (error) {
+        document.getElementById('auth-error-login').textContent = error.message;
+        return;
+    }
+    document.getElementById('auth-success-msg').textContent = 'Password reset link sent.';
+    document.getElementById('auth-success-msg').style.display = 'block';
+});
+
+document.getElementById('auth-back-to-login')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    showStep('step-2-login');
+});
+
+document.getElementById('auth-register-btn')?.addEventListener('click', async function() {
+    const firstname = document.getElementById('reg-firstname').value.trim();
+    const lastname = document.getElementById('reg-lastname').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const confirm = document.getElementById('reg-confirm').value;
+    const errorEl = document.getElementById('auth-error-register');
+    if (!firstname || !lastname || !password || !confirm) {
+        errorEl.textContent = 'All fields are required.';
+        return;
+    }
+    if (password !== confirm) {
+        errorEl.textContent = 'Passwords do not match.';
+        return;
+    }
+    showGlobalLoader();
+    const {
+        error
+    } = await sb.auth.signUp({
+        email: authEmail,
+        password,
+        options: {
+            data: {
+                first_name: firstname,
+                last_name: lastname
+            },
+            emailRedirectTo: window.location.origin + window.location.pathname
+        }
+    });
+    hideGlobalLoader();
+    if (error) {
+        errorEl.textContent = error.message;
+        return;
+    }
+
+    document.getElementById('reg-form-fields').style.display = 'none';
+    document.getElementById('reg-success').style.display = 'block';
+    errorEl.textContent = '';
+});
+
+document.getElementById('reg-to-login-btn')?.addEventListener('click', function() {
+    document.getElementById('auth-user-email').textContent = authEmail;
+    showStep('step-2-login');
+});
+
+document.getElementById('sidebar-login')?.addEventListener('click', () => {
+    openModal(authOverlay);
+    showStep('step-1');
+    document.getElementById('auth-email').value = '';
+    authEmail = '';
+    document.getElementById('auth-error').textContent = '';
+});
+
+document.querySelectorAll('.auth-step').forEach(step => {
+    step.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const map = {
+                'step-1': 'auth-continue-btn',
+                'step-2-login': 'auth-signin-btn',
+                'step-2-register': 'auth-register-btn',
+                'step-forgot': 'auth-send-reset-btn'
+            };
+            const btnId = map[step.id];
+            if (btnId) document.getElementById(btnId)?.click();
+        }
+    });
+});
+
+document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const input = document.getElementById(this.dataset.target);
+        if (!input) return;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        this.innerHTML = isPassword ?
+            `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="m14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>` :
+            `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    });
+});
+
+// Recurrence modal listeners
+document.getElementById('recurrence-select')?.addEventListener('change', function() {
+    recurrence.type = this.value;
+    if (recurrence.type === 'smart' && eventType !== 'task') {
+        recurrence.type = 'none';
+        this.value = 'none';
+    }
+    if ((this.value === 'weekly' || this.value === 'custom') && recurrence.days.length === 0) {
+        const dayOfWeek = new Date().getDay();
+        recurrence.days = [dayOfWeek];
+    }
+    if (this.value === 'none') {
+        recurrence.days = [];
+        recurrence.interval = 1;
+    }
+    updateRecurrenceModalUI();
+});
+
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.interval-btn');
+    if (!btn) return;
+
+    const spinner = btn.closest('.rec-interval-spinner');
+    if (!spinner) return;
+
+    const input = spinner.querySelector('.interval-input');
+    if (input) {
+        let val = parseInt(input.value, 10) || 1;
+        const min = 1;
+        if (btn.classList.contains('interval-plus')) {
+            val += 1;
+        } else if (btn.classList.contains('interval-minus')) {
+            val = Math.max(min, val - 1);
+        }
+        input.value = val;
+        input.dispatchEvent(new Event('input', {
+            bubbles: true
+        }));
+    }
+
+    const display = spinner.querySelector('.interval-display');
+    if (display) {
+        let val = parseInt(display.textContent, 10) || 1;
+        const min = 1;
+        if (btn.classList.contains('interval-plus')) {
+            val += 1;
+        } else if (btn.classList.contains('interval-minus')) {
+            val = Math.max(min, val - 1);
+        }
+        display.textContent = val;
+        recurrence.interval = val;
+    }
+});
+
+document.getElementById('recurrence-done-btn')?.addEventListener('click', () => {
+    const smartRadio = document.querySelector('input[name="smartInterval"]:checked');
+    if (recurrence.type === 'smart' && smartRadio) {
+        recurrence.smartInterval = smartRadio.value;
+    }
+    closeModal(document.getElementById('recurrence-modal'));
+    updateRecurrencePreview();
+});
+
+document.getElementById('recurrence-modal-close')?.addEventListener('click', () => {
+    closeModal(document.getElementById('recurrence-modal'));
+    updateRecurrencePreview();
+});
+document.getElementById('recurrence-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal(this);
+        updateRecurrencePreview();
+    }
+});
+document.getElementById('open-recurrence-btn')?.addEventListener('click', openRecurrenceModal);
+
+// --------- TAG MODAL (only colors) ---------
+document.getElementById('tag-done-btn')?.addEventListener('click', () => {
+    const colorBtn = document.getElementById('toggle-color-btn');
+    if (colorBtn) {
+        colorBtn.classList.toggle('active', selectedTagColor !== '#f5f5f5');
+    }
+    closeModal(document.getElementById('tag-modal'));
+});
+
+document.getElementById('tag-modal-close')?.addEventListener('click', () => {
+    closeModal(document.getElementById('tag-modal'));
+});
+document.getElementById('tag-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeModal(this);
+});
+
+document.querySelector('.tag-colors-grid')?.addEventListener('click', function(e) {
+    const item = e.target.closest('.tag-color-item');
+    if (!item) return;
+    selectedTagColor = item.dataset.color;
+    document.querySelectorAll('.tag-color-item').forEach(el => el.classList.remove('selected'));
+    item.classList.add('selected');
+});
+
+// --------- COLOR PICKER BUTTON ---------
+document.getElementById('toggle-color-btn')?.addEventListener('click', function() {
+    const btn = this;
+    if (btn.classList.contains('active')) {
+        selectedTagColor = '#f5f5f5';
+        btn.classList.remove('active');
+    } else {
+        openModal(document.getElementById('tag-modal'));
+        document.querySelectorAll('.tag-color-item').forEach(el => el.classList.remove('selected'));
+        const activeColor = document.querySelector(`.tag-color-item[data-color="${selectedTagColor}"]`);
+        if (activeColor) activeColor.classList.add('selected');
+    }
+});
+
+// Gregorian picker listeners
+if (gregPrevBtn) gregPrevBtn.addEventListener('click', function() {
+    gregState.gm--;
+    if (gregState.gm < 0) {
+        gregState.gm = 11;
+        gregState.gy--;
+    }
+    renderGregPicker();
+});
+if (gregNextBtn) gregNextBtn.addEventListener('click', function() {
+    gregState.gm++;
+    if (gregState.gm > 11) {
+        gregState.gm = 0;
+        gregState.gy++;
+    }
+    renderGregPicker();
+});
+if (gregConfirmBtn) gregConfirmBtn.addEventListener('click', function() {
+    if (!gregState.selectedGd) {
+        gregDaysEl.style.outline = '1px solid var(--accent)';
+        return;
+    }
+    if (titlePickerActive) {
+        titlePickerActive = false;
+        var gy = gregState.gy,
+            gm = gregState.gm,
+            gd = gregState.selectedGd;
+        var newDate = new Date(gy, gm, gd);
+        if (viewMode === 'month') {
+            newDate = new Date(newDate.getFullYear(), newDate.getMonth(), 1);
+        } else if (viewMode === 'year') {
+            newDate = new Date(newDate.getFullYear(), 0, 1);
+        }
+        currentDate = newDate;
+        gregPickerPopup.classList.remove('open');
+        document.getElementById('greg-today-btn').style.display = 'none';
+        renderCalendar();
+        return;
+    }
+    var h = gregHourInput.value || '09';
+    var m = gregMinuteInput.value || '00';
+    var gy = gregState.gy,
+        gm = gregState.gm + 1,
+        gd = gregState.selectedGd;
+    if (eventStartGreg) eventStartGreg.value = gy + '-' + pad(gm) + '-' + pad(gd);
+    if (eventStartInput) eventStartInput.value = gy + '-' + pad(gm) + '-' + pad(gd) + 'T' + pad(h) + ':' + pad(m);
+    var endH = document.getElementById('greg-end-hour')?.value || '10';
+    var endM = document.getElementById('greg-end-minute')?.value || '00';
+    var endDateStr = gy + '-' + pad(gm) + '-' + pad(gd) + 'T' + pad(endH) + ':' + pad(endM);
+    if (eventEndInput) eventEndInput.value = endDateStr;
+    gregTriggerText.textContent = GREG_MONTH_NAMES[gregState.gm] + ' ' + gd + ', ' + gy + '  ' + pad(h) + ':' + pad(m);
+    gregPickerTrigger.classList.add('has-value');
+    gregPickerPopup.classList.remove('open');
+});
+if (gregPickerPopup) gregPickerPopup.addEventListener('click', function(e) {
+    if (e.target === gregPickerPopup) {
+        gregPickerPopup.classList.remove('open');
+        document.getElementById('greg-today-btn').style.display = 'none';
+        titlePickerActive = false;
+    }
+});
+if (gregPickerTrigger) gregPickerTrigger.addEventListener('click', function() {
+    if (eventStartGreg.value) {
+        var p = eventStartGreg.value.split('-');
+        openGregPicker(+p[0], +p[1] - 1, +p[2]);
+    } else openGregPicker();
+});
+
+// Event type toggle
+document.getElementById('event-type-toggle')?.addEventListener('click', e => {
+    const label = e.target.closest('.event-type-label');
+    if (label) setEventType(label.dataset.type);
+});
+
+// Navigation buttons
+prevMonthBtn?.addEventListener('click', navigatePrev);
+nextMonthBtn?.addEventListener('click', navigateNext);
+currentMonthYearBtn?.addEventListener('click', openTitlePicker);
+
+// Add event button
+if (addEventBtn) addEventBtn.addEventListener('click', () => {
+    if (!currentUser) {
+        openModal(authOverlay);
+        authError.textContent = 'Please sign in to add events.';
+        return;
+    }
+    if (eventTitleInput) eventTitleInput.value = '';
+    if (eventStartInput) eventStartInput.value = '';
+    if (eventEndInput) eventEndInput.value = '';
+    if (eventStartGreg) eventStartGreg.value = '';
+    if (gregTriggerText) gregTriggerText.textContent = 'Select date';
+    if (gregPickerTrigger) gregPickerTrigger.classList.remove('has-value');
+    editingEventId = null;
+
+    recurrence = {
+        type: 'none',
+        interval: 1,
+        days: []
+    };
+    currentInvitees = [];
+    updateRecurrencePreview();
+
+    selectedTagColor = '#f5f5f5';
+    currentLocationCoords = null;
+    document.getElementById('location-coords-input').value = '';
+    document.getElementById('location-section').style.display = 'none';
+    document.getElementById('toggle-location-btn')?.classList.remove('active');
+    document.getElementById('toggle-invite-btn')?.classList.remove('active');
+    eventType = 'event';
+    document.getElementById('event-type-toggle').style.display = '';
+    const gregCheck = document.getElementById('event-all-day-greg');
+    if (gregCheck) gregCheck.checked = false;
+
+    const descField = document.getElementById('event-description');
+    if (descField) descField.value = '';
+    currentChecklistItems = [];
+    hideInlineChecklist();
+    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
+    if (toggleBtn) {
+        toggleBtn.style.display = 'none';
+        toggleBtn.classList.remove('active');
+    }
+
+    updateAllDayAndTimeRows();
+    openModal(eventModal);
+    requestAnimationFrame(() => {
+        setEventType('event');
+    });
+});
+
+// Save event
+if (saveEventBtn) saveEventBtn.onclick = saveEvent;
+
+// Modal close buttons
+closeModalBtns.forEach(btn => btn.addEventListener('click', () => closeModal(eventModal)));
+eventDetailModal.addEventListener('click', e => {
+    if (e.target === eventDetailModal) closeModal(eventDetailModal);
+});
+[eventModal].forEach(m => m?.addEventListener('click', e => {
+    if (e.target === m) closeModal(m);
+}));
+
+// View tabs
+viewTabsEl.querySelectorAll('.view-tab').forEach(btn => btn.addEventListener('click', () => {
+    viewMode = btn.dataset.view;
+    localStorage.setItem('ravlo-view-mode', viewMode);
+    renderCalendar();
+    animateTabIndicator();
+}));
+
+// Month/Year popup triggers
+if (gregMonthBtn) gregMonthBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    openGregMonthPopup();
+});
+if (gregYearBtn) gregYearBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    openGregYearPopup();
+});
+
+if (confirmYesBtn) confirmYesBtn.addEventListener('click', async () => {
+    var id = eventDetailConfirm.dataset.eventId;
+    if (id) await deleteEventById(id);
+    closeModal(eventDetailModal);
+    hideDeleteConfirmation();
+});
+if (confirmNoBtn) confirmNoBtn.addEventListener('click', hideDeleteConfirmation);
+
+// Time spinner
+document.addEventListener('click', function(e) {
+    const arrow = e.target.closest('.time-arrow');
+    if (!arrow) return;
+
+    const targetId = arrow.dataset.target;
+    const step = parseInt(arrow.dataset.step, 10);
+    const input = document.getElementById(targetId);
+    if (!input) return;
+
+    const prefix = 'greg';
+    const isEnd = targetId.includes('end');
+
+    let val = parseInt(input.value, 10);
+    if (isNaN(val)) val = 0;
+    let newVal = val + step;
+
+    if (targetId.includes('hour')) {
+        if (newVal < 0) newVal = 23;
+        if (newVal > 23) newVal = 0;
+    } else if (targetId.includes('minute')) {
+        if (newVal < 0) newVal = 45;
+        if (newVal > 45) newVal = 0;
+        newVal = Math.round(newVal / 15) * 15;
+    }
+
+    const g = getSelectedGregFor(prefix);
+    if (g && !isEnd && isToday(g.gy, g.gm, g.gd)) {
+        const now = new Date();
+        const curHour = now.getHours();
+        const curMinute = now.getMinutes();
+        const startHourEl = document.getElementById(prefix + '-hour');
+        const startMinuteEl = document.getElementById(prefix + '-minute');
+        let testHour = targetId.includes('hour') ? newVal : parseInt(startHourEl?.value || 0);
+        let testMin = targetId.includes('minute') ? newVal : parseInt(startMinuteEl?.value || 0);
+        const testTotal = testHour * 60 + testMin;
+        const nowTotal = curHour * 60 + curMinute;
+        if (testTotal <= nowTotal) return;
+    }
+
+    input.value = String(newVal).padStart(2, '0');
+
+    if (!isEnd) syncEndTimeOnStartChange(prefix);
+
+    const obj = {
+        value: val
+    };
+    gsap.to(obj, {
+        value: newVal,
+        duration: 0.3,
+        ease: 'power2.out',
+        onUpdate: function() {
+            input.value = String(Math.round(obj.value)).padStart(2, '0');
+        }
+    });
+
+    gsap.fromTo(input, {
+        scale: 1
+    }, {
+        scale: 1.1,
+        duration: 0.15,
+        yoyo: true,
+        repeat: 1,
+        ease: 'power2.out'
+    });
+
+    gsap.fromTo(arrow, {
+        scale: 1
+    }, {
+        scale: 1.3,
+        duration: 0.2,
+        yoyo: true,
+        repeat: 1,
+        ease: 'power2.out'
+    });
+
+    validateTimeInput(prefix, isEnd);
+});
+
+// Time input validation listeners
+['greg'].forEach(prefix => {
+    const startHour = document.getElementById(prefix + '-hour');
+    const startMin = document.getElementById(prefix + '-minute');
+    const endHour = document.getElementById(prefix + '-end-hour');
+    const endMin = document.getElementById(prefix + '-end-minute');
+
+    if (startHour) {
+        startHour.addEventListener('input', () => {
+            validateTimeInput(prefix, false);
+            syncEndTimeOnStartChange(prefix);
+        });
+        startHour.addEventListener('change', () => {
+            validateTimeInput(prefix, false);
+            syncEndTimeOnStartChange(prefix);
+        });
+    }
+    if (startMin) {
+        startMin.addEventListener('input', () => {
+            validateTimeInput(prefix, false);
+            syncEndTimeOnStartChange(prefix);
+        });
+        startMin.addEventListener('change', () => {
+            validateTimeInput(prefix, false);
+            syncEndTimeOnStartChange(prefix);
+        });
+    }
+    if (endHour) {
+        endHour.addEventListener('input', () => validateTimeInput(prefix, true));
+        endHour.addEventListener('change', () => validateTimeInput(prefix, true));
+    }
+    if (endMin) {
+        endMin.addEventListener('input', () => validateTimeInput(prefix, true));
+        endMin.addEventListener('change', () => validateTimeInput(prefix, true));
+    }
+});
+
+// All-day toggle
+document.getElementById('event-all-day-greg')?.addEventListener('change', function() {
+    const timeRow = document.querySelector('#greg-picker-popup .picker-time-row');
+    if (timeRow) timeRow.style.display = this.checked ? 'none' : '';
+});
+
+// --------- ICON PICKER BUTTON ---------
+function updateIconButton() {
+    const btn = document.getElementById('toggle-icon-btn');
+    if (!btn) return;
+    if (selectedIcon) {
+        btn.innerHTML = selectedIcon;
+    } else {
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
+    }
+}
+
+function openIconModal() {
+    const modal = document.getElementById('icon-modal');
+    const grid = document.getElementById('icon-grid');
+    if (!modal || !grid) return;
+
+    grid.innerHTML = '';
+    ICON_OPTIONS.forEach((iconObj) => {
+        const item = document.createElement('div');
+        item.className = 'icon-item';
+        if (selectedIcon === iconObj.svg) {
+            item.classList.add('selected');
+        }
+        item.innerHTML = iconObj.svg;
+        item.addEventListener('click', () => {
+            selectedIcon = iconObj.svg;
+            updateIconButton();
+
+            document.getElementById('toggle-icon-btn')?.classList.add('active');
+            grid.querySelectorAll('.icon-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            selectedIcon = iconObj.svg;
+            const iconBtn = document.getElementById('toggle-icon-btn');
+            if (iconBtn) {
+                iconBtn.classList.toggle('active', !!selectedIcon);
+            }
+            selectedIcon = ev.icon || null;
+
+            selectedIcon = null;
+            updateIconButton();
+        });
+        grid.appendChild(item);
+    });
+
+    openModal(modal);
+}
+
+document.getElementById('toggle-icon-btn')?.addEventListener('click', function() {
+    const btn = this;
+    if (btn.classList.contains('active')) {
+        selectedIcon = null;
+        updateIconButton();
+        btn.classList.remove('active');
+    } else {
+        openIconModal();
+    }
+});
+
+document.getElementById('icon-done-btn')?.addEventListener('click', () => {
+    closeModal(document.getElementById('icon-modal'));
+});
+
+document.getElementById('icon-modal-close')?.addEventListener('click', () => {
+    closeModal(document.getElementById('icon-modal'));
+});
+
+document.getElementById('icon-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeModal(this);
+});
 
 /* --------- INVITE MODAL HANDLERS (Connected to Dashboard Ecosystem) --------- */
 document.getElementById('toggle-invite-btn')?.addEventListener('click', () => {
@@ -3085,7 +4602,10 @@ async function searchInviteUsers(query) {
     resultsDiv.innerHTML = '<div style="color:#aaa;">Searching...</div>';
 
     try {
-        let { data: users, error } = await sb
+        let {
+            data: users,
+            error
+        } = await sb
             .from('profiles')
             .select('id, first_name, last_name, username, photo_url')
             .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%`)
@@ -3126,7 +4646,9 @@ async function searchInviteUsers(query) {
             return;
         }
 
-        const { data: allConns } = await sb
+        const {
+            data: allConns
+        } = await sb
             .from('dashboard_connectionrequests')
             .select('from_id, to_id, status')
             .or(
@@ -3199,14 +4721,20 @@ async function searchInviteUsers(query) {
 
 function inviteConnectedUser(userId, name) {
     if (currentInvitees.some(inv => inv.id === userId)) return;
-    currentInvitees.push({ id: userId, name });
+    currentInvitees.push({
+        id: userId,
+        name
+    });
     updateInviteSelectedUI();
     document.getElementById('invite-search-input').dispatchEvent(new Event('input'));
 }
 
 async function sendConnectionInvite(userId, name) {
     try {
-        const { data: existing } = await sb
+        // Check if there's already any request between these two users
+        const {
+            data: existing
+        } = await sb
             .from('dashboard_connectionrequests')
             .select('id, status')
             .or(
@@ -3225,9 +4753,17 @@ async function sendConnectionInvite(userId, name) {
             return;
         }
 
-        const { data: newReq, error } = await sb
+        // Insert new request
+        const {
+            data: newReq,
+            error
+        } = await sb
             .from('dashboard_connectionrequests')
-            .insert({ from_id: currentUser.id, to_id: userId, status: 'pending' })
+            .insert({
+                from_id: currentUser.id,
+                to_id: userId,
+                status: 'pending'
+            })
             .select()
             .single();
         if (error) throw error;
@@ -3270,11 +4806,349 @@ function escHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// Copy non-user invite link
+/* --------- /* --------- LOCATION MODAL HANDLERS (with place name search) --------- */
+let locationSearchTimer = null;
+
+document.getElementById('toggle-location-btn')?.addEventListener('click', function() {
+    const btn = this;
+    if (btn.classList.contains('active')) {
+        currentLocationCoords = null;
+        currentLocationName = '';
+        currentLocationAddress = null;
+        document.getElementById('location-coords-input').value = '';
+        if (locationMarker) {
+            locationMap.removeLayer(locationMarker);
+            locationMarker = null;
+        }
+        btn.classList.remove('active');
+        closeModal(document.getElementById('location-modal'));
+        return;
+    }
+
+    const searchInput = document.getElementById('location-search-input');
+    const suggestions = document.getElementById('location-suggestions');
+    const infoEl = document.getElementById('selected-location-info');
+
+    searchInput.value = '';
+    suggestions.innerHTML = '';
+    suggestions.style.display = 'none';
+    infoEl.textContent = '';
+
+    if (currentLocationName && currentLocationCoords) {
+        searchInput.value = currentLocationName;
+        infoEl.textContent = `${currentLocationName} (${currentLocationCoords.lat.toFixed(5)}, ${currentLocationCoords.lng.toFixed(5)})`;
+    } else if (currentLocationCoords) {
+        infoEl.textContent = `${currentLocationCoords.lat.toFixed(5)}, ${currentLocationCoords.lng.toFixed(5)}`;
+    }
+
+    openModal(document.getElementById('location-modal'));
+
+    setTimeout(() => {
+        initLocationMap('location-modal-map');
+        if (locationMap) {
+            locationMap.invalidateSize();
+            if (locationMarker) locationMap.removeLayer(locationMarker);
+            if (currentLocationCoords) {
+                updateMapFromCoords(currentLocationCoords.lat, currentLocationCoords.lng);
+            }
+        }
+    }, 200);
+});
+
+// Place name search with debounce
+document.getElementById('location-search-input')?.addEventListener('input', function() {
+    clearTimeout(locationSearchTimer);
+    const query = this.value.trim();
+    const suggestionsList = document.getElementById('location-suggestions');
+
+    if (query.length < 2) {
+        suggestionsList.innerHTML = '';
+        suggestionsList.style.display = 'none';
+        return;
+    }
+
+    locationSearchTimer = setTimeout(async () => {
+        try {
+            // 1. Photon URL
+            const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`;
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            suggestionsList.innerHTML = '';
+            // 2. Data in features key
+            if (!data.features || data.features.length === 0) {
+                suggestionsList.innerHTML = '<li style="color:#888;">No results found</li>';
+                suggestionsList.style.display = 'block';
+                return;
+            }
+
+            // 3. Iterate features
+            data.features.forEach(place => {
+                const li = document.createElement('li');
+                const props = place.properties;
+                const mainName = props.name || props.street || 'Unnamed place';
+                const city = props.city || props.state || '';
+                const country = props.country || '';
+                let shortAddress = [city, country].filter(Boolean).join(', ');
+
+                li.innerHTML = `<span style="font-weight:600; color:#fff;">${mainName}</span>` +
+                    (shortAddress ? `<br><span style="font-size:11px; color:#888;">${shortAddress}</span>` : '');
+
+                // 4. Coordinates: [lng, lat] order
+                const [lng, lat] = place.geometry.coordinates;
+
+                li.addEventListener('click', () => {
+                    document.getElementById('location-search-input').value = mainName;
+                    document.getElementById('selected-location-info').textContent =
+                        `${mainName} (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+
+                    suggestionsList.innerHTML = '';
+                    suggestionsList.style.display = 'none';
+
+                    updateMapFromCoords(lat, lng);
+
+                    currentLocationCoords = {
+                        lat,
+                        lng
+                    };
+                    currentLocationName = mainName;
+                    currentLocationAddress = {
+                        city: city,
+                        country: country,
+                    };
+                });
+
+                suggestionsList.appendChild(li);
+            });
+
+            suggestionsList.style.display = 'block';
+        } catch (err) {
+            console.error('Photon Geocoding error:', err);
+            let errorMsg = 'Error fetching data. ';
+            if (err.message.includes('Failed to fetch')) {
+                errorMsg += 'Please check your internet connection.';
+            } else {
+                errorMsg += err.message;
+            }
+            suggestionsList.innerHTML = `<li style="color:#ff6b6b;">⚠️ ${errorMsg}</li>`;
+            suggestionsList.style.display = 'block';
+        }
+    }, 300);
+});
+
+// Hide suggestions on outside click
+document.addEventListener('click', (e) => {
+    const suggestions = document.getElementById('location-suggestions');
+    const searchInput = document.getElementById('location-search-input');
+    if (suggestions && !suggestions.contains(e.target) && e.target !== searchInput) {
+        suggestions.style.display = 'none';
+    }
+});
+
+// Done button for location save
+document.getElementById('location-done-btn')?.addEventListener('click', () => {
+    if (currentLocationAddress) {
+        // ... (existing address handling)
+    } else if (currentLocationName) {
+        // fallback
+    } else if (currentLocationCoords) {
+        // coordinates only
+    } else {
+        showToast('Please select a location.');
+        return;
+    }
+
+    closeModal(document.getElementById('location-modal'));
+    document.getElementById('toggle-location-btn')?.classList.add('active');
+});
+
+document.getElementById('location-modal-close')?.addEventListener('click', () => {
+    closeModal(document.getElementById('location-modal'));
+});
+
+/* --------- CHECKLIST MODAL HANDLERS --------- */
+document.getElementById('toggle-checklist-mode-btn')?.addEventListener('click', function() {
+    const btn = this;
+    if (btn.classList.contains('active')) {
+        hideInlineChecklist();
+    } else {
+        tempChecklistItems = JSON.parse(JSON.stringify(currentChecklistItems));
+        renderChecklistModalItems();
+        openModal(document.getElementById('checklist-modal'));
+    }
+});
+
+document.getElementById('checklist-modal-add-btn')?.addEventListener('click', () => {
+    const input = document.getElementById('checklist-modal-input');
+    const text = input.value.trim();
+    if (text) {
+        tempChecklistItems.push({
+            text,
+            done: false
+        });
+        renderChecklistModalItems();
+        input.value = '';
+    }
+});
+
+document.getElementById('checklist-done-btn')?.addEventListener('click', () => {
+    currentChecklistItems = tempChecklistItems;
+    // ❌ دیگر به توضیحات اضافه نمیشه
+    closeModal(document.getElementById('checklist-modal'));
+    document.getElementById('toggle-checklist-mode-btn')?.classList.add('active');
+    // نمایش چک‌لیست درون‌خطی
+    showInlineChecklist();
+});
+
+document.getElementById('checklist-modal-close')?.addEventListener('click', () => {
+    closeModal(document.getElementById('checklist-modal'));
+});
+
+// Copy invite code
+document.getElementById('copy-invite-code-btn')?.addEventListener('click', () => {
+    const code = document.getElementById('invite-code-text').textContent;
+    navigator.clipboard.writeText(code).then(() => showToast('Code copied!'));
+});
+
+// Clear location (old inline)
+document.getElementById('clear-location-btn')?.addEventListener('click', function() {
+    document.getElementById('location-coords-input').value = '';
+    currentLocationCoords = null;
+    currentLocationName = '';
+    if (locationMarker) {
+        locationMap.removeLayer(locationMarker);
+        locationMarker = null;
+    }
+    document.getElementById('toggle-location-btn')?.classList.remove('active');
+});
+
+// Coordinate input (old one)
+document.getElementById('location-coords-input')?.addEventListener('input', function() {
+    const coords = parseCoordinates(this.value.trim());
+    if (coords) {
+        currentLocationCoords = coords;
+        updateMapFromCoords(coords.lat, coords.lng);
+    } else {
+        currentLocationCoords = null;
+    }
+});
+
+/* =========================== SIDEBAR OPEN/CLOSE =========================== */
+(function() {
+    const toggleBtn = document.getElementById('menu-toggle-btn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const closeBtn = document.getElementById('sidebar-close-btn');
+
+    if (!toggleBtn || !sidebar || !overlay) return;
+
+    let isOpen = false;
+
+    function openSidebar() {
+        if (isOpen) return;
+        isOpen = true;
+        toggleBtn.classList.add('open');
+        overlay.classList.add('open');
+        gsap.to(sidebar, {
+            x: 0,
+            duration: 0.5,
+            ease: 'power3.out'
+        });
+    }
+
+    function closeSidebar() {
+        if (!isOpen) return;
+        isOpen = false;
+        toggleBtn.classList.remove('open');
+        overlay.classList.remove('open');
+        gsap.to(sidebar, {
+            x: '-100%',
+            duration: 0.4,
+            ease: 'power3.in'
+        });
+    }
+
+    toggleBtn.addEventListener('click', () => {
+        isOpen ? closeSidebar() : openSidebar();
+    });
+
+    overlay.addEventListener('click', closeSidebar);
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeSidebar);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen) {
+            closeSidebar();
+        }
+    });
+
+    sidebar.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', () => {
+            setTimeout(closeSidebar, 150);
+        });
+    });
+})();
+
+async function cleanupOldCompletions() {
+    if (!currentUser) return;
+    const now = new Date();
+    const twentyEightDaysMs = 28 * 24 * 60 * 60 * 1000;
+    const twentyEightDaysAgo = new Date(now.getTime() - twentyEightDaysMs);
+
+    for (let i = events.length - 1; i >= 0; i--) {
+        const ev = events[i];
+
+        // 1. رویدادهای تکرارشونده: فقط رکوردهای completion قدیمی را پاک کن
+        if (ev.recurrence_type !== 'none') {
+            if (ev.completed_timestamps && Object.keys(ev.completed_timestamps).length > 0) {
+                let changed = false;
+                for (let dateStr in ev.completed_timestamps) {
+                    const completedAt = new Date(ev.completed_timestamps[dateStr]);
+                    if (completedAt < twentyEightDaysAgo) {
+                        if (ev.completed_occurrences) {
+                            ev.completed_occurrences = ev.completed_occurrences.filter(d => d !== dateStr);
+                        }
+                        delete ev.completed_timestamps[dateStr];
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    await updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    });
+                }
+            }
+            continue; // به هیچ عنوان خود رویداد حذف نشود
+        }
+
+        if (ev.start_date) {
+            const startDate = new Date(ev.start_date);
+            if (startDate < twentyEightDaysAgo) {
+                await deleteEventFromDB(ev.id);
+                events.splice(i, 1); // از آرایه محلی هم حذف کن
+            }
+        }
+        // پاکسازی دعوت‌های ردشده که ۱ روز از ردشان گذشته (دلخواه)
+await sb.from('ravlo')
+    .delete()
+    .eq('user_id', currentUser.id)
+    .eq('invitation_status', 'declined')
+    .lt('updated_at', new Date(Date.now() - 24*60*60*1000).toISOString()); // اگر ستون updated_at داری
+    }
+}
+
 function copyNonUserInviteLink() {
     const linkEl = document.getElementById('invite-nonuser-link');
     if (!linkEl) return;
     const text = linkEl.textContent;
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
             showToast('Link copied to clipboard!');
@@ -3310,6 +5184,7 @@ function openInvitationResponse(ev) {
     const container = document.getElementById('invitation-detail-container');
     container.innerHTML = '';
 
+    // هدر جزئیات (رنگ + آیکون + عنوان)
     const headerDiv = document.createElement('div');
     headerDiv.className = 'invitation-detail-header';
 
@@ -3340,15 +5215,25 @@ function openInvitationResponse(ev) {
 
     container.appendChild(headerDiv);
 
+    // تاریخ و زمان
     const start = ev.start_date ? new Date(ev.start_date) : null;
     const end = ev.end_date ? new Date(ev.end_date) : null;
-    let dateText = '', timeText = '';
+    let dateText = '',
+        timeText = '';
     if (start) {
-        dateText = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        dateText = start.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
         if (ev.all_day) {
             timeText = 'All day';
         } else {
-            const fmtTime = d => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const fmtTime = d => d.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
             timeText = fmtTime(start);
             if (end) timeText += ' - ' + fmtTime(end);
         }
@@ -3360,18 +5245,21 @@ function openInvitationResponse(ev) {
     timeP.innerHTML = `<strong>Time:</strong> ${timeText}`;
     container.appendChild(timeP);
 
+    // توضیحات
     if (ev.description && ev.description.trim()) {
         const descP = document.createElement('p');
         descP.innerHTML = `<strong>Description:</strong> ${ev.description}`;
         container.appendChild(descP);
     }
 
+    // مهمان‌ها
     if (ev.invitees && ev.invitees.length > 0) {
         const inviteesP = document.createElement('p');
         inviteesP.innerHTML = `<strong>Invitees:</strong> ${ev.invitees.join(', ')}`;
         container.appendChild(inviteesP);
     }
 
+    // مکان
     if (ev.location && ev.location.lat && ev.location.lng) {
         const locP = document.createElement('p');
         locP.innerHTML = `<strong>Location:</strong> ${ev.location.lat.toFixed(5)}, ${ev.location.lng.toFixed(5)}`;
@@ -3380,9 +5268,12 @@ function openInvitationResponse(ev) {
 
     openModal(document.getElementById('invitation-response-modal'));
 
+    // دکمه Accept
     document.getElementById('invitation-accept-btn').onclick = async () => {
         showGlobalLoader();
-        await updateEventInDB(ev.id, { invitation_status: 'accepted' });
+        await updateEventInDB(ev.id, {
+            invitation_status: 'accepted'
+        });
         const localEv = events.find(e => e.id === ev.id);
         if (localEv) localEv.invitation_status = 'accepted';
         hideGlobalLoader();
@@ -3390,13 +5281,16 @@ function openInvitationResponse(ev) {
         renderCalendar();
     };
 
+    // دکمه Decline
     document.getElementById('invitation-decline-btn').onclick = async () => {
         showGlobalLoader();
         await deleteEventFromDB(ev.id);
         events = events.filter(e => e.id !== ev.id);
 
         if (ev.parent_event_id) {
-            const { data: parentData } = await sb
+            const {
+                data: parentData
+            } = await sb
                 .from('ravlo')
                 .select('user_id, title')
                 .eq('id', ev.parent_event_id)
@@ -3426,123 +5320,7 @@ function openInvitationResponse(ev) {
     };
 }
 
-/* =========================== HIDE INLINE CHECKLIST ============================ */
-function hideInlineChecklist() {
-    const editor = document.getElementById('checklist-inline-editor');
-    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
-    if (editor) editor.style.display = 'none';
-    if (toggleBtn) toggleBtn.classList.remove('active');
-}
-
-/* =========================== SHOW INLINE CHECKLIST ============================ */
-function showInlineChecklist() {
-    const editor = document.getElementById('checklist-inline-editor');
-    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
-    if (editor) editor.style.display = 'block';
-    if (toggleBtn) toggleBtn.classList.add('active');
-    renderInlineChecklistItems(currentChecklistItems);
-}
-
-/* =========================== RENDER INLINE CHECKLIST ITEMS ============================ */
-function renderInlineChecklistItems(items) {
-    const container = document.getElementById('checklist-inline-items');
-    if (!container) return;
-    container.innerHTML = '';
-
-    items.forEach((item, index) => {
-        const row = document.createElement('div');
-        row.className = 'checklist-inline-row';
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = 'neon-checkbox';
-        cb.checked = item.done;
-        cb.addEventListener('change', function() {
-            item.done = this.checked;
-        });
-
-        const textSpan = document.createElement('span');
-        textSpan.className = 'checklist-text';
-        textSpan.textContent = item.text;
-        textSpan.setAttribute('contenteditable', 'true');
-        textSpan.addEventListener('input', function() {
-            item.text = this.textContent.trim();
-        });
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'delete-item-btn';
-        delBtn.innerHTML = '✕';
-        delBtn.addEventListener('click', () => {
-            currentChecklistItems.splice(index, 1);
-            renderInlineChecklistItems(currentChecklistItems);
-        });
-
-        const addSubBtn = document.createElement('button');
-        addSubBtn.className = 'add-subtask-btn';
-        addSubBtn.innerHTML = '+';
-        addSubBtn.title = 'Add subtask';
-        addSubBtn.addEventListener('click', () => {
-            if (!item.subtasks) item.subtasks = [];
-            item.subtasks.push({ text: '', done: false });
-            renderInlineChecklistItems(currentChecklistItems);
-            const subRows = container.querySelectorAll('.subtask-row .checklist-text');
-            if (subRows.length > 0) {
-                const last = subRows[subRows.length - 1];
-                last.focus();
-                const range = document.createRange();
-                range.selectNodeContents(last);
-                range.collapse(false);
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(range);
-            }
-        });
-
-        row.appendChild(cb);
-        row.appendChild(textSpan);
-        row.appendChild(addSubBtn);
-        row.appendChild(delBtn);
-        container.appendChild(row);
-
-        if (item.subtasks && item.subtasks.length > 0) {
-            item.subtasks.forEach((sub, subIndex) => {
-                const subRow = document.createElement('div');
-                subRow.className = 'checklist-inline-row subtask-row';
-
-                const subCb = document.createElement('input');
-                subCb.type = 'checkbox';
-                subCb.className = 'neon-checkbox';
-                subCb.checked = sub.done;
-                subCb.addEventListener('change', function() {
-                    sub.done = this.checked;
-                });
-
-                const subText = document.createElement('span');
-                subText.className = 'checklist-text';
-                subText.textContent = sub.text;
-                subText.setAttribute('contenteditable', 'true');
-                subText.addEventListener('input', function() {
-                    sub.text = this.textContent.trim();
-                });
-
-                const subDelBtn = document.createElement('button');
-                subDelBtn.className = 'delete-item-btn';
-                subDelBtn.innerHTML = '✕';
-                subDelBtn.addEventListener('click', () => {
-                    item.subtasks.splice(subIndex, 1);
-                    renderInlineChecklistItems(currentChecklistItems);
-                });
-
-                subRow.appendChild(subCb);
-                subRow.appendChild(subText);
-                subRow.appendChild(subDelBtn);
-                container.appendChild(subRow);
-            });
-        }
-    });
-}
-
-/* =========================== RENDER CHECKLIST IN DETAIL ============================ */
+// =========================== RENDER CHECKLIST IN DETAIL ============================
 function renderChecklistInDetail(ev) {
     const container = document.getElementById('detail-checklist-container');
     if (!container) return;
@@ -3594,6 +5372,7 @@ function renderChecklistInDetail(ev) {
             cb.style.accentColor = 'var(--accent)';
             cb.style.flexShrink = '0';
 
+            // متن
             const textSpan = document.createElement('span');
             textSpan.className = 'detail-checklist-text';
             textSpan.textContent = item.text || 'Untitled';
@@ -3630,6 +5409,47 @@ function renderChecklistInDetail(ev) {
     if (allDone && ev.checklist.length > 0) {
         markTaskDone(ev);
     }
+
+    function markTaskDone(ev) {
+    const occurrenceDate = ev.occurrenceDate; 
+
+    if (occurrenceDate && ev.recurrence_type && ev.recurrence_type !== 'none') {
+        if (!ev.completed_occurrences) ev.completed_occurrences = [];
+        if (!ev.completed_occurrences.includes(occurrenceDate)) {
+            ev.completed_occurrences.push(occurrenceDate);
+            if (!ev.completed_timestamps) ev.completed_timestamps = {};
+            ev.completed_timestamps[occurrenceDate] = new Date().toISOString();
+
+            updateEventInDB(ev.id, {
+                completed_occurrences: ev.completed_occurrences,
+                completed_timestamps: ev.completed_timestamps
+            }).then(() => {
+                if (currentUser) removeNotificationsForEvent(ev.id, currentUser.id);
+                showToast('✅ Checklist completed for this occurrence. Auto‑deleted in 28 days.');
+                closeModal(eventDetailModal);
+                renderCalendar();
+                updateNotificationDot();
+            }).catch(() => showToast('Error updating task.'));
+        }
+        return;
+    }
+
+    if (ev.status === 'done' || ev.status === 'completed') return;
+
+    ev.status = 'done';
+    ev.completed_at = new Date().toISOString();
+
+    updateEventInDB(ev.id, {
+        status: 'done',
+        completed_at: ev.completed_at
+    }).then(async () => {
+        if (currentUser) await removeNotificationsForEvent(ev.id, currentUser.id);
+        showToast('🎉 Task marked as Done!');
+        closeModal(eventDetailModal);
+        renderCalendar();
+        updateNotificationDot();
+    }).catch(() => showToast('Error completing task.'));
+}
 
     listContainer.querySelectorAll('.neon-checkbox').forEach(cb => {
         cb.addEventListener('change', function() {
@@ -3681,7 +5501,7 @@ function renderChecklistInDetail(ev) {
     });
 }
 
-/* =========================== CHECK ALL CHECKLIST DONE ============================ */
+// =========================== CHECK ALL CHECKLIST DONE ============================
 function checkAllChecklistDone(ev) {
     if (!ev.checklist || ev.checklist.length === 0) return;
 
@@ -3700,26 +5520,132 @@ function checkAllChecklistDone(ev) {
     }
 }
 
-/* =========================== MARK TASK DONE ============================ */
+// =========================== MARK TASK DONE ============================
 function markTaskDone(ev) {
     if (ev.status === 'done') return;
 
     ev.status = 'done';
     ev.completed_at = new Date().toISOString();
     
-    updateEventInDB(ev.id, { status: 'done', completed_at: ev.completed_at })
-        .then(async () => {
-            if (currentUser) {
-                await removeNotificationsForEvent(ev.id, currentUser.id);
+    updateEventInDB(ev.id, { 
+        status: 'done', 
+        completed_at: ev.completed_at 
+    }).then(async () => {
+        if (currentUser) {
+            await removeNotificationsForEvent(ev.id, currentUser.id);
+        }
+        
+        // ─── وضعیت تکمیل (Complete / Undo) ───
+const completeBtn = document.getElementById('detail-complete-btn');
+if (completeBtn) {
+    completeBtn.style.display = isInvitee ? 'none' : '';
+
+    if (isCompleted) {
+        completeBtn.textContent = 'Undo';
+        completeBtn.onclick = () => {
+            if (dateForCompletion && ev.recurrence_type !== 'none') {
+                var idx = ev.completed_occurrences.indexOf(dateForCompletion);
+                if (idx > -1) ev.completed_occurrences.splice(idx, 1);
+                if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
+                    delete ev.completed_timestamps[dateForCompletion];
+                }
+                updateEventInDB(ev.id, {
+                    completed_occurrences: ev.completed_occurrences,
+                    completed_timestamps: ev.completed_timestamps
+                }).then(async () => {
+                    // ✅ بازسازی نوتیفیکیشن اگر امروز است
+                    if (currentUser) {
+                        const today = new Date();
+                        const evDate = new Date(ev.start_date);
+                        if (evDate.getFullYear() === today.getFullYear() &&
+                            evDate.getMonth() === today.getMonth() &&
+                            evDate.getDate() === today.getDate()) {
+                            await addNotificationToUser(
+                                currentUser.id,
+                                'event',
+                                '📅 Event Today',
+                                `${ev.title || 'Untitled'} is today!`,
+                                '#',
+                                ev.id
+                            );
+                        }
+                    }
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => showToast('Error undoing.'));
+            } else {
+                updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
+                    ev.status = 'pending';
+                    ev.completed_at = null;
+                    if (currentUser) {
+                        const today = new Date();
+                        const evDate = new Date(ev.start_date);
+                        if (evDate.getFullYear() === today.getFullYear() &&
+                            evDate.getMonth() === today.getMonth() &&
+                            evDate.getDate() === today.getDate()) {
+                            await addNotificationToUser(
+                                currentUser.id,
+                                'event',
+                                '📅 Event Today',
+                                `${ev.title || 'Untitled'} is today!`,
+                                '#',
+                                ev.id
+                            );
+                        }
+                    }
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => showToast('Error undoing.'));
             }
-            showToast('Task marked as Done!');
-            renderCalendar();
-            updateNotificationDot();
-        })
-        .catch(() => showToast('Error marking task as done.'));
+        };
+    } else {
+        completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
+        completeBtn.onclick = () => {
+            if (dateForCompletion && ev.recurrence_type !== 'none') {
+                if (!ev.completed_occurrences) ev.completed_occurrences = [];
+                ev.completed_occurrences.push(dateForCompletion);
+                if (!ev.completed_timestamps) ev.completed_timestamps = {};
+                ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
+                updateEventInDB(ev.id, {
+                    completed_occurrences: ev.completed_occurrences,
+                    completed_timestamps: ev.completed_timestamps
+                }).then(async () => {
+                    if (currentUser) {
+                        await removeNotificationsForEvent(ev.id, currentUser.id);
+                    }
+                    showToast('This occurrence will be auto-deleted after 28 days.');
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => showToast('Error completing.'));
+            } else {
+                var newStatus = ev.type === 'task' ? 'done' : 'completed';
+                var payload = { status: newStatus, completed_at: new Date().toISOString() };
+                updateEventInDB(ev.id, payload).then(async () => {
+                    ev.status = newStatus;
+                    ev.completed_at = payload.completed_at;
+                    if (currentUser) {
+                        await removeNotificationsForEvent(ev.id, currentUser.id);
+                    }
+                    showToast('This item will be auto-deleted after 28 days.');
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                    updateNotificationDot();
+                }).catch(() => showToast('Error completing.'));
+            }
+        };
+    }
+}
+        
+        showToast('Task marked as Done!');
+        renderCalendar();
+        updateNotificationDot();
+    }).catch(() => showToast('Error marking task as done.'));
 }
 
-/* =========================== POSTPONE ============================ */
+/* =========================== POSTPONE =========================== */
 function openPostponeModal() {
     if (!currentDetailEvent) return;
     document.getElementById('postpone-event-title').textContent =
@@ -3744,6 +5670,7 @@ function applyPostponeOffset(minutes) {
 
     updateEventInDB(ev.id, payload)
         .then(() => {
+            // به‌روزرسانی در آرایه محلی
             const localEv = events.find(e => e.id === ev.id);
             if (localEv) {
                 if (payload.start_date) localEv.start_date = payload.start_date;
@@ -3756,7 +5683,7 @@ function applyPostponeOffset(minutes) {
         .catch(err => showToast('Postpone failed: ' + err.message));
 }
 
-// Postpone modal event listeners
+// گوش‌دهندگان دکمه‌ها
 document.getElementById('postpone-modal').addEventListener('click', function(e) {
     const optionBtn = e.target.closest('.postpone-option');
     if (!optionBtn) return;
@@ -3783,59 +5710,7 @@ document.getElementById('postpone-modal-close').addEventListener('click', () => 
     closeModal(document.getElementById('postpone-modal'));
 });
 
-/* =========================== CLEANUP OLD COMPLETIONS ============================ */
-async function cleanupOldCompletions() {
-    if (!currentUser) return;
-    const now = new Date();
-    const twentyEightDaysMs = 28 * 24 * 60 * 60 * 1000;
-    const twentyEightDaysAgo = new Date(now.getTime() - twentyEightDaysMs);
-
-    for (let i = events.length - 1; i >= 0; i--) {
-        const ev = events[i];
-
-        // 1. For recurring events: clean only old completion records
-        if (ev.recurrence_type !== 'none') {
-            if (ev.completed_timestamps && Object.keys(ev.completed_timestamps).length > 0) {
-                let changed = false;
-                for (let dateStr in ev.completed_timestamps) {
-                    const completedAt = new Date(ev.completed_timestamps[dateStr]);
-                    if (completedAt < twentyEightDaysAgo) {
-                        if (ev.completed_occurrences) {
-                            ev.completed_occurrences = ev.completed_occurrences.filter(d => d !== dateStr);
-                        }
-                        delete ev.completed_timestamps[dateStr];
-                        changed = true;
-                    }
-                }
-                if (changed) {
-                    await updateEventInDB(ev.id, {
-                        completed_occurrences: ev.completed_occurrences,
-                        completed_timestamps: ev.completed_timestamps
-                    });
-                }
-            }
-            continue; // Do not delete the recurring event itself
-        }
-
-        // 2. For non-recurring events: delete if older than 28 days
-        if (ev.start_date) {
-            const startDate = new Date(ev.start_date);
-            if (startDate < twentyEightDaysAgo) {
-                await deleteEventFromDB(ev.id);
-                events.splice(i, 1);
-            }
-        }
-    }
-
-    // Clean up declined invitations older than 1 day (optional)
-    await sb.from('ravlo')
-        .delete()
-        .eq('user_id', currentUser.id)
-        .eq('invitation_status', 'declined')
-        .lt('updated_at', new Date(Date.now() - 24*60*60*1000).toISOString());
-}
-
-/* =========================== CLEANUP CHECKLIST FROM DESCRIPTIONS ============================ */
+// =========================== CLEANUP CHECKLIST FROM DESCRIPTIONS ============================
 async function cleanupChecklistFromDescriptions() {
     if (!currentUser) return;
     
@@ -3853,6 +5728,7 @@ async function cleanupChecklistFromDescriptions() {
         for (const ev of eventsData) {
             if (!ev.description) continue;
             
+            // چک کن که description شامل چک‌لیست هست یا نه
             const lines = ev.description.split('\n');
             const hasChecklist = lines.some(line => 
                 line.trim().startsWith('☑') || line.trim().startsWith('☐') ||
@@ -3860,18 +5736,23 @@ async function cleanupChecklistFromDescriptions() {
             );
             
             if (hasChecklist) {
+                // پاک کردن خطوطی که شبیه چک‌لیست هستند
                 const cleanLines = lines.filter(line => 
                     !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
                     !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
                 );
                 const cleanDesc = cleanLines.join('\n').trim();
                 
+                // آپدیت کردن در دیتابیس
                 await updateEventInDB(ev.id, { description: cleanDesc });
                 cleanedCount++;
+                console.log('Cleaned checklist from event: ' + ev.id);
             }
         }
         
         if (cleanedCount > 0) {
+            console.log('Cleaned ' + cleanedCount + ' events');
+            // ریفرش رویدادها
             const freshEvents = await fetchEvents();
             events = freshEvents;
             renderCalendar();
@@ -3881,120 +5762,12 @@ async function cleanupChecklistFromDescriptions() {
     }
 }
 
-/* =========================== SIDEBAR COMMUNICATION ============================ */
-
-function syncSidebarWithUser() {
-    if (!sidebarComponent) return;
-    if (currentUser && currentProfile) {
-        sidebarComponent.setUser({
-            id: currentUser.id,
-            first_name: currentProfile.first_name,
-            last_name: currentProfile.last_name,
-            photo_url: currentProfile.photo_url,
-            role: currentUserRole
-        });
-    } else {
-        sidebarComponent.clearUser();
-    }
-}
-
-async function updateNotificationDot() {
-    if (!sidebarComponent) return;
-    if (!currentUser) {
-        sidebarComponent.setNotificationDot(false);
-        return;
-    }
-
-    try {
-        const { data, error } = await sb
-            .from('notifications')
-            .select('id')
-            .eq('user_id', currentUser.id)
-            .eq('is_read', false);
-        if (error) throw error;
-        if (data && data.length > 0) {
-            sidebarComponent.setNotificationDot(true);
-            return;
-        }
-    } catch (e) {
-        console.warn('Could not fetch notifications:', e);
-    }
-
-    const today = new Date();
-    const ty = today.getFullYear(), tm = today.getMonth(), td = today.getDate();
-    const hasTodayEvents = events.some(ev => {
-        if (!ev.start_date) return false;
-        if (ev.status === 'done' || ev.status === 'completed') return false;
-        const d = new Date(ev.start_date);
-        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
-            if (ev.recurrence_type !== 'none') {
-                const dateStr = toLocalDateString(today);
-                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                    ? ev.completed_occurrences.includes(dateStr)
-                    : false;
-                return !isCompleted;
-            }
-            return true;
-        }
-        return false;
-    });
-    sidebarComponent.setNotificationDot(hasTodayEvents);
-}
-
-// ─── SIDEBAR EVENT LISTENERS ───
-if (sidebarComponent) {
-    sidebarComponent.addEventListener('login-request', () => {
-        openModal(authOverlay);
-        showStep('step-1');
-        document.getElementById('auth-email').value = '';
-        authEmail = '';
-        document.getElementById('auth-error').textContent = '';
-    });
-
-    sidebarComponent.addEventListener('logout-request', () => {
-        openModal(document.getElementById('logout-confirm-modal'));
-    });
-}
-
-/* =========================== AUTH FLOW ============================ */
-async function showApp() {
-    showGlobalLoader();
-    closeModal(authOverlay);
-    appContainer.style.display = 'block';
-
-    if (currentUser) {
-        events = await fetchEvents();
-        await cleanupOldCompletions();
-        await cleanupChecklistFromDescriptions();
-        await moveOverdueTasksToToday();
-        await checkAndCreateTodayNotifications();
-    }
-    renderCalendar();
-    animateTabIndicator();
-    renderTodayList();
-    updateNotificationDot();
-    hideGlobalLoader();
-}
-
-async function logout() {
-    showGlobalLoader();
-    await sb.auth.signOut();
-    currentUser = null;
-    currentUserRole = 'public';
-    currentProfile = null;
-    events = [];
-    renderCalendar();
-    syncSidebarWithUser();
-    closeModal(eventModal);
-    closeModal(eventDetailModal);
-    hideGlobalLoader();
-}
-
 /* =========================== INITIALIZATION =========================== */
+
 async function initCalendar() {
     if (currentUser) {
         events = await fetchEvents();
-        updateNotificationDot();
+        updateNotificationDot()
     } else {
         events = [];
     }
@@ -4009,82 +5782,60 @@ async function initCalendar() {
         currentUser = user;
         currentProfile = await buildCurrentProfile(user);
         currentUserRole = currentProfile?.role || 'user';
-        syncSidebarWithUser();
     }
 
     try {
-        const { data: { session } } = await sb.auth.getSession();
+        const {
+            data: {
+                session
+            }
+        } = await sb.auth.getSession();
+
         if (session?.user) {
             await applySessionUser(session.user);
+
             events = await fetchEvents();
             renderCalendar();
+            updateAuthUI();
             await updateNotificationDot();
         } else {
-            syncSidebarWithUser();
-            await updateNotificationDot();
+            updateAuthUI();
         }
     } catch (e) {
         console.warn('Session restore failed:', e.message);
-        syncSidebarWithUser();
+        updateAuthUI();
         await updateNotificationDot();
     }
 
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get('access_token');
     const refreshToken = urlParams.get('refresh_token');
+
     if (accessToken && refreshToken) {
-        const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        const {
+            error
+        } = await sb.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+        });
+
         if (!error) {
             window.history.replaceState({}, document.title, window.location.pathname);
-            const { data: { user } } = await sb.auth.getUser();
+
+            const {
+                data: {
+                    user
+                }
+            } = await sb.auth.getUser();
             if (user) {
                 await applySessionUser(user);
             }
+
+            updateAuthUI();
             await initCalendar();
-        }
-    }
-})();
-
-// =========================== INITIALIZATION ===========================
-(async function tryRestoreSession() {
-    showApp();
-
-    async function applySessionUser(user) {
-        currentUser = user;
-        currentProfile = await buildCurrentProfile(user);
-        currentUserRole = currentProfile?.role || 'user';
-        syncSidebarWithUser();
-    }
-
-    try {
-        const { data: { session } } = await sb.auth.getSession();
-        if (session?.user) {
-            await applySessionUser(session.user);
-            events = await fetchEvents();
-            renderCalendar();
-            await updateNotificationDot();
         } else {
-            syncSidebarWithUser();
-            await updateNotificationDot();
+            console.warn('URL session set failed:', error.message);
         }
-    } catch (e) {
-        console.warn('Session restore failed:', e.message);
-        syncSidebarWithUser();
-        await updateNotificationDot();
     }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
-    if (accessToken && refreshToken) {
-        const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        if (!error) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-            const { data: { user } } = await sb.auth.getUser();
-            if (user) {
-                await applySessionUser(user);
-            }
-            await initCalendar();
-        }
-    }
 })();
