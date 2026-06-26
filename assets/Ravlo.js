@@ -893,6 +893,36 @@ async function moveOverdueTasksToToday() {
 }
 
 /* =========================== AUTH FLOW ============================ */
+// ----- Sign In Button -----
+document.getElementById('auth-signin-btn')?.addEventListener('click', async function() {
+    const email = authEmail;
+    const password = document.getElementById('auth-password').value;
+    const errorEl = document.getElementById('auth-error-login');
+    if (!email || !password) {
+        errorEl.textContent = 'Please enter your password.';
+        return;
+    }
+
+    showGlobalLoader();
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    hideGlobalLoader();
+
+    if (error) {
+        errorEl.textContent = error.message;
+        return;
+    }
+
+    currentUser = data.user;
+    currentProfile = await buildCurrentProfile(currentUser);
+    currentUserRole = currentProfile?.role || 'recruit';
+    closeModal(authOverlay);
+
+    syncSidebarComponent();
+
+    events = await fetchEvents();
+    renderCalendar();
+    await updateNotificationDot();
+});
 async function showApp() {
     showGlobalLoader();
     closeModal(authOverlay);
