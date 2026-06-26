@@ -173,7 +173,6 @@ async function checkAndCreateTodayNotifications() {
     });
     
     for (const ev of todayEvents) {
-        // چک کن که نوتیفیکیشن قبلاً وجود دارد یا نه
         const { data: existing } = await sb
             .from('notifications')
             .select('id')
@@ -267,6 +266,19 @@ function animateMonthYearChange(newText) {
                 ease: 'power2.out'
             });
         }
+    });
+}
+
+function animateTabIndicator() {
+    const activeTab = viewTabsEl.querySelector('.view-tab.active');
+    if (!activeTab || !tabIndicator) return;
+    const tabRect = activeTab.getBoundingClientRect(),
+        containerRect = viewTabsEl.getBoundingClientRect();
+    gsap.to(tabIndicator, {
+        left: tabRect.left - containerRect.left,
+        width: tabRect.width,
+        duration: 0.4,
+        ease: 'power2.out'
     });
 }
 
@@ -373,11 +385,8 @@ function renderChecklistModalItems() {
 function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'ravlo-toast';
-
-    // SVG ring
     const r = 10;
     const circumference = 2 * Math.PI * r;
-
     toast.innerHTML = `
         <svg width="24" height="24" viewBox="0 0 24 24" class="toast-ring">
             <circle cx="12" cy="12" r="${r}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
@@ -388,16 +397,11 @@ function showToast(message) {
         </svg>
         <span>${message}</span>
     `;
-
     document.body.appendChild(toast);
-
-    // Start ring animation after a tiny delay to ensure transition triggers
     requestAnimationFrame(() => {
         const ring = toast.querySelector('.toast-ring circle:last-child');
         if (ring) ring.style.strokeDashoffset = circumference;
     });
-
-    // Remove after 4 seconds
     setTimeout(() => toast.remove(), 4000);
 }
 
@@ -434,8 +438,6 @@ const ICON_EDIT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 const ICON_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 
 /* =========================== PROFILE & AUTH ============================ */
-
-/* ------------------------- PROFILE BUILDER ------------------------- */
 async function buildCurrentProfile(user) {
     if (!user) return null;
     const {
@@ -513,7 +515,6 @@ function syncSidebarComponent() {
     } else {
         comp.clearUser();
     }
-    // محاسبه آیتم‌های امروز و عقب‌افتاده
     const { todayItems, overdueItems } = getTodayAndOverdueItems();
     comp.setTodayList(todayItems, overdueItems);
     comp.setEvents(events);
@@ -524,7 +525,7 @@ async function updateNotificationDot() {
     const comp = getSidebarComponent();
     if (!comp) return;
 
-    let hasNotifications = false;   // ← اول تابع باشد
+    let hasNotifications = false; 
 
     // 1. Check unread notifications in DB
     if (currentUser) {
@@ -564,7 +565,6 @@ async function updateNotificationDot() {
         }
     }
 
-    // ست کردن نقطه
     if (comp && typeof comp.setNotificationDot === 'function') {
         comp.setNotificationDot(hasNotifications);
     }
@@ -639,6 +639,116 @@ function getTodayAndOverdueItems() {
 }
 
 /* =========================== MODAL HELPERS ============================ */
+// =========================== INLINE CHECKLIST HELPERS ============================
+function hideInlineChecklist() {
+    const editor = document.getElementById('checklist-inline-editor');
+    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
+    if (editor) editor.style.display = 'none';
+    if (toggleBtn) toggleBtn.classList.remove('active');
+}
+
+function showInlineChecklist() {
+    const editor = document.getElementById('checklist-inline-editor');
+    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
+    if (editor) editor.style.display = 'block';
+    if (toggleBtn) toggleBtn.classList.add('active');
+    renderInlineChecklistItems(currentChecklistItems);
+}
+
+function renderInlineChecklistItems(items) {
+    const container = document.getElementById('checklist-inline-items');
+    if (!container) return;
+    container.innerHTML = '';
+
+    items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'checklist-inline-row';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'neon-checkbox';
+        cb.checked = item.done;
+        cb.addEventListener('change', function() {
+            item.done = this.checked;
+        });
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'checklist-text';
+        textSpan.textContent = item.text;
+        textSpan.setAttribute('contenteditable', 'true');
+        textSpan.addEventListener('input', function() {
+            item.text = this.textContent.trim();
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-item-btn';
+        delBtn.innerHTML = '✕';
+        delBtn.addEventListener('click', () => {
+            currentChecklistItems.splice(index, 1);
+            renderInlineChecklistItems(currentChecklistItems);
+        });
+
+        const addSubBtn = document.createElement('button');
+        addSubBtn.className = 'add-subtask-btn';
+        addSubBtn.innerHTML = '+';
+        addSubBtn.title = 'Add subtask';
+        addSubBtn.addEventListener('click', () => {
+            if (!item.subtasks) item.subtasks = [];
+            item.subtasks.push({
+                text: '',
+                done: false
+            });
+            renderInlineChecklistItems(currentChecklistItems);
+            const subRows = container.querySelectorAll('.subtask-row .checklist-text');
+            if (subRows.length > 0) {
+                const last = subRows[subRows.length - 1];
+                last.focus();
+            }
+        });
+
+        row.appendChild(cb);
+        row.appendChild(textSpan);
+        row.appendChild(addSubBtn);
+        row.appendChild(delBtn);
+        container.appendChild(row);
+
+        if (item.subtasks && item.subtasks.length > 0) {
+            item.subtasks.forEach((sub, subIndex) => {
+                const subRow = document.createElement('div');
+                subRow.className = 'checklist-inline-row subtask-row';
+
+                const subCb = document.createElement('input');
+                subCb.type = 'checkbox';
+                subCb.className = 'neon-checkbox';
+                subCb.checked = sub.done;
+                subCb.addEventListener('change', function() {
+                    sub.done = this.checked;
+                });
+
+                const subText = document.createElement('span');
+                subText.className = 'checklist-text';
+                subText.textContent = sub.text;
+                subText.setAttribute('contenteditable', 'true');
+                subText.addEventListener('input', function() {
+                    sub.text = this.textContent.trim();
+                });
+
+                const subDelBtn = document.createElement('button');
+                subDelBtn.className = 'delete-item-btn';
+                subDelBtn.innerHTML = '✕';
+                subDelBtn.addEventListener('click', () => {
+                    item.subtasks.splice(subIndex, 1);
+                    renderInlineChecklistItems(currentChecklistItems);
+                });
+
+                subRow.appendChild(subCb);
+                subRow.appendChild(subText);
+                subRow.appendChild(subDelBtn);
+                container.appendChild(subRow);
+            });
+        }
+    });
+}
 
 function openModal(modal) {
     if (!modal) return;
@@ -651,7 +761,6 @@ function closeModal(modal) {
     document.body.classList.remove('modal-open');
 }
 
-/* ------------------------- LOADER HELPERS ------------------------- */
 function getLoaderHTML(type) {
     switch (type) {
         case 'dots':
@@ -748,7 +857,6 @@ function showConfirmModal(message, onConfirm) {
 }
 
 /* =========================== DATABASE HELPERS ============================ */
-
 async function fetchEvents() {
     if (!currentUser) return [];
     const { data, error } = await sb
@@ -789,7 +897,6 @@ async function fetchEvents() {
     
     return data || [];
 }
-
 
 async function updateEventInDB(id, payload) {
     if (!currentUser) {
@@ -832,12 +939,6 @@ async function saveEventToDB(payload) {
 }
 
 // =========================== SMART RECURRENCE HELPERS ============================
-
-/**
- * محاسبه تاریخ بعدی برای تسک هوشمند
- * @param {Object} ev - تسک فعلی
- * @returns {Date|null} تاریخ پیشنهادی برای تسک بعدی
- */
 function getNextSmartDate(ev) {
     const interval = ev.recurrence_smart_interval || 'weekly';
     let intervalDays = interval === 'weekly' ? 7 : interval === '10day' ? 10 : 30;
@@ -858,9 +959,6 @@ function getNextSmartDate(ev) {
     return newDate;
 }
 
-/**
- * ساخت تسک بعدی با مشخصات مشابه و تاریخ جدید
- */
 async function createNextSmartTask(ev, newDate) {
     if (!currentUser) return;
     const payload = {
@@ -899,9 +997,6 @@ async function createNextSmartTask(ev, newDate) {
     }
 }
 
-/**
- * تکمیل تسک هوشمند: اتمام تسک فعلی و ساخت تسک بعدی
- */
 async function completeSmartTask(ev) {
     if (ev.status === 'done') return;
     ev.status = 'done';
@@ -1012,7 +1107,6 @@ document.getElementById('auth-signin-btn')?.addEventListener('click', async func
     renderCalendar();
     await updateNotificationDot();
 });
-
 async function showApp() {
     showGlobalLoader();
     closeModal(authOverlay);
@@ -1023,12 +1117,61 @@ async function showApp() {
         await cleanupOldCompletions();
         await cleanupChecklistFromDescriptions();
         await moveOverdueTasksToToday();
-        await checkAndCreateTodayNotifications(); // ✅ اضافه کن
+        await checkAndCreateTodayNotifications();
     }
     renderCalendar();
     animateTabIndicator();
     hideGlobalLoader();
 }
+// Wait for the sidebar component to be fully defined, then restore session
+customElements.whenDefined('sidebar-component').then(async () => {
+    const comp = document.querySelector('sidebar-component');
+    if (!comp) return;
+
+    try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session?.user) {
+            currentUser = session.user;
+            currentProfile = await buildCurrentProfile(currentUser);
+            currentUserRole = currentProfile?.role || 'recruit';
+            comp.setUser(currentUser, currentProfile);    // این خط کلیدی است
+            events = await fetchEvents();
+            comp.setEvents(events);
+            renderCalendar();
+            await updateNotificationDot();
+        } else {
+            comp.clearUser();   // در صورت عدم وجود کاربر، UI را ریست کن
+        }
+    } catch (e) {
+        console.warn('Session restore failed:', e);
+        comp.clearUser();
+    }
+
+    // OAuth redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    if (accessToken && refreshToken) {
+        const { error } = await sb.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+        });
+        if (!error) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            const { data: { user } } = await sb.auth.getUser();
+            if (user) {
+                currentUser = user;
+                currentProfile = await buildCurrentProfile(currentUser);
+                currentUserRole = currentProfile?.role || 'recruit';
+                comp.setUser(currentUser, currentProfile);
+                events = await fetchEvents();
+                comp.setEvents(events);
+                renderCalendar();
+                await updateNotificationDot();
+            }
+        }
+    }
+});
 
 async function logout() {
     showGlobalLoader();
@@ -1044,8 +1187,56 @@ async function logout() {
     hideGlobalLoader();
 }
 
-/* =========================== LEAFLET MAP HELPERS ============================ */
+// Wait for the sidebar component to be fully defined, then restore session
+customElements.whenDefined('sidebar-component').then(async () => {
+    const comp = document.querySelector('sidebar-component');
+    if (!comp) return;
 
+    try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session?.user) {
+            currentUser = session.user;
+            currentProfile = await buildCurrentProfile(currentUser);
+            currentUserRole = currentProfile?.role || 'recruit';
+            comp.setUser(currentUser, currentProfile);    // این خط کلیدی است
+            events = await fetchEvents();
+            comp.setEvents(events);
+            renderCalendar();
+            await updateNotificationDot();
+        } else {
+            comp.clearUser();   // در صورت عدم وجود کاربر، UI را ریست کن
+        }
+    } catch (e) {
+        console.warn('Session restore failed:', e);
+        comp.clearUser();
+    }
+
+    // OAuth redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    if (accessToken && refreshToken) {
+        const { error } = await sb.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+        });
+        if (!error) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            const { data: { user } } = await sb.auth.getUser();
+            if (user) {
+                currentUser = user;
+                currentProfile = await buildCurrentProfile(currentUser);
+                currentUserRole = currentProfile?.role || 'recruit';
+                comp.setUser(currentUser, currentProfile);
+                events = await fetchEvents();
+                comp.setEvents(events);
+                renderCalendar();
+                await updateNotificationDot();
+            }
+        }
+    }
+});
+/* =========================== LEAFLET MAP HELPERS ============================ */
 function isLeafletReady() {
     return typeof L !== 'undefined';
 }
@@ -1114,7 +1305,6 @@ function parseCoordinates(str) {
 }
 
 /* =========================== RECURRENCE LOGIC ============================ */
-
 function updateRecurrencePreview() {
     const preview = document.getElementById('recurrence-preview');
     if (!preview) return;
@@ -1414,7 +1604,6 @@ function getRecurrenceDates(ev, fromDate, toDate) {
 }
 
 /* =========================== GREGORIAN PICKER ============================ */
-
 function renderYearPanel(container, selectedYear, fromYear, toYear, persian, onSelect) {
     container.innerHTML = '';
     var now = new Date();
@@ -1612,7 +1801,6 @@ function openGregYearPopup() {
         renderGregPicker();
     });
 }
-
 
 /* ------------------------- RENDER DISPATCHER ------------------------- */
 function syncViewTabsUI() {
@@ -2352,6 +2540,7 @@ function renderDayView() {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 }
+
 /* ------------------------- YEAR VIEW ------------------------- */
 function renderYearView() {
     calendarGrid.className = 'year-grid';
@@ -2394,7 +2583,6 @@ function makeYearMonthCard_Greg(year, month, today) {
 }
 
 /* =========================== EVENT TYPE & TIME ============================ */
-
 function setEventType(type) {
     eventType = type;
     const toggle = document.getElementById('event-type-toggle');
@@ -2603,6 +2791,573 @@ function openTitlePicker() {
     openGregPicker(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
 }
 
+function openEventDetail(ev, occurrenceDate) {
+    currentDetailEventId = ev.id;
+    ev.__occurrenceDate = occurrenceDate;
+
+    document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
+    const colorDot = document.getElementById('detail-color-dot');
+    colorDot.style.backgroundColor = ev.color || '#f5f5f5';
+
+    const detailHeader = document.querySelector('#event-detail-modal .detail-header');
+    let iconSpan = document.getElementById('detail-icon');
+    if (!iconSpan) {
+        iconSpan = document.createElement('span');
+        iconSpan.id = 'detail-icon';
+        iconSpan.className = 'detail-icon';
+        colorDot.after(iconSpan);
+    }
+
+    if (ev.icon) {
+        iconSpan.innerHTML = ev.icon;
+        iconSpan.style.color = ev.color || 'var(--accent)';
+        iconSpan.style.display = 'inline-block';
+        colorDot.style.display = 'none';
+    } else {
+        iconSpan.innerHTML = '';
+        iconSpan.style.display = 'none';
+        colorDot.style.display = 'inline-block';
+    }
+
+    const descIcon = document.getElementById('detail-desc-icon');
+    if (descIcon) descIcon.style.color = ev.color || 'var(--accent)';
+    const calIcon = document.getElementById('detail-calendar-icon');
+    calIcon.style.color = ev.color || 'var(--accent)';
+
+    const start = ev.start_date ? new Date(ev.start_date) : null;
+    const end = ev.end_date ? new Date(ev.end_date) : null;
+    let dateText = '', timeText = '', durationParen = '';
+
+    if (start) {
+        dateText = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (ev.all_day) {
+            timeText = 'All day';
+        } else {
+            const fmtTime = d => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+            timeText = fmtTime(start);
+            if (end) {
+                const diffMs = end.getTime() - start.getTime();
+                if (diffMs > 0) {
+                    const totalMinutes = Math.floor(diffMs / 60000);
+                    const days = Math.floor(totalMinutes / 1440);
+                    const hours = Math.floor((totalMinutes % 1440) / 60);
+                    const mins = totalMinutes % 60;
+                    let parts = [];
+                    if (days > 0) parts.push(days + 'd');
+                    if (hours > 0) parts.push(hours + 'h');
+                    if (mins > 0) parts.push(mins + 'm');
+                    if (parts.length > 0) durationParen = ' (' + parts.join(' ') + ')';
+                }
+            }
+        }
+    }
+
+    document.getElementById('detail-date-text').textContent = dateText;
+    document.getElementById('detail-time-text').textContent = timeText;
+    document.getElementById('detail-duration-paren').textContent = durationParen;
+
+    const dividers = eventDetailModal.querySelectorAll('.detail-divider-h');
+    if (ev.type === 'task') {
+        dividers.forEach(hr => hr.style.display = 'none');
+    } else {
+        dividers.forEach(hr => hr.style.display = '');
+    }
+
+    const descContainer = document.getElementById('detail-description-container');
+    const descText = document.getElementById('detail-description-text');
+    let cleanDescription = ev.description || '';
+    if (cleanDescription) {
+        const lines = cleanDescription.split('\n');
+        const filteredLines = lines.filter(line =>
+            !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
+            !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
+        );
+        cleanDescription = filteredLines.join('\n').trim();
+    }
+    if (cleanDescription) {
+        descContainer.style.display = 'block';
+        descText.textContent = cleanDescription;
+    } else {
+        descContainer.style.display = 'none';
+    }
+
+    let checklistContainer = document.getElementById('detail-checklist-container');
+    if (!checklistContainer) {
+        const descContainer2 = document.getElementById('detail-description-container');
+        if (descContainer2 && descContainer2.parentNode) {
+            checklistContainer = document.createElement('div');
+            checklistContainer.id = 'detail-checklist-container';
+            checklistContainer.className = 'detail-checklist-container';
+            checklistContainer.style.display = 'none';
+            const header = document.createElement('div');
+            header.className = 'detail-checklist-header';
+            header.innerHTML = `
+                <span id="detail-checklist-icon" class="detail-icon" style="color:var(--accent);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </span>
+                <span style="font-weight:600;font-size:14px;">Checklist</span>
+            `;
+            checklistContainer.appendChild(header);
+            const listItems = document.createElement('div');
+            listItems.id = 'detail-checklist-items';
+            listItems.className = 'detail-checklist-items';
+            checklistContainer.appendChild(listItems);
+            descContainer2.parentNode.insertBefore(checklistContainer, descContainer2.nextSibling);
+        }
+    }
+    if (checklistContainer) {
+        renderChecklistInDetail(ev);
+    }
+
+    const inviteesSection = document.getElementById('detail-invitees-section');
+    if (inviteesSection) {
+        if (ev.type === 'event') {
+            inviteesSection.style.display = 'block';
+            const attendIcon = document.getElementById('detail-attendees-icon');
+            if (attendIcon) attendIcon.style.color = ev.color || 'var(--accent)';
+            const attendeesList = document.getElementById('detail-attendees-list');
+            attendeesList.innerHTML = '';
+            const invitees = ev.invitees || [];
+            if (invitees.length === 0) {
+                attendeesList.innerHTML = `<div class="attendee-empty"><div class="attendee-avatar empty-plus">+</div><span class="attendee-empty-text">Invite more people</span></div>`;
+            } else if (invitees.length <= 3) {
+                const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
+                invitees.forEach((name, i) => {
+                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
+                    attendeesList.innerHTML += `<div class="attendee-item"><div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div><span class="attendee-name">${name}</span></div>`;
+                });
+            } else {
+                const colors = ['#f97316','#e11d48'];
+                const firstTwo = invitees.slice(0,2);
+                const restCount = invitees.length - 2;
+                let html = '<div class="attendees-overlap-row">';
+                firstTwo.forEach((name, i) => {
+                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
+                    html += `<div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
+                });
+                html += `<span class="attendee-extra-count">+${restCount} more</span></div>`;
+                attendeesList.innerHTML = html;
+            }
+        } else {
+            inviteesSection.style.display = 'none';
+        }
+    }
+
+    const mapContainer = document.getElementById('detail-location-container');
+    if (ev.location && (ev.location.lat || ev.location.lng)) {
+        const lat = ev.location.lat;
+        const lng = ev.location.lng;
+        if (lat != null && lng != null && isLeafletReady() && mapContainer) {
+            mapContainer.style.display = 'block';
+            const coordsText = document.getElementById('detail-location-coords-text');
+            if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            const overlay = document.getElementById('detail-map-address-overlay');
+            if (ev.location.address) {
+                const addr = ev.location.address;
+                const place = addr.name || addr.road || addr.amenity || addr.shop || addr.tourism || '';
+                const city = addr.city || addr.town || addr.village || addr.county || '';
+                const country = addr.country || '';
+                const parts = [place, city, country].filter(Boolean);
+                if (overlay) {
+                    overlay.textContent = parts.join(', ');
+                    overlay.style.display = 'block';
+                }
+            } else if (overlay) {
+                overlay.style.display = 'none';
+            }
+            setTimeout(() => {
+                const detailMapDiv = document.getElementById('detail-location-map');
+                if (detailMapDiv) {
+                    if (detailMapDiv._leaflet_id) {
+                        const oldMap = detailMapDiv._leaflet_map;
+                        if (oldMap) oldMap.remove();
+                        else delete detailMapDiv._leaflet_id;
+                    }
+                    const detailMap = L.map('detail-location-map', {
+                        center: [lat, lng],
+                        zoom: 15,
+                        attributionControl: false,
+                        zoomControl: false,
+                        dragging: false,
+                        scrollWheelZoom: false,
+                        doubleClickZoom: false,
+                        touchZoom: false,
+                        keyboard: false,
+                        interactive: false
+                    });
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                        maxZoom: 19
+                    }).addTo(detailMap);
+                    const icon = getAccentPinIcon();
+                    if (icon) L.marker([lat, lng], { icon }).addTo(detailMap);
+                    else L.marker([lat, lng]).addTo(detailMap);
+                    setTimeout(() => detailMap.invalidateSize(), 100);
+                    const mapDivForClick = document.getElementById('detail-location-map');
+                    if (mapDivForClick) {
+                        mapDivForClick.style.cursor = 'pointer';
+                        mapDivForClick.addEventListener('click', () => {
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+                        });
+                    }
+                }
+            }, 200);
+        }
+    } else if (mapContainer) {
+        mapContainer.style.display = 'none';
+    }
+
+    const oldConfirm = document.getElementById('event-detail-confirm');
+    if (oldConfirm) oldConfirm.classList.add('hidden');
+    const oldAddr = document.getElementById('detail-address-container');
+    if (oldAddr) oldAddr.style.display = 'none';
+
+    const isInvitee = !!ev.parent_event_id;
+
+    const editBtn = document.getElementById('detail-edit-btn-top');
+    if (editBtn) {
+        editBtn.style.display = isInvitee ? 'none' : '';
+        editBtn.onclick = () => {
+            closeModal(eventDetailModal);
+            const evToEdit = events.find(e => e.id == currentDetailEventId);
+            if (evToEdit) openEditModal(evToEdit);
+        };
+    }
+
+    var dateForCompletion = null;
+    if (occurrenceDate) {
+        dateForCompletion = toLocalDateString(occurrenceDate);
+    }
+    var isCompleted = false;
+    if (dateForCompletion && ev.recurrence_type && ev.recurrence_type !== 'none') {
+        isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                        ? ev.completed_occurrences.includes(dateForCompletion)
+                        : false;
+    } else {
+        isCompleted = (ev.status === 'completed' || ev.status === 'done');
+    }
+
+    const completeBtn = document.getElementById('detail-complete-btn');
+    if (completeBtn) {
+        completeBtn.style.display = isInvitee ? 'none' : '';
+
+        if (ev.type === 'task' && ev.recurrence_type === 'smart') {
+            completeBtn.textContent = 'Done';
+            completeBtn.onclick = function() {
+                closeModal(eventDetailModal);
+                completeSmartTask(ev);
+            };
+        }
+        else if (isCompleted) {
+            completeBtn.textContent = 'Undo';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    var idx = ev.completed_occurrences.indexOf(dateForCompletion);
+                    if (idx > -1) ev.completed_occurrences.splice(idx, 1);
+                    if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
+                        delete ev.completed_timestamps[dateForCompletion];
+                    }
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(async () => {
+                        if (currentUser && ev.type === 'task') {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    'Event today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#'
+                                );
+                            }
+                        }
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error undoing.'));
+                } else {
+                    updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
+                        ev.status = 'pending';
+                        ev.completed_at = null;
+                        if (currentUser && ev.type === 'task') {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    'Event today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#'
+                                );
+                            }
+                        }
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error undoing.'));
+                }
+            };
+        } else {
+            completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    if (!ev.completed_occurrences) ev.completed_occurrences = [];
+                    ev.completed_occurrences.push(dateForCompletion);
+                    if (!ev.completed_timestamps) ev.completed_timestamps = {};
+                    ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(async () => {
+                        if (currentUser) {
+                            await removeNotificationsForEvent(ev.id, currentUser.id);
+                        }
+                        showToast('Occurrence marked done. Auto‑deleted in 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error completing.'));
+                } else {
+                    var newStatus = ev.type === 'task' ? 'done' : 'completed';
+                    var payload = { status: newStatus, completed_at: new Date().toISOString() };
+                    updateEventInDB(ev.id, payload).then(async () => {
+                        ev.status = newStatus;
+                        ev.completed_at = payload.completed_at;
+                        if (currentUser) {
+                            await removeNotificationsForEvent(ev.id, currentUser.id);
+                        }
+                        showToast('Item marked done. Auto‑deleted in 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error completing.'));
+                }
+            };
+        }
+    }
+
+    const cancelBtn = document.getElementById('detail-cancel-btn');
+    if (cancelBtn) {
+        if (isInvitee) {
+            cancelBtn.textContent = 'Leave Event';
+            cancelBtn.onclick = () => {
+                showConfirmModal('Leave this event?', async () => {
+                    await deleteEventFromDB(ev.id);
+                    events = events.filter(e => e.id !== ev.id);
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                });
+            };
+        } else {
+            cancelBtn.textContent = 'Delete';
+            cancelBtn.onclick = () => {
+                showConfirmModal('Are you sure you want to delete this event?', () => {
+                    deleteEventById(ev.id).then(() => {
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                    }).catch(() => showToast('Failed to delete event.'));
+                });
+            };
+        }
+    }
+
+    const postponeBtn = document.getElementById('detail-postpone-btn');
+    if (postponeBtn) {
+        if (isInvitee) {
+            postponeBtn.style.display = 'none';
+        } else {
+            postponeBtn.style.display = '';
+            postponeBtn.onclick = () => openPostponeModal();
+        }
+    }
+
+    openModal(eventDetailModal);
+}
+
+// =========================== RENDER CHECKLIST IN DETAIL ============================
+function renderChecklistInDetail(ev) {
+    const container = document.getElementById('detail-checklist-container');
+    if (!container) return;
+
+    if (ev.type !== 'task' || !ev.checklist || ev.checklist.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    
+    const icon = document.getElementById('detail-checklist-icon');
+    if (icon) icon.style.color = ev.color || 'var(--accent)';
+
+    const listContainer = document.getElementById('detail-checklist-items');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+
+    function renderItems(items, parentElement, depth = 0) {
+        items.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = 'detail-checklist-row';
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.gap = '10px';
+            row.style.padding = '4px 0';
+            row.style.minHeight = '28px';
+            
+            if (depth > 0) {
+                row.style.paddingLeft = (depth * 20) + 'px';
+                row.classList.add('subtask-row');
+            }
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'neon-checkbox';
+            cb.checked = item.done || false;
+            cb.dataset.parentIndex = index;
+            cb.dataset.depth = depth;
+            cb.style.width = '18px';
+            cb.style.height = '18px';
+            cb.style.minWidth = '18px';
+            cb.style.minHeight = '18px';
+            cb.style.margin = '0';
+            cb.style.padding = '0';
+            cb.style.cursor = 'pointer';
+            cb.style.accentColor = 'var(--accent)';
+            cb.style.flexShrink = '0';
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'detail-checklist-text';
+            textSpan.textContent = item.text || 'Untitled';
+            textSpan.style.flex = '1';
+            textSpan.style.fontSize = '14px';
+            textSpan.style.color = 'var(--text-primary)';
+            textSpan.style.wordBreak = 'break-word';
+            textSpan.style.padding = '2px 4px';
+            textSpan.style.lineHeight = '1.4';
+            
+            if (item.done) {
+                textSpan.style.textDecoration = 'line-through';
+                textSpan.style.opacity = '0.6';
+            }
+
+            row.appendChild(cb);
+            row.appendChild(textSpan);
+            parentElement.appendChild(row);
+
+            if (item.subtasks && item.subtasks.length > 0) {
+                const subContainer = document.createElement('div');
+                subContainer.className = 'detail-checklist-subcontainer';
+                subContainer.style.paddingLeft = '24px';
+                renderItems(item.subtasks, subContainer, depth + 1);
+                parentElement.appendChild(subContainer);
+            }
+        });
+    }
+
+    renderItems(ev.checklist, listContainer, 0);
+
+    // اگر همه آیتم‌ها انجام شده باشند، تسک را خودکار تیک بزنیم
+    if (ev.checklist.length > 0) {
+        checkAllChecklistDone(ev);
+    }
+
+    listContainer.querySelectorAll('.neon-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const depth = parseInt(this.dataset.depth);
+            let item = null;
+
+            if (depth === 0) {
+                const idx = parseInt(this.dataset.parentIndex);
+                if (idx >= 0 && idx < ev.checklist.length) {
+                    item = ev.checklist[idx];
+                }
+            } else {
+                let flatIdx = 0;
+                let found = false;
+                for (let i = 0; i < ev.checklist.length; i++) {
+                    const p = ev.checklist[i];
+                    if (p.subtasks) {
+                        for (let s = 0; s < p.subtasks.length; s++) {
+                            if (flatIdx === parseInt(this.dataset.parentIndex)) {
+                                item = p.subtasks[s];
+                                found = true;
+                                break;
+                            }
+                            flatIdx++;
+                        }
+                    }
+                    if (found) break;
+                }
+            }
+
+            if (item) {
+                item.done = this.checked;
+                const row = this.closest('.detail-checklist-row');
+                if (row) {
+                    const text = row.querySelector('.detail-checklist-text');
+                    if (text) {
+                        text.style.textDecoration = this.checked ? 'line-through' : 'none';
+                        text.style.opacity = this.checked ? '0.6' : '1';
+                    }
+                }
+
+                updateEventInDB(ev.id, { checklist: ev.checklist })
+                    .then(() => {
+                        checkAllChecklistDone(ev);
+                    })
+                    .catch(() => showToast('Error updating checklist.'));
+            }
+        });
+    });
+}
+
+function checkAllChecklistDone(ev) {
+    if (!ev.checklist || ev.checklist.length === 0) return;
+
+    function allItemsDone(items) {
+        for (const item of items) {
+            if (!item.done) return false;
+            if (item.subtasks && item.subtasks.length > 0) {
+                if (!allItemsDone(item.subtasks)) return false;
+            }
+        }
+        return true;
+    }
+
+    if (allItemsDone(ev.checklist)) {
+        markTaskDone(ev);
+    }
+}
+
+function markTaskDone(ev) {
+    if (ev.status === 'done') return;
+
+    ev.status = 'done';
+    ev.completed_at = new Date().toISOString();
+    
+    updateEventInDB(ev.id, { 
+        status: 'done', 
+        completed_at: ev.completed_at 
+    }).then(async () => {
+        if (currentUser) {
+            await removeNotificationsForEvent(ev.id, currentUser.id);
+        }
+        showToast('Task marked as Done!');
+        closeModal(eventDetailModal);
+        renderCalendar();
+        updateNotificationDot();
+    }).catch(() => showToast('Error marking task as done.'));
+}
+
 async function openEditModal(ev) {
     if (!ev) return;
     editingEventId = ev.id;
@@ -2730,2771 +3485,6 @@ async function openEditModal(ev) {
     updateAllDayAndTimeRows();
     openModal(eventModal);
 }
-
-/* =========================== EVENT SAVE ============================ */
-async function saveEvent() {
-    try {
-        // ── 1. Get form values ──────────────────────────────
-        var title = '';
-        if (eventTitleInput) title = eventTitleInput.value.trim();
-
-        var allDay = false;
-        var gregCheck = document.getElementById('event-all-day-greg');
-        if (gregCheck) allDay = gregCheck.checked;
-
-        var start = '';
-        if (eventStartInput) start = eventStartInput.value;
-        if (!title || !start) {
-            showToast('Title and start date are required.');
-            return;
-        }
-
-        var endDate = null;
-        if (eventType !== 'task' && eventEndInput && eventEndInput.value) {
-            endDate = eventEndInput.value;
-        }
-
-        var desc = '';
-        var descEl = document.getElementById('event-description');
-        if (descEl) desc = descEl.value.trim();
-
-        // ── 2. Build main payload ─────────────────────────
-        var payload = {
-            title: title,
-            start_date: new Date(start).toISOString(),
-            end_date: endDate ? new Date(endDate).toISOString() : null,
-            all_day: allDay,
-            type: eventType,
-            reminder_minutes: 0,
-            color: selectedTagColor,
-            icon: selectedIcon || null,
-            description: desc, 
-            recurrence_type: recurrence.type,
-            recurrence_interval: recurrence.interval,
-            recurrence_days: (recurrence.type === 'weekly' || recurrence.type === 'custom') ? recurrence.days : [],
-            recurrence_smart_interval: recurrence.type === 'smart' ? recurrence.smartInterval : null,
-            invitees: eventType === 'event' ? currentInvitees.map(inv => inv.name) : [],
-            checklist: eventType === 'task' ? currentChecklistItems : []
-        };
-
-        // ── 3. Location (فقط برای event) ──────────────────
-        if (eventType === 'event' && (currentLocationCoords || currentLocationName)) {
-            payload.location = {
-                lat: currentLocationCoords?.lat || null,
-                lng: currentLocationCoords?.lng || null,
-                name: currentLocationName || '',
-                address: currentLocationAddress || null
-            };
-        } else {
-            payload.location = null;
-        }
-
-        // ── 4. Completed occurrences ──────────────────────
-        if (!editingEventId) {
-            payload.completed_occurrences = [];
-            payload.completed_timestamps = {};
-        }
-
-        // ── 5. Invitee IDs ────────────────────────────────
-        payload.invitee_ids = currentInvitees.map(inv => inv.id);
-
-        // ── 6. Save to database ───────────────────────────
-        showGlobalLoader();
-
-        if (editingEventId) {
-            // Update existing event
-            await updateEventInDB(editingEventId, payload);
-            var idx = events.findIndex(function(ev) {
-                return ev.id == editingEventId;
-            });
-            if (idx !== -1) {
-                // حفظ کردن completed_occurrences و completed_timestamps موجود
-                if (events[idx].completed_occurrences) {
-                    payload.completed_occurrences = events[idx].completed_occurrences;
-                }
-                if (events[idx].completed_timestamps) {
-                    payload.completed_timestamps = events[idx].completed_timestamps;
-                }
-                Object.assign(events[idx], payload);
-            }
-            editingEventId = null;
-        } else {
-            // Create new event
-            var saved = await saveEventToDB(payload);
-            if (saved) {
-                // Push to local events array
-                events.push(saved);
-
-                // ── 7. Create invitee rows (if any) ─────────
-                if (currentInvitees.length > 0) {
-                    for (const invitee of currentInvitees) {
-                        const invitePayload = {
-                            ...payload,
-                            user_id: invitee.id,
-                            parent_event_id: saved.id,
-                            invitation_status: 'pending',
-                            invitees: [],
-                            invitee_ids: [],
-                            completed_occurrences: [],
-                            completed_timestamps: {},
-                            checklist: eventType === 'task' ? currentChecklistItems : []
-                        };
-
-                        const {
-                            error: invErr
-                        } = await sb
-                            .rpc('insert_invited_event', {
-                                payload: invitePayload
-                            });
-
-                        if (invErr) console.warn('Failed to insert invitee row:', JSON.stringify(invErr, null, 2));
-                    }
-                }
-
-                // ── 8. Send notifications ─────────────────
-                const eventTitle = title || 'Untitled event';
-                currentInvitees.forEach(inv => {
-                    addNotificationToUser(inv.id, 'event', 'You have been invited to an event',
-                        `${currentProfile?.first_name || 'Someone'} invited you to "${eventTitle}"`, '#');
-                });
-            }
-        }
-
-        // ── 9. Clean up UI ────────────────────────────────
-        hideGlobalLoader();
-        closeModal(eventModal);
-
-        // Reset form fields
-        if (eventTitleInput) eventTitleInput.value = '';
-        if (eventStartInput) eventStartInput.value = '';
-        if (eventEndInput) eventEndInput.value = '';
-        if (eventStartGreg) eventStartGreg.value = '';
-        if (gregTriggerText) gregTriggerText.textContent = 'Select date';
-        if (gregPickerTrigger) gregPickerTrigger.classList.remove('has-value');
-
-        // Reset checklist
-        currentChecklistItems = [];
-        hideInlineChecklist();
-
-        // Reset location
-        currentLocationCoords = null;
-        currentLocationName = '';
-        currentLocationAddress = null;
-        document.getElementById('location-coords-input').value = '';
-        document.getElementById('location-section').style.display = 'none';
-        document.getElementById('toggle-location-btn')?.classList.remove('active');
-
-        // Reset invitees
-        currentInvitees = [];
-        document.getElementById('toggle-invite-btn')?.classList.remove('active');
-
-        // Reset color
-        selectedTagColor = '#f5f5f5';
-        document.getElementById('toggle-color-btn')?.classList.remove('active');
-
-        // Reset icon
-        selectedIcon = null;
-        updateIconButton();
-        document.getElementById('toggle-icon-btn')?.classList.remove('active');
-
-        // Reset recurrence
-        recurrence = {
-            type: 'none',
-            interval: 1,
-            days: [],
-            smartInterval: 'weekly'
-        };
-        updateRecurrencePreview();
-
-        // Reset event type to default
-        eventType = 'event';
-        setEventType('event');
-
-        // Re-render calendar
-        renderCalendar();
-        updateNotificationDot();
-
-        // Show success message
-        showToast(editingEventId ? 'Event updated successfully!' : 'Event created successfully!');
-
-    } catch (err) {
-        console.error('Save event error:', err);
-        showToast('Error saving event: ' + err.message);
-        hideGlobalLoader();
-    }
-}
-
-/* =========================== EVENT DETAIL MODAL ============================ */
-function openEventDetail(ev, occurrenceDate) {
-    currentDetailEventId = ev.id;
-    ev.__occurrenceDate = occurrenceDate;
-
-    // ─── Color & title ───
-    document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
-    const colorDot = document.getElementById('detail-color-dot');
-    colorDot.style.backgroundColor = ev.color || '#f5f5f5';
-
-    const detailHeader = document.querySelector('#event-detail-modal .detail-header');
-    let iconSpan = document.getElementById('detail-icon');
-    if (!iconSpan) {
-        iconSpan = document.createElement('span');
-        iconSpan.id = 'detail-icon';
-        iconSpan.className = 'detail-icon';
-        colorDot.after(iconSpan);
-    }
-
-    if (ev.icon) {
-        iconSpan.innerHTML = ev.icon;
-        iconSpan.style.color = ev.color || 'var(--accent)';
-        iconSpan.style.display = 'inline-block';
-        colorDot.style.display = 'none';
-    } else {
-        iconSpan.innerHTML = '';
-        iconSpan.style.display = 'none';
-        colorDot.style.display = 'inline-block';
-    }
-
-    const descIcon = document.getElementById('detail-desc-icon');
-    if (descIcon) descIcon.style.color = ev.color || 'var(--accent)';
-    const calIcon = document.getElementById('detail-calendar-icon');
-    calIcon.style.color = ev.color || 'var(--accent)';
-
-    // ─── Date and time ───
-    const start = ev.start_date ? new Date(ev.start_date) : null;
-    const end = ev.end_date ? new Date(ev.end_date) : null;
-    let dateText = '', timeText = '', durationParen = '';
-
-    if (start) {
-        dateText = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        if (ev.all_day) {
-            timeText = 'All day';
-        } else {
-            const fmtTime = d => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-            timeText = fmtTime(start);
-            if (end) {
-                const diffMs = end.getTime() - start.getTime();
-                if (diffMs > 0) {
-                    const totalMinutes = Math.floor(diffMs / 60000);
-                    const days = Math.floor(totalMinutes / 1440);
-                    const hours = Math.floor((totalMinutes % 1440) / 60);
-                    const mins = totalMinutes % 60;
-                    let parts = [];
-                    if (days > 0) parts.push(days + 'd');
-                    if (hours > 0) parts.push(hours + 'h');
-                    if (mins > 0) parts.push(mins + 'm');
-                    if (parts.length > 0) durationParen = ' (' + parts.join(' ') + ')';
-                }
-            }
-        }
-    }
-
-    document.getElementById('detail-date-text').textContent = dateText;
-    document.getElementById('detail-time-text').textContent = timeText;
-    document.getElementById('detail-duration-paren').textContent = durationParen;
-
-    // ─── Hide horizontal dividers for tasks ───
-    const dividers = eventDetailModal.querySelectorAll('.detail-divider-h');
-    if (ev.type === 'task') {
-        dividers.forEach(hr => hr.style.display = 'none');
-    } else {
-        dividers.forEach(hr => hr.style.display = '');
-    }
-
-    // ─── Description ───
-    const descContainer = document.getElementById('detail-description-container');
-    const descText = document.getElementById('detail-description-text');
-    let cleanDescription = ev.description || '';
-    if (cleanDescription) {
-        const lines = cleanDescription.split('\n');
-        const filteredLines = lines.filter(line =>
-            !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
-            !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
-        );
-        cleanDescription = filteredLines.join('\n').trim();
-    }
-    if (cleanDescription) {
-        descContainer.style.display = 'block';
-        descText.textContent = cleanDescription;
-    } else {
-        descContainer.style.display = 'none';
-    }
-
-    // ─── CHECKLIST ───
-    let checklistContainer = document.getElementById('detail-checklist-container');
-    if (!checklistContainer) {
-        const descContainer2 = document.getElementById('detail-description-container');
-        if (descContainer2 && descContainer2.parentNode) {
-            checklistContainer = document.createElement('div');
-            checklistContainer.id = 'detail-checklist-container';
-            checklistContainer.className = 'detail-checklist-container';
-            checklistContainer.style.display = 'none';
-            const header = document.createElement('div');
-            header.className = 'detail-checklist-header';
-            header.innerHTML = `
-                <span id="detail-checklist-icon" class="detail-icon" style="color:var(--accent);">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                </span>
-                <span style="font-weight:600;font-size:14px;">Checklist</span>
-            `;
-            checklistContainer.appendChild(header);
-            const listItems = document.createElement('div');
-            listItems.id = 'detail-checklist-items';
-            listItems.className = 'detail-checklist-items';
-            checklistContainer.appendChild(listItems);
-            descContainer2.parentNode.insertBefore(checklistContainer, descContainer2.nextSibling);
-        }
-    }
-    if (checklistContainer) {
-        renderChecklistInDetail(ev);
-    }
-
-    // ─── Attendees ───
-    const inviteesSection = document.getElementById('detail-invitees-section');
-    if (inviteesSection) {
-        if (ev.type === 'event') {
-            inviteesSection.style.display = 'block';
-            const attendIcon = document.getElementById('detail-attendees-icon');
-            if (attendIcon) attendIcon.style.color = ev.color || 'var(--accent)';
-            const attendeesList = document.getElementById('detail-attendees-list');
-            attendeesList.innerHTML = '';
-            const invitees = ev.invitees || [];
-            if (invitees.length === 0) {
-                attendeesList.innerHTML = `<div class="attendee-empty"><div class="attendee-avatar empty-plus">+</div><span class="attendee-empty-text">Invite more people</span></div>`;
-            } else if (invitees.length <= 3) {
-                const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
-                invitees.forEach((name, i) => {
-                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
-                    attendeesList.innerHTML += `<div class="attendee-item"><div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div><span class="attendee-name">${name}</span></div>`;
-                });
-            } else {
-                const colors = ['#f97316','#e11d48'];
-                const firstTwo = invitees.slice(0,2);
-                const restCount = invitees.length - 2;
-                let html = '<div class="attendees-overlap-row">';
-                firstTwo.forEach((name, i) => {
-                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
-                    html += `<div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
-                });
-                html += `<span class="attendee-extra-count">+${restCount} more</span></div>`;
-                attendeesList.innerHTML = html;
-            }
-        } else {
-            inviteesSection.style.display = 'none';
-        }
-    }
-
-    // ─── Location map ───
-    const mapContainer = document.getElementById('detail-location-container');
-    if (ev.location && (ev.location.lat || ev.location.lng)) {
-        const lat = ev.location.lat;
-        const lng = ev.location.lng;
-        if (lat != null && lng != null && isLeafletReady() && mapContainer) {
-            mapContainer.style.display = 'block';
-            const coordsText = document.getElementById('detail-location-coords-text');
-            if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-            const overlay = document.getElementById('detail-map-address-overlay');
-            if (ev.location.address) {
-                const addr = ev.location.address;
-                const place = addr.name || addr.road || addr.amenity || addr.shop || addr.tourism || '';
-                const city = addr.city || addr.town || addr.village || addr.county || '';
-                const country = addr.country || '';
-                const parts = [place, city, country].filter(Boolean);
-                if (overlay) {
-                    overlay.textContent = parts.join(', ');
-                    overlay.style.display = 'block';
-                }
-            } else if (overlay) {
-                overlay.style.display = 'none';
-            }
-            setTimeout(() => {
-                const detailMapDiv = document.getElementById('detail-location-map');
-                if (detailMapDiv) {
-                    if (detailMapDiv._leaflet_id) {
-                        const oldMap = detailMapDiv._leaflet_map;
-                        if (oldMap) oldMap.remove();
-                        else delete detailMapDiv._leaflet_id;
-                    }
-                    const detailMap = L.map('detail-location-map', {
-                        center: [lat, lng],
-                        zoom: 15,
-                        attributionControl: false,
-                        zoomControl: false,
-                        dragging: false,
-                        scrollWheelZoom: false,
-                        doubleClickZoom: false,
-                        touchZoom: false,
-                        keyboard: false,
-                        interactive: false
-                    });
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                        maxZoom: 19
-                    }).addTo(detailMap);
-                    const icon = getAccentPinIcon();
-                    if (icon) L.marker([lat, lng], { icon }).addTo(detailMap);
-                    else L.marker([lat, lng]).addTo(detailMap);
-                    setTimeout(() => detailMap.invalidateSize(), 100);
-                    const mapDivForClick = document.getElementById('detail-location-map');
-                    if (mapDivForClick) {
-                        mapDivForClick.style.cursor = 'pointer';
-                        mapDivForClick.addEventListener('click', () => {
-                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
-                        });
-                    }
-                }
-            }, 200);
-        }
-    } else if (mapContainer) {
-        mapContainer.style.display = 'none';
-    }
-
-    const oldConfirm = document.getElementById('event-detail-confirm');
-    if (oldConfirm) oldConfirm.classList.add('hidden');
-    const oldAddr = document.getElementById('detail-address-container');
-    if (oldAddr) oldAddr.style.display = 'none';
-
-    // ─── تشخیص مهمان ───
-    const isInvitee = !!ev.parent_event_id;
-
-    // ─── دکمه Edit ───
-    const editBtn = document.getElementById('detail-edit-btn-top');
-    if (editBtn) {
-        editBtn.style.display = isInvitee ? 'none' : '';
-        editBtn.onclick = () => {
-            closeModal(eventDetailModal);
-            const evToEdit = events.find(e => e.id == currentDetailEventId);
-            if (evToEdit) openEditModal(evToEdit);
-        };
-    }
-
-    // ─── وضعیت تکمیل ───
-    var dateForCompletion = null;
-    if (occurrenceDate) {
-        dateForCompletion = toLocalDateString(occurrenceDate);
-    }
-    var isCompleted = false;
-    if (dateForCompletion && ev.recurrence_type && ev.recurrence_type !== 'none') {
-        isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                        ? ev.completed_occurrences.includes(dateForCompletion)
-                        : false;
-    } else {
-        isCompleted = (ev.status === 'completed' || ev.status === 'done');
-    }
-
-    const completeBtn = document.getElementById('detail-complete-btn');
-    if (completeBtn) {
-        completeBtn.style.display = isInvitee ? 'none' : '';
-
-        // ── تسک هوشمند ──
-        if (ev.type === 'task' && ev.recurrence_type === 'smart') {
-            completeBtn.textContent = 'Done';
-            completeBtn.onclick = function() {
-                closeModal(eventDetailModal);
-                completeSmartTask(ev);
-            };
-        }
-        // ── غیر هوشمند ──
-        else if (isCompleted) {
-            completeBtn.textContent = 'Undo';
-            completeBtn.onclick = () => {
-                if (dateForCompletion && ev.recurrence_type !== 'none') {
-                    var idx = ev.completed_occurrences.indexOf(dateForCompletion);
-                    if (idx > -1) ev.completed_occurrences.splice(idx, 1);
-                    if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
-                        delete ev.completed_timestamps[dateForCompletion];
-                    }
-                    updateEventInDB(ev.id, {
-                        completed_occurrences: ev.completed_occurrences,
-                        completed_timestamps: ev.completed_timestamps
-                    }).then(async () => {
-                        if (currentUser && ev.type === 'task') {
-                            const today = new Date();
-                            const evDate = new Date(ev.start_date);
-                            if (evDate.getFullYear() === today.getFullYear() &&
-                                evDate.getMonth() === today.getMonth() &&
-                                evDate.getDate() === today.getDate()) {
-                                await addNotificationToUser(
-                                    currentUser.id,
-                                    'event',
-                                    'Event today',
-                                    `${ev.title || 'Untitled'} is today!`,
-                                    '#'
-                                );
-                            }
-                        }
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                        updateNotificationDot();
-                    }).catch(() => showToast('Error undoing.'));
-                } else {
-                    updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
-                        ev.status = 'pending';
-                        ev.completed_at = null;
-                        if (currentUser && ev.type === 'task') {
-                            const today = new Date();
-                            const evDate = new Date(ev.start_date);
-                            if (evDate.getFullYear() === today.getFullYear() &&
-                                evDate.getMonth() === today.getMonth() &&
-                                evDate.getDate() === today.getDate()) {
-                                await addNotificationToUser(
-                                    currentUser.id,
-                                    'event',
-                                    'Event today',
-                                    `${ev.title || 'Untitled'} is today!`,
-                                    '#'
-                                );
-                            }
-                        }
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                        updateNotificationDot();
-                    }).catch(() => showToast('Error undoing.'));
-                }
-            };
-        } else {
-            completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
-            completeBtn.onclick = () => {
-                if (dateForCompletion && ev.recurrence_type !== 'none') {
-                    if (!ev.completed_occurrences) ev.completed_occurrences = [];
-                    ev.completed_occurrences.push(dateForCompletion);
-                    if (!ev.completed_timestamps) ev.completed_timestamps = {};
-                    ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
-                    updateEventInDB(ev.id, {
-                        completed_occurrences: ev.completed_occurrences,
-                        completed_timestamps: ev.completed_timestamps
-                    }).then(async () => {
-                        if (currentUser) {
-                            await removeNotificationsForEvent(ev.id, currentUser.id);
-                        }
-                        showToast('Occurrence marked done. Auto‑deleted in 28 days.');
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                        updateNotificationDot();
-                    }).catch(() => showToast('Error completing.'));
-                } else {
-                    var newStatus = ev.type === 'task' ? 'done' : 'completed';
-                    var payload = { status: newStatus, completed_at: new Date().toISOString() };
-                    updateEventInDB(ev.id, payload).then(async () => {
-                        ev.status = newStatus;
-                        ev.completed_at = payload.completed_at;
-                        if (currentUser) {
-                            await removeNotificationsForEvent(ev.id, currentUser.id);
-                        }
-                        showToast('Item marked done. Auto‑deleted in 28 days.');
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                        updateNotificationDot();
-                    }).catch(() => showToast('Error completing.'));
-                }
-            };
-        }
-    }
-
-    // ─── دکمه Delete / Leave ───
-    const cancelBtn = document.getElementById('detail-cancel-btn');
-    if (cancelBtn) {
-        if (isInvitee) {
-            cancelBtn.textContent = 'Leave Event';
-            cancelBtn.onclick = () => {
-                showConfirmModal('Leave this event?', async () => {
-                    await deleteEventFromDB(ev.id);
-                    events = events.filter(e => e.id !== ev.id);
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                });
-            };
-        } else {
-            cancelBtn.textContent = 'Delete';
-            cancelBtn.onclick = () => {
-                showConfirmModal('Are you sure you want to delete this event?', () => {
-                    deleteEventById(ev.id).then(() => {
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => showToast('Failed to delete event.'));
-                });
-            };
-        }
-    }
-
-    const postponeBtn = document.getElementById('detail-postpone-btn');
-    if (postponeBtn) {
-        if (isInvitee) {
-            postponeBtn.style.display = 'none';
-        } else {
-            postponeBtn.style.display = '';
-            postponeBtn.onclick = () => openPostponeModal();
-        }
-    }
-
-    openModal(eventDetailModal);
-}
-
-
-/* =========================== DELETE CONFIRMATION ============================ */
-
-async function deleteEventById(id) {
-    showGlobalLoader();
-    try {
-        const ok = await deleteEventFromDB(id);
-        if (ok) {
-            events = events.filter(ev => ev.id != id);
-            renderCalendar();
-            updateNotificationDot()
-        }
-    } catch (err) {
-        console.error('Delete failed:', err);
-        showToast('Failed to delete event. Please try again.');
-    } finally {
-        hideGlobalLoader();
-    }
-}
-
-function showDeleteConfirmation(eventId) {
-    const actions = document.querySelector('.event-detail-actions');
-    const confirm = document.getElementById('event-detail-confirm');
-    if (actions) actions.style.display = 'none';
-    if (confirm) {
-        confirm.classList.remove('hidden');
-        confirm.dataset.eventId = eventId;
-        setTimeout(() => confirm.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest'
-        }), 100);
-    }
-}
-
-function hideDeleteConfirmation() {
-    const actions = document.querySelector('.event-detail-actions');
-    const confirm = document.getElementById('event-detail-confirm');
-    if (actions) actions.style.display = '';
-    if (confirm) {
-        confirm.classList.add('hidden');
-        delete confirm.dataset.eventId;
-    }
-}
-
-// =========================== HIDE INLINE CHECKLIST ============================
-function hideInlineChecklist() {
-    const editor = document.getElementById('checklist-inline-editor');
-    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
-    if (editor) editor.style.display = 'none';
-    if (toggleBtn) toggleBtn.classList.remove('active');
-}
-
-// =========================== SHOW INLINE CHECKLIST ============================
-function showInlineChecklist() {
-    const editor = document.getElementById('checklist-inline-editor');
-    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
-    if (editor) editor.style.display = 'block';
-    if (toggleBtn) toggleBtn.classList.add('active');
-    renderInlineChecklistItems(currentChecklistItems);
-}
-
-// =========================== RENDER INLINE CHECKLIST ITEMS ============================
-function renderInlineChecklistItems(items) {
-    const container = document.getElementById('checklist-inline-items');
-    if (!container) return;
-    container.innerHTML = '';
-
-    items.forEach((item, index) => {
-        const row = document.createElement('div');
-        row.className = 'checklist-inline-row';
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = 'neon-checkbox';
-        cb.checked = item.done;
-        cb.addEventListener('change', function() {
-            item.done = this.checked;
-        });
-
-        const textSpan = document.createElement('span');
-        textSpan.className = 'checklist-text';
-        textSpan.textContent = item.text;
-        textSpan.setAttribute('contenteditable', 'true');
-        textSpan.addEventListener('input', function() {
-            item.text = this.textContent.trim();
-        });
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'delete-item-btn';
-        delBtn.innerHTML = '✕';
-        delBtn.addEventListener('click', () => {
-            currentChecklistItems.splice(index, 1);
-            renderInlineChecklistItems(currentChecklistItems);
-        });
-
-        const addSubBtn = document.createElement('button');
-        addSubBtn.className = 'add-subtask-btn';
-        addSubBtn.innerHTML = '+';
-        addSubBtn.title = 'Add subtask';
-        addSubBtn.addEventListener('click', () => {
-            if (!item.subtasks) item.subtasks = [];
-            item.subtasks.push({
-                text: '',
-                done: false
-            });
-            renderInlineChecklistItems(currentChecklistItems);
-            const subRows = container.querySelectorAll('.subtask-row .checklist-text');
-            if (subRows.length > 0) {
-                const last = subRows[subRows.length - 1];
-                last.focus();
-                const range = document.createRange();
-                range.selectNodeContents(last);
-                range.collapse(false);
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(range);
-            }
-        });
-
-        row.appendChild(cb);
-        row.appendChild(textSpan);
-        row.appendChild(addSubBtn);
-        row.appendChild(delBtn);
-        container.appendChild(row);
-
-        if (item.subtasks && item.subtasks.length > 0) {
-            item.subtasks.forEach((sub, subIndex) => {
-                const subRow = document.createElement('div');
-                subRow.className = 'checklist-inline-row subtask-row';
-
-                const subCb = document.createElement('input');
-                subCb.type = 'checkbox';
-                subCb.className = 'neon-checkbox';
-                subCb.checked = sub.done;
-                subCb.addEventListener('change', function() {
-                    sub.done = this.checked;
-                });
-
-                const subText = document.createElement('span');
-                subText.className = 'checklist-text';
-                subText.textContent = sub.text;
-                subText.setAttribute('contenteditable', 'true');
-                subText.addEventListener('input', function() {
-                    sub.text = this.textContent.trim();
-                });
-
-                const subDelBtn = document.createElement('button');
-                subDelBtn.className = 'delete-item-btn';
-                subDelBtn.innerHTML = '✕';
-                subDelBtn.addEventListener('click', () => {
-                    item.subtasks.splice(subIndex, 1);
-                    renderInlineChecklistItems(currentChecklistItems);
-                });
-
-                subRow.appendChild(subCb);
-                subRow.appendChild(subText);
-                subRow.appendChild(subDelBtn);
-                container.appendChild(subRow);
-            });
-        }
-    });
-}
-
-// =========================== RENDER CHECKLIST IN DETAIL ============================
-function renderChecklistInDetail(ev) {
-    const container = document.getElementById('detail-checklist-container');
-    if (!container) return;
-
-    if (ev.type !== 'task' || !ev.checklist || ev.checklist.length === 0) {
-        container.style.display = 'none';
-        return;
-    }
-
-    container.style.display = 'block';
-    
-    const icon = document.getElementById('detail-checklist-icon');
-    if (icon) icon.style.color = ev.color || 'var(--accent)';
-
-    const listContainer = document.getElementById('detail-checklist-items');
-    if (!listContainer) return;
-    listContainer.innerHTML = '';
-
-    let allDone = true;
-
-    function renderItems(items, parentElement, depth = 0) {
-        items.forEach((item, index) => {
-            const row = document.createElement('div');
-            row.className = 'detail-checklist-row';
-            row.style.display = 'flex';
-            row.style.alignItems = 'center';
-            row.style.gap = '10px';
-            row.style.padding = '4px 0';
-            row.style.minHeight = '28px';
-            
-            if (depth > 0) {
-                row.style.paddingLeft = (depth * 20) + 'px';
-                row.classList.add('subtask-row');
-            }
-
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.className = 'neon-checkbox';
-            cb.checked = item.done || false;
-            cb.dataset.parentIndex = index;
-            cb.dataset.depth = depth;
-            cb.style.width = '18px';
-            cb.style.height = '18px';
-            cb.style.minWidth = '18px';
-            cb.style.minHeight = '18px';
-            cb.style.margin = '0';
-            cb.style.padding = '0';
-            cb.style.cursor = 'pointer';
-            cb.style.accentColor = 'var(--accent)';
-            cb.style.flexShrink = '0';
-
-            // متن
-            const textSpan = document.createElement('span');
-            textSpan.className = 'detail-checklist-text';
-            textSpan.textContent = item.text || 'Untitled';
-            textSpan.style.flex = '1';
-            textSpan.style.fontSize = '14px';
-            textSpan.style.color = 'var(--text-primary)';
-            textSpan.style.wordBreak = 'break-word';
-            textSpan.style.padding = '2px 4px';
-            textSpan.style.lineHeight = '1.4';
-            
-            if (item.done) {
-                textSpan.style.textDecoration = 'line-through';
-                textSpan.style.opacity = '0.6';
-            } else {
-                allDone = false;
-            }
-
-            row.appendChild(cb);
-            row.appendChild(textSpan);
-            parentElement.appendChild(row);
-
-            if (item.subtasks && item.subtasks.length > 0) {
-                const subContainer = document.createElement('div');
-                subContainer.className = 'detail-checklist-subcontainer';
-                subContainer.style.paddingLeft = '24px';
-                renderItems(item.subtasks, subContainer, depth + 1);
-                parentElement.appendChild(subContainer);
-            }
-        });
-    }
-
-    renderItems(ev.checklist, listContainer, 0);
-
-    if (allDone && ev.checklist.length > 0) {
-        markTaskDone(ev);
-    }
-
-    listContainer.querySelectorAll('.neon-checkbox').forEach(cb => {
-        cb.addEventListener('change', function() {
-            const depth = parseInt(this.dataset.depth);
-            let item = null;
-
-            if (depth === 0) {
-                const idx = parseInt(this.dataset.parentIndex);
-                if (idx >= 0 && idx < ev.checklist.length) {
-                    item = ev.checklist[idx];
-                }
-            } else {
-                let flatIdx = 0;
-                let found = false;
-                for (let i = 0; i < ev.checklist.length; i++) {
-                    const p = ev.checklist[i];
-                    if (p.subtasks) {
-                        for (let s = 0; s < p.subtasks.length; s++) {
-                            if (flatIdx === parseInt(this.dataset.parentIndex)) {
-                                item = p.subtasks[s];
-                                found = true;
-                                break;
-                            }
-                            flatIdx++;
-                        }
-                    }
-                    if (found) break;
-                }
-            }
-
-            if (item) {
-                item.done = this.checked;
-                const row = this.closest('.detail-checklist-row');
-                if (row) {
-                    const text = row.querySelector('.detail-checklist-text');
-                    if (text) {
-                        text.style.textDecoration = this.checked ? 'line-through' : 'none';
-                        text.style.opacity = this.checked ? '0.6' : '1';
-                    }
-                }
-
-                updateEventInDB(ev.id, { checklist: ev.checklist })
-                    .then(() => {
-                        checkAllChecklistDone(ev);
-                    })
-                    .catch(() => showToast('Error updating checklist.'));
-            }
-        });
-    });
-}
-
-// =========================== CHECK ALL CHECKLIST DONE ============================
-function checkAllChecklistDone(ev) {
-    if (!ev.checklist || ev.checklist.length === 0) return;
-
-    function allItemsDone(items) {
-        for (const item of items) {
-            if (!item.done) return false;
-            if (item.subtasks && item.subtasks.length > 0) {
-                if (!allItemsDone(item.subtasks)) return false;
-            }
-        }
-        return true;
-    }
-
-    if (allItemsDone(ev.checklist)) {
-        markTaskDone(ev);
-    }
-}
-
-// =========================== MARK TASK DONE ============================
-function markTaskDone(ev) {
-    if (ev.status === 'done') return;
-
-    ev.status = 'done';
-    ev.completed_at = new Date().toISOString();
-    
-    updateEventInDB(ev.id, { 
-        status: 'done', 
-        completed_at: ev.completed_at 
-    }).then(async () => {
-        if (currentUser) {
-            await removeNotificationsForEvent(ev.id, currentUser.id);
-        }
-        
-        // ─── وضعیت تکمیل (Complete / Undo) ───
-const completeBtn = document.getElementById('detail-complete-btn');
-if (completeBtn) {
-    completeBtn.style.display = isInvitee ? 'none' : '';
-
-    if (isCompleted) {
-        completeBtn.textContent = 'Undo';
-        completeBtn.onclick = () => {
-            if (dateForCompletion && ev.recurrence_type !== 'none') {
-                var idx = ev.completed_occurrences.indexOf(dateForCompletion);
-                if (idx > -1) ev.completed_occurrences.splice(idx, 1);
-                if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
-                    delete ev.completed_timestamps[dateForCompletion];
-                }
-                updateEventInDB(ev.id, {
-                    completed_occurrences: ev.completed_occurrences,
-                    completed_timestamps: ev.completed_timestamps
-                }).then(async () => {
-                    // ✅ بازسازی نوتیفیکیشن اگر امروز است
-                    if (currentUser) {
-                        const today = new Date();
-                        const evDate = new Date(ev.start_date);
-                        if (evDate.getFullYear() === today.getFullYear() &&
-                            evDate.getMonth() === today.getMonth() &&
-                            evDate.getDate() === today.getDate()) {
-                            await addNotificationToUser(
-                                currentUser.id,
-                                'event',
-                                '📅 Event Today',
-                                `${ev.title || 'Untitled'} is today!`,
-                                '#',
-                                ev.id
-                            );
-                        }
-                    }
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error undoing.'));
-            } else {
-                updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
-                    ev.status = 'pending';
-                    ev.completed_at = null;
-                    if (currentUser) {
-                        const today = new Date();
-                        const evDate = new Date(ev.start_date);
-                        if (evDate.getFullYear() === today.getFullYear() &&
-                            evDate.getMonth() === today.getMonth() &&
-                            evDate.getDate() === today.getDate()) {
-                            await addNotificationToUser(
-                                currentUser.id,
-                                'event',
-                                '📅 Event Today',
-                                `${ev.title || 'Untitled'} is today!`,
-                                '#',
-                                ev.id
-                            );
-                        }
-                    }
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error undoing.'));
-            }
-        };
-    } else {
-        completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
-        completeBtn.onclick = () => {
-            if (dateForCompletion && ev.recurrence_type !== 'none') {
-                if (!ev.completed_occurrences) ev.completed_occurrences = [];
-                ev.completed_occurrences.push(dateForCompletion);
-                if (!ev.completed_timestamps) ev.completed_timestamps = {};
-                ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
-                updateEventInDB(ev.id, {
-                    completed_occurrences: ev.completed_occurrences,
-                    completed_timestamps: ev.completed_timestamps
-                }).then(async () => {
-                    if (currentUser) {
-                        await removeNotificationsForEvent(ev.id, currentUser.id);
-                    }
-                    showToast('This occurrence will be auto-deleted after 28 days.');
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error completing.'));
-            } else {
-                var newStatus = ev.type === 'task' ? 'done' : 'completed';
-                var payload = { status: newStatus, completed_at: new Date().toISOString() };
-                updateEventInDB(ev.id, payload).then(async () => {
-                    ev.status = newStatus;
-                    ev.completed_at = payload.completed_at;
-                    if (currentUser) {
-                        await removeNotificationsForEvent(ev.id, currentUser.id);
-                    }
-                    showToast('This item will be auto-deleted after 28 days.');
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error completing.'));
-            }
-        };
-    }
-}
-        
-        showToast('Task marked as Done!');
-        renderCalendar();
-        updateNotificationDot();
-    }).catch(() => showToast('Error marking task as done.'));
-}
-
-/* =========================== NAVIGATION ============================ */
-
-function navigatePrev() {
-    if (viewMode === 'year') {
-        currentDate.setFullYear(currentDate.getFullYear() - 1);
-    } else if (viewMode === 'month') {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-    } else if (viewMode === 'day') {
-        currentDate.setDate(currentDate.getDate() - 1);
-    }
-    renderCalendar();
-}
-
-function navigateNext() {
-    if (viewMode === 'year') {
-        currentDate.setFullYear(currentDate.getFullYear() + 1);
-    } else if (viewMode === 'month') {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-    } else if (viewMode === 'day') {
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    renderCalendar();
-}
-
-function handleTodayClick() {
-    const today = new Date();
-    currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    gregPickerPopup.classList.remove('open');
-    titlePickerActive = false;
-    document.getElementById('greg-today-btn').style.display = 'none';
-    renderCalendar();
-}
-
-/* =========================== GSAP ANIMATIONS ============================ */
-
-function animateTabIndicator() {
-    const activeTab = viewTabsEl.querySelector('.view-tab.active');
-    if (!activeTab || !tabIndicator) return;
-    const tabRect = activeTab.getBoundingClientRect(),
-        containerRect = viewTabsEl.getBoundingClientRect();
-    gsap.to(tabIndicator, {
-        left: tabRect.left - containerRect.left,
-        width: tabRect.width,
-        duration: 0.4,
-        ease: 'power2.out'
-    });
-}
-
-/* =========================== EVENT LISTENERS ============================ */
-
-/* --------- LOGOUT --------- */
-document.getElementById('sidebar-logout')?.addEventListener('click', () => {
-    openModal(document.getElementById('logout-confirm-modal'));
-});
-document.getElementById('logout-confirm-yes')?.addEventListener('click', () => {
-    closeModal(document.getElementById('logout-confirm-modal'));
-    logout();
-});
-document.getElementById('logout-confirm-no')?.addEventListener('click', () => {
-    closeModal(document.getElementById('logout-confirm-modal'));
-});
-document.getElementById('logout-confirm-modal')?.addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) {
-        closeModal(e.currentTarget);
-    }
-});
-
-/* --------- TODAY BUTTON --------- */
-document.getElementById('greg-today-btn')?.addEventListener('click', handleTodayClick);
-
-/* --------- AUTH OVERLAY CLICK --------- */
-authOverlay.addEventListener('click', (e) => {
-    if (e.target === authOverlay) closeModal(authOverlay);
-});
-
-/* --------- STEP-BASED AUTH FLOW --------- */
-let authEmail = '';
-
-function showStep(stepId) {
-    document.querySelectorAll('.auth-step').forEach(el => el.classList.add('hidden'));
-    document.getElementById(stepId)?.classList.remove('hidden');
-}
-
-document.getElementById('auth-continue-btn')?.addEventListener('click', async function() {
-    const email = document.getElementById('auth-email').value.trim();
-    const errorEl = document.getElementById('auth-error');
-    if (!email) {
-        errorEl.textContent = 'Please enter an email.';
-        return;
-    }
-    authEmail = email;
-
-    showGlobalLoader();
-    try {
-        const {
-            data: exists,
-            error: rpcError
-        } = await sb.rpc('check_email_exists', {
-            email_to_check: email
-        });
-        if (rpcError) throw rpcError;
-        if (exists) {
-            document.getElementById('auth-user-email').textContent = email;
-            showStep('step-2-login');
-        } else {
-            showStep('step-2-register');
-            document.getElementById('reg-form-fields').style.display = '';
-            document.getElementById('reg-success').style.display = 'none';
-        }
-        document.getElementById('auth-error').textContent = '';
-    } catch (e) {
-        console.error(e);
-        errorEl.textContent = 'Something went wrong. Try again.';
-    } finally {
-        hideGlobalLoader();
-    }
-});
-
-document.getElementById('auth-signin-btn')?.addEventListener('click', async function() {
-    const email = authEmail;
-    const password = document.getElementById('auth-password').value;
-    const errorEl = document.getElementById('auth-error-login');
-    if (!email || !password) {
-        errorEl.textContent = 'Please enter your password.';
-        return;
-    }
-
-    showGlobalLoader();
-    const {
-        data,
-        error
-    } = await sb.auth.signInWithPassword({
-        email,
-        password
-    });
-    hideGlobalLoader();
-    if (error) {
-        errorEl.textContent = error.message;
-        return;
-    }
-
-    currentUser = data.user;
-    currentProfile = await buildCurrentProfile(currentUser);
-    currentUserRole = currentProfile?.role || 'recruit';
-    closeModal(authOverlay);
-    syncSidebarComponent();
-    events = await fetchEvents();
-    renderCalendar();
-    updateNotificationDot()
-});
-
-document.getElementById('auth-forgot-link')?.addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('forgot-email').value = authEmail;
-    showStep('step-forgot');
-});
-
-document.getElementById('auth-send-reset-btn')?.addEventListener('click', async function() {
-    const email = document.getElementById('forgot-email').value.trim();
-    if (!email) return;
-    showGlobalLoader();
-    const {
-        error
-    } = await sb.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + window.location.pathname
-    });
-    hideGlobalLoader();
-    if (error) {
-        document.getElementById('auth-error-login').textContent = error.message;
-        return;
-    }
-    document.getElementById('auth-success-msg').textContent = 'Password reset link sent.';
-    document.getElementById('auth-success-msg').style.display = 'block';
-});
-
-document.getElementById('auth-back-to-login')?.addEventListener('click', function(e) {
-    e.preventDefault();
-    showStep('step-2-login');
-});
-
-document.getElementById('auth-register-btn')?.addEventListener('click', async function() {
-    const firstname = document.getElementById('reg-firstname').value.trim();
-    const lastname = document.getElementById('reg-lastname').value.trim();
-    const password = document.getElementById('reg-password').value;
-    const confirm = document.getElementById('reg-confirm').value;
-    const errorEl = document.getElementById('auth-error-register');
-    if (!firstname || !lastname || !password || !confirm) {
-        errorEl.textContent = 'All fields are required.';
-        return;
-    }
-    if (password !== confirm) {
-        errorEl.textContent = 'Passwords do not match.';
-        return;
-    }
-    showGlobalLoader();
-    const {
-        error
-    } = await sb.auth.signUp({
-        email: authEmail,
-        password,
-        options: {
-            data: {
-                first_name: firstname,
-                last_name: lastname
-            },
-            emailRedirectTo: window.location.origin + window.location.pathname
-        }
-    });
-    hideGlobalLoader();
-    if (error) {
-        errorEl.textContent = error.message;
-        return;
-    }
-
-    document.getElementById('reg-form-fields').style.display = 'none';
-    document.getElementById('reg-success').style.display = 'block';
-    errorEl.textContent = '';
-});
-
-document.getElementById('reg-to-login-btn')?.addEventListener('click', function() {
-    document.getElementById('auth-user-email').textContent = authEmail;
-    showStep('step-2-login');
-});
-
-document.getElementById('sidebar-login')?.addEventListener('click', () => {
-    openModal(authOverlay);
-    showStep('step-1');
-    document.getElementById('auth-email').value = '';
-    authEmail = '';
-    document.getElementById('auth-error').textContent = '';
-});
-
-document.querySelectorAll('.auth-step').forEach(step => {
-    step.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const map = {
-                'step-1': 'auth-continue-btn',
-                'step-2-login': 'auth-signin-btn',
-                'step-2-register': 'auth-register-btn',
-                'step-forgot': 'auth-send-reset-btn'
-            };
-            const btnId = map[step.id];
-            if (btnId) document.getElementById(btnId)?.click();
-        }
-    });
-});
-
-document.querySelectorAll('.toggle-password-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const input = document.getElementById(this.dataset.target);
-        if (!input) return;
-        const isPassword = input.type === 'password';
-        input.type = isPassword ? 'text' : 'password';
-        this.innerHTML = isPassword ?
-            `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="m14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>` :
-            `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
-    });
-});
-
-// Recurrence modal listeners
-document.getElementById('recurrence-select')?.addEventListener('change', function() {
-    recurrence.type = this.value;
-    if (recurrence.type === 'smart' && eventType !== 'task') {
-        recurrence.type = 'none';
-        this.value = 'none';
-    }
-    if ((this.value === 'weekly' || this.value === 'custom') && recurrence.days.length === 0) {
-        const dayOfWeek = new Date().getDay();
-        recurrence.days = [dayOfWeek];
-    }
-    if (this.value === 'none') {
-        recurrence.days = [];
-        recurrence.interval = 1;
-    }
-    updateRecurrenceModalUI();
-});
-
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.interval-btn');
-    if (!btn) return;
-
-    const spinner = btn.closest('.rec-interval-spinner');
-    if (!spinner) return;
-
-    const input = spinner.querySelector('.interval-input');
-    if (input) {
-        let val = parseInt(input.value, 10) || 1;
-        const min = 1;
-        if (btn.classList.contains('interval-plus')) {
-            val += 1;
-        } else if (btn.classList.contains('interval-minus')) {
-            val = Math.max(min, val - 1);
-        }
-        input.value = val;
-        input.dispatchEvent(new Event('input', {
-            bubbles: true
-        }));
-    }
-
-    const display = spinner.querySelector('.interval-display');
-    if (display) {
-        let val = parseInt(display.textContent, 10) || 1;
-        const min = 1;
-        if (btn.classList.contains('interval-plus')) {
-            val += 1;
-        } else if (btn.classList.contains('interval-minus')) {
-            val = Math.max(min, val - 1);
-        }
-        display.textContent = val;
-        recurrence.interval = val;
-    }
-});
-
-document.getElementById('recurrence-done-btn')?.addEventListener('click', () => {
-    const smartRadio = document.querySelector('input[name="smartInterval"]:checked');
-    if (recurrence.type === 'smart' && smartRadio) {
-        recurrence.smartInterval = smartRadio.value;
-    }
-    closeModal(document.getElementById('recurrence-modal'));
-    updateRecurrencePreview();
-});
-
-document.getElementById('recurrence-modal-close')?.addEventListener('click', () => {
-    closeModal(document.getElementById('recurrence-modal'));
-    updateRecurrencePreview();
-});
-document.getElementById('recurrence-modal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeModal(this);
-        updateRecurrencePreview();
-    }
-});
-document.getElementById('open-recurrence-btn')?.addEventListener('click', openRecurrenceModal);
-
-// --------- TAG MODAL (only colors) ---------
-document.getElementById('tag-done-btn')?.addEventListener('click', () => {
-    const colorBtn = document.getElementById('toggle-color-btn');
-    if (colorBtn) {
-        colorBtn.classList.toggle('active', selectedTagColor !== '#f5f5f5');
-    }
-    closeModal(document.getElementById('tag-modal'));
-});
-
-document.getElementById('tag-modal-close')?.addEventListener('click', () => {
-    closeModal(document.getElementById('tag-modal'));
-});
-document.getElementById('tag-modal')?.addEventListener('click', function(e) {
-    if (e.target === this) closeModal(this);
-});
-
-document.querySelector('.tag-colors-grid')?.addEventListener('click', function(e) {
-    const item = e.target.closest('.tag-color-item');
-    if (!item) return;
-    selectedTagColor = item.dataset.color;
-    document.querySelectorAll('.tag-color-item').forEach(el => el.classList.remove('selected'));
-    item.classList.add('selected');
-});
-
-// --------- COLOR PICKER BUTTON ---------
-document.getElementById('toggle-color-btn')?.addEventListener('click', function() {
-    const btn = this;
-    if (btn.classList.contains('active')) {
-        selectedTagColor = '#f5f5f5';
-        btn.classList.remove('active');
-    } else {
-        openModal(document.getElementById('tag-modal'));
-        document.querySelectorAll('.tag-color-item').forEach(el => el.classList.remove('selected'));
-        const activeColor = document.querySelector(`.tag-color-item[data-color="${selectedTagColor}"]`);
-        if (activeColor) activeColor.classList.add('selected');
-    }
-});
-
-// Gregorian picker listeners
-if (gregPrevBtn) gregPrevBtn.addEventListener('click', function() {
-    gregState.gm--;
-    if (gregState.gm < 0) {
-        gregState.gm = 11;
-        gregState.gy--;
-    }
-    renderGregPicker();
-});
-if (gregNextBtn) gregNextBtn.addEventListener('click', function() {
-    gregState.gm++;
-    if (gregState.gm > 11) {
-        gregState.gm = 0;
-        gregState.gy++;
-    }
-    renderGregPicker();
-});
-if (gregConfirmBtn) gregConfirmBtn.addEventListener('click', function() {
-    if (!gregState.selectedGd) {
-        gregDaysEl.style.outline = '1px solid var(--accent)';
-        return;
-    }
-    if (titlePickerActive) {
-        titlePickerActive = false;
-        var gy = gregState.gy,
-            gm = gregState.gm,
-            gd = gregState.selectedGd;
-        var newDate = new Date(gy, gm, gd);
-        if (viewMode === 'month') {
-            newDate = new Date(newDate.getFullYear(), newDate.getMonth(), 1);
-        } else if (viewMode === 'year') {
-            newDate = new Date(newDate.getFullYear(), 0, 1);
-        }
-        currentDate = newDate;
-        gregPickerPopup.classList.remove('open');
-        document.getElementById('greg-today-btn').style.display = 'none';
-        renderCalendar();
-        return;
-    }
-    var h = gregHourInput.value || '09';
-    var m = gregMinuteInput.value || '00';
-    var gy = gregState.gy,
-        gm = gregState.gm + 1,
-        gd = gregState.selectedGd;
-    if (eventStartGreg) eventStartGreg.value = gy + '-' + pad(gm) + '-' + pad(gd);
-    if (eventStartInput) eventStartInput.value = gy + '-' + pad(gm) + '-' + pad(gd) + 'T' + pad(h) + ':' + pad(m);
-    var endH = document.getElementById('greg-end-hour')?.value || '10';
-    var endM = document.getElementById('greg-end-minute')?.value || '00';
-    var endDateStr = gy + '-' + pad(gm) + '-' + pad(gd) + 'T' + pad(endH) + ':' + pad(endM);
-    if (eventEndInput) eventEndInput.value = endDateStr;
-    gregTriggerText.textContent = GREG_MONTH_NAMES[gregState.gm] + ' ' + gd + ', ' + gy + '  ' + pad(h) + ':' + pad(m);
-    gregPickerTrigger.classList.add('has-value');
-    gregPickerPopup.classList.remove('open');
-});
-if (gregPickerPopup) gregPickerPopup.addEventListener('click', function(e) {
-    if (e.target === gregPickerPopup) {
-        gregPickerPopup.classList.remove('open');
-        document.getElementById('greg-today-btn').style.display = 'none';
-        titlePickerActive = false;
-    }
-});
-if (gregPickerTrigger) gregPickerTrigger.addEventListener('click', function() {
-    if (eventStartGreg.value) {
-        var p = eventStartGreg.value.split('-');
-        openGregPicker(+p[0], +p[1] - 1, +p[2]);
-    } else openGregPicker();
-});
-
-// Event type toggle
-document.getElementById('event-type-toggle')?.addEventListener('click', e => {
-    const label = e.target.closest('.event-type-label');
-    if (label) setEventType(label.dataset.type);
-});
-
-// Navigation buttons
-prevMonthBtn?.addEventListener('click', navigatePrev);
-nextMonthBtn?.addEventListener('click', navigateNext);
-currentMonthYearBtn?.addEventListener('click', openTitlePicker);
-
-// Add event button
-if (addEventBtn) addEventBtn.addEventListener('click', () => {
-    if (!currentUser) {
-        openModal(authOverlay);
-        authError.textContent = 'Please sign in to add events.';
-        return;
-    }
-    if (eventTitleInput) eventTitleInput.value = '';
-    if (eventStartInput) eventStartInput.value = '';
-    if (eventEndInput) eventEndInput.value = '';
-    if (eventStartGreg) eventStartGreg.value = '';
-    if (gregTriggerText) gregTriggerText.textContent = 'Select date';
-    if (gregPickerTrigger) gregPickerTrigger.classList.remove('has-value');
-    editingEventId = null;
-
-    recurrence = {
-        type: 'none',
-        interval: 1,
-        days: []
-    };
-    currentInvitees = [];
-    updateRecurrencePreview();
-
-    selectedTagColor = '#f5f5f5';
-    currentLocationCoords = null;
-    document.getElementById('location-coords-input').value = '';
-    document.getElementById('location-section').style.display = 'none';
-    document.getElementById('toggle-location-btn')?.classList.remove('active');
-    document.getElementById('toggle-invite-btn')?.classList.remove('active');
-    eventType = 'event';
-    document.getElementById('event-type-toggle').style.display = '';
-    const gregCheck = document.getElementById('event-all-day-greg');
-    if (gregCheck) gregCheck.checked = false;
-
-    const descField = document.getElementById('event-description');
-    if (descField) descField.value = '';
-    currentChecklistItems = [];
-    hideInlineChecklist();
-    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
-    if (toggleBtn) {
-        toggleBtn.style.display = 'none';
-        toggleBtn.classList.remove('active');
-    }
-
-    updateAllDayAndTimeRows();
-    openModal(eventModal);
-    requestAnimationFrame(() => {
-        setEventType('event');
-    });
-});
-
-// Save event
-if (saveEventBtn) saveEventBtn.onclick = saveEvent;
-
-// Modal close buttons
-closeModalBtns.forEach(btn => btn.addEventListener('click', () => closeModal(eventModal)));
-eventDetailModal.addEventListener('click', e => {
-    if (e.target === eventDetailModal) closeModal(eventDetailModal);
-});
-[eventModal].forEach(m => m?.addEventListener('click', e => {
-    if (e.target === m) closeModal(m);
-}));
-
-// View tabs
-viewTabsEl.querySelectorAll('.view-tab').forEach(btn => btn.addEventListener('click', () => {
-    viewMode = btn.dataset.view;
-    localStorage.setItem('ravlo-view-mode', viewMode);
-    renderCalendar();
-    animateTabIndicator();
-}));
-
-// Month/Year popup triggers
-if (gregMonthBtn) gregMonthBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    openGregMonthPopup();
-});
-if (gregYearBtn) gregYearBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    openGregYearPopup();
-});
-
-if (confirmYesBtn) confirmYesBtn.addEventListener('click', async () => {
-    var id = eventDetailConfirm.dataset.eventId;
-    if (id) await deleteEventById(id);
-    closeModal(eventDetailModal);
-    hideDeleteConfirmation();
-});
-if (confirmNoBtn) confirmNoBtn.addEventListener('click', hideDeleteConfirmation);
-
-// Time spinner
-document.addEventListener('click', function(e) {
-    const arrow = e.target.closest('.time-arrow');
-    if (!arrow) return;
-
-    const targetId = arrow.dataset.target;
-    const step = parseInt(arrow.dataset.step, 10);
-    const input = document.getElementById(targetId);
-    if (!input) return;
-
-    const prefix = 'greg';
-    const isEnd = targetId.includes('end');
-
-    let val = parseInt(input.value, 10);
-    if (isNaN(val)) val = 0;
-    let newVal = val + step;
-
-    if (targetId.includes('hour')) {
-        if (newVal < 0) newVal = 23;
-        if (newVal > 23) newVal = 0;
-    } else if (targetId.includes('minute')) {
-        if (newVal < 0) newVal = 45;
-        if (newVal > 45) newVal = 0;
-        newVal = Math.round(newVal / 15) * 15;
-    }
-
-    const g = getSelectedGregFor(prefix);
-    if (g && !isEnd && isToday(g.gy, g.gm, g.gd)) {
-        const now = new Date();
-        const curHour = now.getHours();
-        const curMinute = now.getMinutes();
-        const startHourEl = document.getElementById(prefix + '-hour');
-        const startMinuteEl = document.getElementById(prefix + '-minute');
-        let testHour = targetId.includes('hour') ? newVal : parseInt(startHourEl?.value || 0);
-        let testMin = targetId.includes('minute') ? newVal : parseInt(startMinuteEl?.value || 0);
-        const testTotal = testHour * 60 + testMin;
-        const nowTotal = curHour * 60 + curMinute;
-        if (testTotal <= nowTotal) return;
-    }
-
-    input.value = String(newVal).padStart(2, '0');
-
-    if (!isEnd) syncEndTimeOnStartChange(prefix);
-
-    const obj = {
-        value: val
-    };
-    gsap.to(obj, {
-        value: newVal,
-        duration: 0.3,
-        ease: 'power2.out',
-        onUpdate: function() {
-            input.value = String(Math.round(obj.value)).padStart(2, '0');
-        }
-    });
-
-    gsap.fromTo(input, {
-        scale: 1
-    }, {
-        scale: 1.1,
-        duration: 0.15,
-        yoyo: true,
-        repeat: 1,
-        ease: 'power2.out'
-    });
-
-    gsap.fromTo(arrow, {
-        scale: 1
-    }, {
-        scale: 1.3,
-        duration: 0.2,
-        yoyo: true,
-        repeat: 1,
-        ease: 'power2.out'
-    });
-
-    validateTimeInput(prefix, isEnd);
-});
-
-// Time input validation listeners
-['greg'].forEach(prefix => {
-    const startHour = document.getElementById(prefix + '-hour');
-    const startMin = document.getElementById(prefix + '-minute');
-    const endHour = document.getElementById(prefix + '-end-hour');
-    const endMin = document.getElementById(prefix + '-end-minute');
-
-    if (startHour) {
-        startHour.addEventListener('input', () => {
-            validateTimeInput(prefix, false);
-            syncEndTimeOnStartChange(prefix);
-        });
-        startHour.addEventListener('change', () => {
-            validateTimeInput(prefix, false);
-            syncEndTimeOnStartChange(prefix);
-        });
-    }
-    if (startMin) {
-        startMin.addEventListener('input', () => {
-            validateTimeInput(prefix, false);
-            syncEndTimeOnStartChange(prefix);
-        });
-        startMin.addEventListener('change', () => {
-            validateTimeInput(prefix, false);
-            syncEndTimeOnStartChange(prefix);
-        });
-    }
-    if (endHour) {
-        endHour.addEventListener('input', () => validateTimeInput(prefix, true));
-        endHour.addEventListener('change', () => validateTimeInput(prefix, true));
-    }
-    if (endMin) {
-        endMin.addEventListener('input', () => validateTimeInput(prefix, true));
-        endMin.addEventListener('change', () => validateTimeInput(prefix, true));
-    }
-});
-
-// All-day toggle
-document.getElementById('event-all-day-greg')?.addEventListener('change', function() {
-    const timeRow = document.querySelector('#greg-picker-popup .picker-time-row');
-    if (timeRow) timeRow.style.display = this.checked ? 'none' : '';
-});
-
-// --------- ICON PICKER BUTTON ---------
-function updateIconButton() {
-    const btn = document.getElementById('toggle-icon-btn');
-    if (!btn) return;
-    if (selectedIcon) {
-        btn.innerHTML = selectedIcon;
-    } else {
-        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
-    }
-}
-
-function openIconModal() {
-    const modal = document.getElementById('icon-modal');
-    const grid = document.getElementById('icon-grid');
-    if (!modal || !grid) return;
-
-    grid.innerHTML = '';
-    ICON_OPTIONS.forEach((iconObj) => {
-        const item = document.createElement('div');
-        item.className = 'icon-item';
-        if (selectedIcon === iconObj.svg) {
-            item.classList.add('selected');
-        }
-        item.innerHTML = iconObj.svg;
-        item.addEventListener('click', () => {
-            selectedIcon = iconObj.svg;
-            updateIconButton();
-
-            document.getElementById('toggle-icon-btn')?.classList.add('active');
-            grid.querySelectorAll('.icon-item').forEach(el => el.classList.remove('selected'));
-            item.classList.add('selected');
-            selectedIcon = iconObj.svg;
-            const iconBtn = document.getElementById('toggle-icon-btn');
-            if (iconBtn) {
-                iconBtn.classList.toggle('active', !!selectedIcon);
-            }
-            selectedIcon = ev.icon || null;
-
-            selectedIcon = null;
-            updateIconButton();
-        });
-        grid.appendChild(item);
-    });
-
-    openModal(modal);
-}
-
-document.getElementById('toggle-icon-btn')?.addEventListener('click', function() {
-    const btn = this;
-    if (btn.classList.contains('active')) {
-        selectedIcon = null;
-        updateIconButton();
-        btn.classList.remove('active');
-    } else {
-        openIconModal();
-    }
-});
-
-document.getElementById('icon-done-btn')?.addEventListener('click', () => {
-    closeModal(document.getElementById('icon-modal'));
-});
-
-document.getElementById('icon-modal-close')?.addEventListener('click', () => {
-    closeModal(document.getElementById('icon-modal'));
-});
-
-document.getElementById('icon-modal')?.addEventListener('click', function(e) {
-    if (e.target === this) closeModal(this);
-});
-
-/* --------- INVITE MODAL HANDLERS (Connected to Dashboard Ecosystem) --------- */
-document.getElementById('toggle-invite-btn')?.addEventListener('click', () => {
-    const btn = document.getElementById('toggle-invite-btn');
-    if (!currentUser) {
-        showToast('Please sign in first.');
-        return;
-    }
-    if (btn && btn.classList.contains('active')) {
-        currentInvitees = [];
-        updateInviteSelectedUI();
-        btn.classList.remove('active');
-        closeModal(document.getElementById('invite-modal'));
-    } else {
-        if (!document.getElementById('invite-search-input')) {
-            rebuildInviteModal();
-        }
-        document.getElementById('invite-search-input').value = '';
-        document.getElementById('invite-search-results').innerHTML = '';
-        document.getElementById('invite-link-section').style.display = 'none';
-        document.getElementById('invite-selected-list').innerHTML = '';
-        currentInvitees = [];
-        updateInviteSelectedUI();
-        openModal(document.getElementById('invite-modal'));
-    }
-});
-
-function rebuildInviteModal() {
-    const modal = document.getElementById('invite-modal');
-    const content = modal.querySelector('.modal-content');
-    const closeBtn = content.querySelector('#invite-modal-close')?.outerHTML || '';
-    content.innerHTML = `
-        ${closeBtn}
-        <h3 class="modal-heading">Invite People</h3>
-        <p style="font-size:12px; color:#aaa; margin-bottom:8px;">Only users with English names are searchable.</p>
-        <input type="text" id="invite-search-input" class="auth-field" placeholder="Search by English name..." autocomplete="off">
-        <div id="invite-search-results" class="invite-results"></div>
-        <div id="invite-selected-list" class="invite-selected-list"></div>
-        <div id="invite-link-section" style="display:none; margin-top:12px;">
-            <p style="font-size:12px; color:#aaa; margin-bottom:4px;">Share this link to connect first:</p>
-            <div style="display:flex; gap:8px; background:#111; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);">
-                <code id="invite-link-text" style="word-break:break-all;">XXXX</code>
-                <button id="copy-invite-link-btn" class="icon-btn" title="Copy">📋</button>
-            </div>
-        </div>
-        <button id="invite-done-btn" class="accent-btn" style="margin-top:16px;">Done</button>
-    `;
-    document.getElementById('invite-modal-close')?.addEventListener('click', () => closeModal(document.getElementById('invite-modal')));
-    document.getElementById('invite-done-btn')?.addEventListener('click', () => {
-        closeModal(document.getElementById('invite-modal'));
-        document.getElementById('toggle-invite-btn')?.classList.add('active');
-    });
-    document.getElementById('copy-invite-link-btn')?.addEventListener('click', () => {
-        const link = document.getElementById('invite-link-text').textContent;
-        navigator.clipboard.writeText(link).then(() => showToast('Link copied!'));
-    });
-    let searchTimeout;
-    document.getElementById('invite-search-input').addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        const q = this.value.trim();
-        if (q.length < 2) {
-            document.getElementById('invite-search-results').innerHTML = '';
-            return;
-        }
-        searchTimeout = setTimeout(() => searchInviteUsers(q), 300);
-    });
-}
-
-async function searchInviteUsers(query) {
-    const resultsDiv = document.getElementById('invite-search-results');
-    resultsDiv.innerHTML = '<div style="color:#aaa;">Searching...</div>';
-
-    try {
-        let {
-            data: users,
-            error
-        } = await sb
-            .from('profiles')
-            .select('id, first_name, last_name, username, photo_url')
-            .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%`)
-            .limit(10);
-        if (error) throw error;
-
-        users = users.filter(u => {
-            const name = (u.first_name || '') + ' ' + (u.last_name || '');
-            return /^[A-Za-z\s\-']+$/.test(name.trim());
-        });
-
-        if (!users || users.length === 0) {
-            const inviteLink = generateInviteLinkForNewUser();
-            resultsDiv.innerHTML = `
-                <div class="invite-not-found">
-                    <p class="invite-not-found-title">${escHtml(query)} isn't on Ravlo yet.</p>
-                    <p class="invite-not-found-sub">Invite them by sharing this link:</p>
-                    <div class="invite-link-box">
-                        <code id="invite-nonuser-link" class="invite-nonuser-link">${escHtml(inviteLink)}</code>
-                        <button id="copy-nonuser-invite-btn" class="copy-invite-link-btn" title="Copy link">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        </button>
-                    </div>
-                </div>
-            `;
-            const copyBtn = document.getElementById('copy-nonuser-invite-btn');
-            if (copyBtn) {
-                copyBtn.addEventListener('click', copyNonUserInviteLink);
-            }
-            return;
-        }
-
-        const myId = currentUser.id;
-        const userIds = users.map(u => u.id).filter(id => id !== myId);
-
-        if (userIds.length === 0) {
-            resultsDiv.innerHTML = '<div style="color:#aaa;">No users found.</div>';
-            return;
-        }
-
-        const {
-            data: allConns
-        } = await sb
-            .from('dashboard_connectionrequests')
-            .select('from_id, to_id, status')
-            .or(
-                `and(from_id.eq.${myId},to_id.in.(${userIds.join(',')}),status.in.(accepted,pending)),` +
-                `and(to_id.eq.${myId},from_id.in.(${userIds.join(',')}),status.in.(accepted,pending))`
-            );
-
-        const connectedMap = new Map();
-        const pendingMap = new Map();
-        allConns?.forEach(conn => {
-            const otherId = conn.from_id === myId ? conn.to_id : conn.from_id;
-            if (conn.status === 'accepted') connectedMap.set(otherId, true);
-            else if (conn.status === 'pending') pendingMap.set(otherId, true);
-        });
-
-        resultsDiv.innerHTML = '';
-        users.forEach(user => {
-            if (user.id === myId) return;
-
-            const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username || 'User';
-            const isConnected = connectedMap.has(user.id);
-            const isPending = pendingMap.has(user.id) && !isConnected;
-            const alreadyInvited = currentInvitees.some(inv => inv.id === user.id);
-
-            let statusText = '';
-            let actionButton = '';
-
-            if (isConnected) {
-                statusText = 'Connected';
-                actionButton = alreadyInvited ?
-                    '<span class="badge badge-accepted">Added</span>' :
-                    `<button class="btn-accent" onclick="inviteConnectedUser('${user.id}', '${escHtml(name)}')">Invite</button>`;
-            } else if (isPending) {
-                statusText = 'Pending';
-                actionButton = '<span class="badge badge-pending">Pending</span>';
-            } else {
-                statusText = 'Not connected';
-                actionButton = alreadyInvited ?
-                    '<span class="badge badge-accepted">Added</span>' :
-                    `<button class="btn-ghost" onclick="sendConnectionInvite('${user.id}', '${escHtml(name)}')">Connect & Invite</button>`;
-            }
-
-            let avatarHtml = '';
-            if (user.photo_url) {
-                avatarHtml = `<img src="${escHtml(user.photo_url)}" alt="${escHtml(name)}" class="invite-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`;
-                avatarHtml += `<div class="invite-avatar-fallback" style="display:none;">${name.charAt(0).toUpperCase()}</div>`;
-            } else {
-                avatarHtml = `<div class="invite-avatar-fallback">${name.charAt(0).toUpperCase()}</div>`;
-            }
-
-            const card = document.createElement('div');
-            card.className = 'invite-user-card';
-            card.innerHTML = `
-                <div class="invite-user-info">
-                    <div class="invite-avatar">${avatarHtml}</div>
-                    <div class="invite-user-details">
-                        <div class="invite-user-name">${escHtml(name)}</div>
-                        <div class="invite-user-status">${statusText}</div>
-                    </div>
-                </div>
-                ${actionButton}
-            `;
-            resultsDiv.appendChild(card);
-        });
-
-    } catch (e) {
-        resultsDiv.innerHTML = `<div style="color:#f88;">Error: ${e.message}</div>`;
-    }
-}
-
-function inviteConnectedUser(userId, name) {
-    if (currentInvitees.some(inv => inv.id === userId)) return;
-    currentInvitees.push({
-        id: userId,
-        name
-    });
-    updateInviteSelectedUI();
-    document.getElementById('invite-search-input').dispatchEvent(new Event('input'));
-}
-
-async function sendConnectionInvite(userId, name) {
-    try {
-        // Check if there's already any request between these two users
-        const {
-            data: existing
-        } = await sb
-            .from('dashboard_connectionrequests')
-            .select('id, status')
-            .or(
-                `and(from_id.eq.${currentUser.id},to_id.eq.${userId}),` +
-                `and(from_id.eq.${userId},to_id.eq.${currentUser.id})`
-            )
-            .limit(1);
-
-        if (existing && existing.length > 0) {
-            const req = existing[0];
-            if (req.status === 'accepted') {
-                showToast('You are already connected with this user.');
-            } else if (req.status === 'pending') {
-                showToast('A connection request is already pending. Please wait for a response.');
-            }
-            return;
-        }
-
-        // Insert new request
-        const {
-            data: newReq,
-            error
-        } = await sb
-            .from('dashboard_connectionrequests')
-            .insert({
-                from_id: currentUser.id,
-                to_id: userId,
-                status: 'pending'
-            })
-            .select()
-            .single();
-        if (error) throw error;
-
-        const inviteLink = `${DASHBOARD_URL}?connect=${newReq.id}`;
-        document.getElementById('invite-link-text').textContent = inviteLink;
-        document.getElementById('invite-link-section').style.display = 'block';
-
-        const myName = [currentProfile?.first_name, currentProfile?.last_name].filter(Boolean).join(' ') || 'Someone';
-        await addNotificationToUser(userId, 'connection', 'New connection request',
-            `${myName} wants to connect`, '#connections');
-
-        showToast(`Connection request sent! Share the invite link with ${name}.`);
-    } catch (e) {
-        showToast('Error: ' + e.message);
-    }
-}
-
-function updateInviteSelectedUI() {
-    const container = document.getElementById('invite-selected-list');
-    container.innerHTML = currentInvitees.map(inv => `
-        <div class="invite-selected-item">
-            <span>${escHtml(inv.name)}</span>
-            <button class="icon-btn" onclick="removeInvitee('${inv.id}')">✕</button>
-        </div>
-    `).join('');
-}
-
-function removeInvitee(id) {
-    currentInvitees = currentInvitees.filter(inv => inv.id !== id);
-    updateInviteSelectedUI();
-    const inviteBtn = document.getElementById('toggle-invite-btn');
-    if (inviteBtn && currentInvitees.length === 0) {
-        inviteBtn.classList.remove('active');
-    }
-    document.getElementById('invite-search-input').dispatchEvent(new Event('input'));
-}
-
-function escHtml(str) {
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-/* --------- /* --------- LOCATION MODAL HANDLERS (with place name search) --------- */
-let locationSearchTimer = null;
-
-document.getElementById('toggle-location-btn')?.addEventListener('click', function() {
-    const btn = this;
-    if (btn.classList.contains('active')) {
-        currentLocationCoords = null;
-        currentLocationName = '';
-        currentLocationAddress = null;
-        document.getElementById('location-coords-input').value = '';
-        if (locationMarker) {
-            locationMap.removeLayer(locationMarker);
-            locationMarker = null;
-        }
-        btn.classList.remove('active');
-        closeModal(document.getElementById('location-modal'));
-        return;
-    }
-
-    const searchInput = document.getElementById('location-search-input');
-    const suggestions = document.getElementById('location-suggestions');
-    const infoEl = document.getElementById('selected-location-info');
-
-    searchInput.value = '';
-    suggestions.innerHTML = '';
-    suggestions.style.display = 'none';
-    infoEl.textContent = '';
-
-    if (currentLocationName && currentLocationCoords) {
-        searchInput.value = currentLocationName;
-        infoEl.textContent = `${currentLocationName} (${currentLocationCoords.lat.toFixed(5)}, ${currentLocationCoords.lng.toFixed(5)})`;
-    } else if (currentLocationCoords) {
-        infoEl.textContent = `${currentLocationCoords.lat.toFixed(5)}, ${currentLocationCoords.lng.toFixed(5)}`;
-    }
-
-    openModal(document.getElementById('location-modal'));
-
-    setTimeout(() => {
-        initLocationMap('location-modal-map');
-        if (locationMap) {
-            locationMap.invalidateSize();
-            if (locationMarker) locationMap.removeLayer(locationMarker);
-            if (currentLocationCoords) {
-                updateMapFromCoords(currentLocationCoords.lat, currentLocationCoords.lng);
-            }
-        }
-    }, 200);
-});
-
-// Place name search with debounce
-document.getElementById('location-search-input')?.addEventListener('input', function() {
-    clearTimeout(locationSearchTimer);
-    const query = this.value.trim();
-    const suggestionsList = document.getElementById('location-suggestions');
-
-    if (query.length < 2) {
-        suggestionsList.innerHTML = '';
-        suggestionsList.style.display = 'none';
-        return;
-    }
-
-    locationSearchTimer = setTimeout(async () => {
-        try {
-            // 1. Photon URL
-            const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`;
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            suggestionsList.innerHTML = '';
-            // 2. Data in features key
-            if (!data.features || data.features.length === 0) {
-                suggestionsList.innerHTML = '<li style="color:#888;">No results found</li>';
-                suggestionsList.style.display = 'block';
-                return;
-            }
-
-            // 3. Iterate features
-            data.features.forEach(place => {
-                const li = document.createElement('li');
-                const props = place.properties;
-                const mainName = props.name || props.street || 'Unnamed place';
-                const city = props.city || props.state || '';
-                const country = props.country || '';
-                let shortAddress = [city, country].filter(Boolean).join(', ');
-
-                li.innerHTML = `<span style="font-weight:600; color:#fff;">${mainName}</span>` +
-                    (shortAddress ? `<br><span style="font-size:11px; color:#888;">${shortAddress}</span>` : '');
-
-                // 4. Coordinates: [lng, lat] order
-                const [lng, lat] = place.geometry.coordinates;
-
-                li.addEventListener('click', () => {
-                    document.getElementById('location-search-input').value = mainName;
-                    document.getElementById('selected-location-info').textContent =
-                        `${mainName} (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
-
-                    suggestionsList.innerHTML = '';
-                    suggestionsList.style.display = 'none';
-
-                    updateMapFromCoords(lat, lng);
-
-                    currentLocationCoords = {
-                        lat,
-                        lng
-                    };
-                    currentLocationName = mainName;
-                    currentLocationAddress = {
-                        city: city,
-                        country: country,
-                    };
-                });
-
-                suggestionsList.appendChild(li);
-            });
-
-            suggestionsList.style.display = 'block';
-        } catch (err) {
-            console.error('Photon Geocoding error:', err);
-            let errorMsg = 'Error fetching data. ';
-            if (err.message.includes('Failed to fetch')) {
-                errorMsg += 'Please check your internet connection.';
-            } else {
-                errorMsg += err.message;
-            }
-            suggestionsList.innerHTML = `<li style="color:#ff6b6b;">⚠️ ${errorMsg}</li>`;
-            suggestionsList.style.display = 'block';
-        }
-    }, 300);
-});
-
-// Hide suggestions on outside click
-document.addEventListener('click', (e) => {
-    const suggestions = document.getElementById('location-suggestions');
-    const searchInput = document.getElementById('location-search-input');
-    if (suggestions && !suggestions.contains(e.target) && e.target !== searchInput) {
-        suggestions.style.display = 'none';
-    }
-});
-
-// Done button for location save
-document.getElementById('location-done-btn')?.addEventListener('click', () => {
-    if (currentLocationAddress) {
-        // ... (existing address handling)
-    } else if (currentLocationName) {
-        // fallback
-    } else if (currentLocationCoords) {
-        // coordinates only
-    } else {
-        showToast('Please select a location.');
-        return;
-    }
-
-    closeModal(document.getElementById('location-modal'));
-    document.getElementById('toggle-location-btn')?.classList.add('active');
-});
-
-document.getElementById('location-modal-close')?.addEventListener('click', () => {
-    closeModal(document.getElementById('location-modal'));
-});
-
-/* --------- CHECKLIST MODAL HANDLERS --------- */
-document.getElementById('toggle-checklist-mode-btn')?.addEventListener('click', function() {
-    const btn = this;
-    if (btn.classList.contains('active')) {
-        hideInlineChecklist();
-    } else {
-        tempChecklistItems = JSON.parse(JSON.stringify(currentChecklistItems));
-        renderChecklistModalItems();
-        openModal(document.getElementById('checklist-modal'));
-    }
-});
-
-document.getElementById('checklist-modal-add-btn')?.addEventListener('click', () => {
-    const input = document.getElementById('checklist-modal-input');
-    const text = input.value.trim();
-    if (text) {
-        tempChecklistItems.push({
-            text,
-            done: false
-        });
-        renderChecklistModalItems();
-        input.value = '';
-    }
-});
-
-document.getElementById('checklist-done-btn')?.addEventListener('click', () => {
-    currentChecklistItems = tempChecklistItems;
-    // ❌ دیگر به توضیحات اضافه نمیشه
-    closeModal(document.getElementById('checklist-modal'));
-    document.getElementById('toggle-checklist-mode-btn')?.classList.add('active');
-    // نمایش چک‌لیست درون‌خطی
-    showInlineChecklist();
-});
-
-document.getElementById('checklist-modal-close')?.addEventListener('click', () => {
-    closeModal(document.getElementById('checklist-modal'));
-});
-
-// Copy invite code
-document.getElementById('copy-invite-code-btn')?.addEventListener('click', () => {
-    const code = document.getElementById('invite-code-text').textContent;
-    navigator.clipboard.writeText(code).then(() => showToast('Code copied!'));
-});
-
-// Clear location (old inline)
-document.getElementById('clear-location-btn')?.addEventListener('click', function() {
-    document.getElementById('location-coords-input').value = '';
-    currentLocationCoords = null;
-    currentLocationName = '';
-    if (locationMarker) {
-        locationMap.removeLayer(locationMarker);
-        locationMarker = null;
-    }
-    document.getElementById('toggle-location-btn')?.classList.remove('active');
-});
-
-// Coordinate input (old one)
-document.getElementById('location-coords-input')?.addEventListener('input', function() {
-    const coords = parseCoordinates(this.value.trim());
-    if (coords) {
-        currentLocationCoords = coords;
-        updateMapFromCoords(coords.lat, coords.lng);
-    } else {
-        currentLocationCoords = null;
-    }
-});
-
-/* =========================== SIDEBAR OPEN/CLOSE =========================== */
-(function() {
-    const toggleBtn = document.getElementById('menu-toggle-btn');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    const closeBtn = document.getElementById('sidebar-close-btn');
-
-    if (!toggleBtn || !sidebar || !overlay) return;
-
-    let isOpen = false;
-
-    function openSidebar() {
-        if (isOpen) return;
-        isOpen = true;
-        toggleBtn.classList.add('open');
-        overlay.classList.add('open');
-        gsap.to(sidebar, {
-            x: 0,
-            duration: 0.5,
-            ease: 'power3.out'
-        });
-    }
-
-    function closeSidebar() {
-        if (!isOpen) return;
-        isOpen = false;
-        toggleBtn.classList.remove('open');
-        overlay.classList.remove('open');
-        gsap.to(sidebar, {
-            x: '-100%',
-            duration: 0.4,
-            ease: 'power3.in'
-        });
-    }
-
-    toggleBtn.addEventListener('click', () => {
-        isOpen ? closeSidebar() : openSidebar();
-    });
-
-    overlay.addEventListener('click', closeSidebar);
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeSidebar);
-    }
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isOpen) {
-            closeSidebar();
-        }
-    });
-
-    sidebar.querySelectorAll('.sidebar-item').forEach(item => {
-        item.addEventListener('click', () => {
-            setTimeout(closeSidebar, 150);
-        });
-    });
-})();
-
-async function cleanupOldCompletions() {
-    if (!currentUser) return;
-    const now = new Date();
-    const twentyEightDaysMs = 28 * 24 * 60 * 60 * 1000;
-    const twentyEightDaysAgo = new Date(now.getTime() - twentyEightDaysMs);
-
-    for (let i = events.length - 1; i >= 0; i--) {
-        const ev = events[i];
-
-        // 1. رویدادهای تکرارشونده: فقط رکوردهای completion قدیمی را پاک کن
-        if (ev.recurrence_type !== 'none') {
-            if (ev.completed_timestamps && Object.keys(ev.completed_timestamps).length > 0) {
-                let changed = false;
-                for (let dateStr in ev.completed_timestamps) {
-                    const completedAt = new Date(ev.completed_timestamps[dateStr]);
-                    if (completedAt < twentyEightDaysAgo) {
-                        if (ev.completed_occurrences) {
-                            ev.completed_occurrences = ev.completed_occurrences.filter(d => d !== dateStr);
-                        }
-                        delete ev.completed_timestamps[dateStr];
-                        changed = true;
-                    }
-                }
-                if (changed) {
-                    await updateEventInDB(ev.id, {
-                        completed_occurrences: ev.completed_occurrences,
-                        completed_timestamps: ev.completed_timestamps
-                    });
-                }
-            }
-            continue; // به هیچ عنوان خود رویداد حذف نشود
-        }
-
-        if (ev.start_date) {
-            const startDate = new Date(ev.start_date);
-            if (startDate < twentyEightDaysAgo) {
-                await deleteEventFromDB(ev.id);
-                events.splice(i, 1); // از آرایه محلی هم حذف کن
-            }
-        }
-        // پاکسازی دعوت‌های ردشده که ۱ روز از ردشان گذشته (دلخواه)
-await sb.from('ravlo')
-    .delete()
-    .eq('user_id', currentUser.id)
-    .eq('invitation_status', 'declined')
-    .lt('updated_at', new Date(Date.now() - 24*60*60*1000).toISOString()); // اگر ستون updated_at داری
-    }
-}
-
-function copyNonUserInviteLink() {
-    const linkEl = document.getElementById('invite-nonuser-link');
-    if (!linkEl) return;
-    const text = linkEl.textContent;
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('Link copied to clipboard!');
-        }).catch(() => {
-            fallbackCopy(text);
-        });
-    } else {
-        fallbackCopy(text);
-    }
-}
-
-function fallbackCopy(text) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-        document.execCommand('copy');
-        showToast('Link copied!');
-    } catch (e) {
-        showToast('Could not copy link. Please copy it manually.');
-    }
-    document.body.removeChild(textarea);
-}
-
-/* =========================== INVITATION RESPONSE =========================== */
-function openInvitationResponse(ev) {
-    document.getElementById('invitation-response-title').textContent = 'Event Invitation';
-    document.getElementById('invitation-response-message').textContent = 'You are invited to this event.';
-
-    const container = document.getElementById('invitation-detail-container');
-    container.innerHTML = '';
-
-    // هدر جزئیات (رنگ + آیکون + عنوان)
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'invitation-detail-header';
-
-    if (ev.color) {
-        const colorDot = document.createElement('span');
-        colorDot.className = 'detail-color-dot';
-        colorDot.style.backgroundColor = ev.color;
-        colorDot.style.width = '12px';
-        colorDot.style.height = '12px';
-        colorDot.style.borderRadius = '50%';
-        colorDot.style.display = 'inline-block';
-        headerDiv.appendChild(colorDot);
-    }
-
-    if (ev.icon) {
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'detail-icon';
-        iconSpan.innerHTML = ev.icon;
-        iconSpan.style.color = ev.color || 'var(--accent)';
-        iconSpan.style.fontSize = '20px';
-        headerDiv.appendChild(iconSpan);
-    }
-
-    const titleEl = document.createElement('h3');
-    titleEl.textContent = ev.title || 'Untitled';
-    titleEl.style.margin = '0';
-    headerDiv.appendChild(titleEl);
-
-    container.appendChild(headerDiv);
-
-    // تاریخ و زمان
-    const start = ev.start_date ? new Date(ev.start_date) : null;
-    const end = ev.end_date ? new Date(ev.end_date) : null;
-    let dateText = '',
-        timeText = '';
-    if (start) {
-        dateText = start.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-        if (ev.all_day) {
-            timeText = 'All day';
-        } else {
-            const fmtTime = d => d.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-            timeText = fmtTime(start);
-            if (end) timeText += ' - ' + fmtTime(end);
-        }
-    }
-    const dateP = document.createElement('p');
-    dateP.innerHTML = `<strong>Date:</strong> ${dateText}`;
-    container.appendChild(dateP);
-    const timeP = document.createElement('p');
-    timeP.innerHTML = `<strong>Time:</strong> ${timeText}`;
-    container.appendChild(timeP);
-
-    // توضیحات
-    if (ev.description && ev.description.trim()) {
-        const descP = document.createElement('p');
-        descP.innerHTML = `<strong>Description:</strong> ${ev.description}`;
-        container.appendChild(descP);
-    }
-
-    // مهمان‌ها
-    if (ev.invitees && ev.invitees.length > 0) {
-        const inviteesP = document.createElement('p');
-        inviteesP.innerHTML = `<strong>Invitees:</strong> ${ev.invitees.join(', ')}`;
-        container.appendChild(inviteesP);
-    }
-
-    // مکان
-    if (ev.location && ev.location.lat && ev.location.lng) {
-        const locP = document.createElement('p');
-        locP.innerHTML = `<strong>Location:</strong> ${ev.location.lat.toFixed(5)}, ${ev.location.lng.toFixed(5)}`;
-        container.appendChild(locP);
-    }
-
-    openModal(document.getElementById('invitation-response-modal'));
-
-    // دکمه Accept
-    document.getElementById('invitation-accept-btn').onclick = async () => {
-        showGlobalLoader();
-        await updateEventInDB(ev.id, {
-            invitation_status: 'accepted'
-        });
-        const localEv = events.find(e => e.id === ev.id);
-        if (localEv) localEv.invitation_status = 'accepted';
-        hideGlobalLoader();
-        closeModal(document.getElementById('invitation-response-modal'));
-        renderCalendar();
-    };
-
-    // دکمه Decline
-    document.getElementById('invitation-decline-btn').onclick = async () => {
-        showGlobalLoader();
-        await deleteEventFromDB(ev.id);
-        events = events.filter(e => e.id !== ev.id);
-
-        if (ev.parent_event_id) {
-            const {
-                data: parentData
-            } = await sb
-                .from('ravlo')
-                .select('user_id, title')
-                .eq('id', ev.parent_event_id)
-                .single();
-            if (parentData) {
-                await addNotificationToUser(
-                    parentData.user_id,
-                    'event',
-                    'Invitation declined',
-                    `${currentProfile?.first_name || 'Someone'} declined your invitation to "${parentData.title}"`,
-                    '#'
-                );
-            }
-        }
-        hideGlobalLoader();
-        closeModal(document.getElementById('invitation-response-modal'));
-        renderCalendar();
-    };
-
-    document.getElementById('invitation-response-close').onclick = () => {
-        closeModal(document.getElementById('invitation-response-modal'));
-    };
-    document.getElementById('invitation-response-modal').onclick = (e) => {
-        if (e.target === document.getElementById('invitation-response-modal')) {
-            closeModal(document.getElementById('invitation-response-modal'));
-        }
-    };
-}
-
-/* =========================== POSTPONE =========================== */
-function openPostponeModal() {
-    if (!currentDetailEvent) return;
-    document.getElementById('postpone-event-title').textContent =
-        currentDetailEvent.title || 'Untitled';
-    document.getElementById('postpone-custom-row').style.display = 'none';
-    openModal(document.getElementById('postpone-modal'));
-}
-
-function applyPostponeOffset(minutes) {
-    if (!currentDetailEvent) return;
-    const ev = currentDetailEvent;
-    const newStart = new Date(new Date(ev.start_date).getTime() + minutes * 60000);
-    const payload = { start_date: newStart.toISOString() };
-
-    if (ev.end_date) {
-        const oldStart = new Date(ev.start_date);
-        const oldEnd = new Date(ev.end_date);
-        const duration = oldEnd.getTime() - oldStart.getTime();
-        const newEnd = new Date(newStart.getTime() + duration);
-        payload.end_date = newEnd.toISOString();
-    }
-
-    updateEventInDB(ev.id, payload)
-        .then(() => {
-            // به‌روزرسانی در آرایه محلی
-            const localEv = events.find(e => e.id === ev.id);
-            if (localEv) {
-                if (payload.start_date) localEv.start_date = payload.start_date;
-                if (payload.end_date) localEv.end_date = payload.end_date;
-            }
-            closeModal(document.getElementById('postpone-modal'));
-            closeModal(document.getElementById('event-detail-modal'));
-            renderCalendar();
-        })
-        .catch(err => showToast('Postpone failed: ' + err.message));
-}
-
-// گوش‌دهندگان دکمه‌ها
-document.getElementById('postpone-modal').addEventListener('click', function(e) {
-    const optionBtn = e.target.closest('.postpone-option');
-    if (!optionBtn) return;
-
-    if (optionBtn.id === 'postpone-custom-btn') {
-        document.getElementById('postpone-custom-row').style.display = 'block';
-        return;
-    }
-
-    const offset = parseInt(optionBtn.dataset.offset);
-    if (!isNaN(offset)) applyPostponeOffset(offset);
-});
-
-document.getElementById('postpone-custom-apply').addEventListener('click', function() {
-    const mins = parseInt(document.getElementById('postpone-custom-input').value);
-    if (isNaN(mins) || mins < 1) {
-        showToast('Please enter a valid number of minutes.');
-        return;
-    }
-    applyPostponeOffset(mins);
-});
-
-document.getElementById('postpone-modal-close').addEventListener('click', () => {
-    closeModal(document.getElementById('postpone-modal'));
-});
-
-// =========================== CLEANUP CHECKLIST FROM DESCRIPTIONS ============================
-async function cleanupChecklistFromDescriptions() {
-    if (!currentUser) return;
-    
-    try {
-        const { data: eventsData, error } = await sb
-            .from('ravlo')
-            .select('id, description, checklist')
-            .eq('user_id', currentUser.id)
-            .eq('type', 'task');
-        
-        if (error || !eventsData) return;
-        
-        let cleanedCount = 0;
-        
-        for (const ev of eventsData) {
-            if (!ev.description) continue;
-            
-            // چک کن که description شامل چک‌لیست هست یا نه
-            const lines = ev.description.split('\n');
-            const hasChecklist = lines.some(line => 
-                line.trim().startsWith('☑') || line.trim().startsWith('☐') ||
-                line.trim().startsWith('- [x]') || line.trim().startsWith('- [ ]')
-            );
-            
-            if (hasChecklist) {
-                // پاک کردن خطوطی که شبیه چک‌لیست هستند
-                const cleanLines = lines.filter(line => 
-                    !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
-                    !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
-                );
-                const cleanDesc = cleanLines.join('\n').trim();
-                
-                // آپدیت کردن در دیتابیس
-                await updateEventInDB(ev.id, { description: cleanDesc });
-                cleanedCount++;
-                console.log('Cleaned checklist from event: ' + ev.id);
-            }
-        }
-        
-        if (cleanedCount > 0) {
-            console.log('Cleaned ' + cleanedCount + ' events');
-            // ریفرش رویدادها
-            const freshEvents = await fetchEvents();
-            events = freshEvents;
-            renderCalendar();
-        }
-    } catch (e) {
-        console.warn('Cleanup error:', e);
-    }
-}
-
-/* =========================== INITIALIZATION ============================ */
-
-async function initCalendar() {
-    if (currentUser) {
-        events = await fetchEvents();
-        updateNotificationDot()
-    } else {
-        events = [];
-    }
-    renderCalendar();
-    animateTabIndicator();
-}
-
-(async function tryRestoreSession() {
-    showApp();
-
-    async function applySessionUser(user) {
-        currentUser = user;
-        currentProfile = await buildCurrentProfile(user);
-        currentUserRole = currentProfile?.role || 'user';
-    }
-
-    try {
-        const {
-            data: {
-                session
-            }
-        } = await sb.auth.getSession();
-
-        if (session?.user) {
-            await applySessionUser(session.user);
-
-            events = await fetchEvents();
-            renderCalendar();
-            syncSidebarComponent();
-            await updateNotificationDot();
-        } else {
-            syncSidebarComponent();
-        }
-    } catch (e) {
-        console.warn('Session restore failed:', e.message);
-        syncSidebarComponent();
-        await updateNotificationDot();
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
-
-    if (accessToken && refreshToken) {
-        const {
-            error
-        } = await sb.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-        });
-
-        if (!error) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            const {
-                data: {
-                    user
-                }
-            } = await sb.auth.getUser();
-            if (user) {
-                await applySessionUser(user);
-            }
-
-            syncSidebarComponent();
-            await initCalendar();
-        } else {
-            console.warn('URL session set failed:', error.message);
-        }
-    }
-
-})();
 // =========================== APP INITIALIZATION ============================
 // Start the app immediately (don't wait for sidebar component)
 showApp();
@@ -5545,4 +3535,91 @@ showApp();
 customElements.whenDefined('sidebar-component').then(() => {
     getSidebarComponent(); // sets up event listeners
     syncSidebarComponent();
+});
+// =========================== EMERGENCY EVENT LISTENERS ============================
+// View tabs (Day/Month/Year)
+document.querySelectorAll('#view-tabs .view-tab').forEach(btn => {
+    btn.addEventListener('click', function() {
+        viewMode = this.dataset.view;
+        localStorage.setItem('ravlo-view-mode', viewMode);
+        renderCalendar();
+        animateTabIndicator();
+    });
+});
+
+// Navigation arrows
+document.getElementById('prev-month')?.addEventListener('click', function() {
+    if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() - 1);
+    else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() - 1);
+    else if (viewMode === 'day') currentDate.setDate(currentDate.getDate() - 1);
+    renderCalendar();
+});
+document.getElementById('next-month')?.addEventListener('click', function() {
+    if (viewMode === 'year') currentDate.setFullYear(currentDate.getFullYear() + 1);
+    else if (viewMode === 'month') currentDate.setMonth(currentDate.getMonth() + 1);
+    else if (viewMode === 'day') currentDate.setDate(currentDate.getDate() + 1);
+    renderCalendar();
+});
+document.getElementById('current-month-year-btn')?.addEventListener('click', openTitlePicker);
+
+// Event type toggle (Event/Task)
+document.getElementById('event-type-toggle')?.addEventListener('click', function(e) {
+    const label = e.target.closest('.event-type-label');
+    if (label) setEventType(label.dataset.type);
+});
+
+// Save event button
+document.getElementById('save-event')?.addEventListener('click', saveEvent);
+
+// Open recurrence modal
+document.getElementById('open-recurrence-btn')?.addEventListener('click', openRecurrenceModal);
+
+// Close modals on outside click
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal(modal);
+    });
+});
+document.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const modal = this.closest('.modal');
+        if (modal) closeModal(modal);
+    });
+});
+
+// Add event button (from sidebar)
+document.getElementById('sidebar-new-event')?.addEventListener('click', function() {
+    if (!currentUser) {
+        openModal(authOverlay);
+        authError.textContent = 'Please sign in to add events.';
+        return;
+    }
+    document.getElementById('event-title').value = '';
+    document.getElementById('event-start').value = '';
+    document.getElementById('event-end').value = '';
+    document.getElementById('event-start-greg').value = '';
+    document.getElementById('greg-trigger-text').textContent = 'Select date';
+    document.getElementById('greg-picker-trigger').classList.remove('has-value');
+    editingEventId = null;
+    recurrence = { type: 'none', interval: 1, days: [] };
+    currentInvitees = [];
+    updateRecurrencePreview();
+    selectedTagColor = '#f5f5f5';
+    currentLocationCoords = null;
+    document.getElementById('location-coords-input').value = '';
+    document.getElementById('location-section').style.display = 'none';
+    document.getElementById('toggle-location-btn')?.classList.remove('active');
+    document.getElementById('toggle-invite-btn')?.classList.remove('active');
+    eventType = 'event';
+    document.getElementById('event-type-toggle').style.display = '';
+    const gregCheck = document.getElementById('event-all-day-greg');
+    if (gregCheck) gregCheck.checked = false;
+    document.getElementById('event-description').value = '';
+    currentChecklistItems = [];
+    hideInlineChecklist();
+    document.getElementById('toggle-checklist-mode-btn').style.display = 'none';
+    document.getElementById('toggle-checklist-mode-btn').classList.remove('active');
+    updateAllDayAndTimeRows();
+    openModal(eventModal);
+    requestAnimationFrame(() => setEventType('event'));
 });
