@@ -568,6 +568,74 @@ async function updateNotificationDot() {
     }
 }
 
+function getTodayAndOverdueItems() {
+    const todayItems = [];
+    const overdueItems = [];
+    if (!currentUser) return { todayItems, overdueItems };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = toLocalDateString(today);
+
+    events.forEach(ev => {
+        if (!ev.start_date) return;
+        if (ev.status === 'done' || ev.status === 'completed') return;
+
+        // 1. Overdue (only recurring tasks that are past due)
+        if (ev.recurrence_type && ev.recurrence_type !== 'none' && ev.type === 'task') {
+            const start = new Date(ev.start_date);
+            const yesterday = new Date(today.getTime() - 1);
+            const recDates = getRecurrenceDates(ev, start, yesterday);
+            recDates.forEach(rd => {
+                const dateStr = toLocalDateString(rd);
+                const isCompleted = ev.completed_occurrences?.includes?.(dateStr);
+                if (!isCompleted && dateStr < todayStr) {
+                    overdueItems.push({
+                        id: ev.id,
+                        title: ev.title || 'Untitled',
+                        color: ev.color || 'var(--accent)',
+                        date: dateStr
+                    });
+                }
+            });
+        }
+
+        // 2. Today (all event types)
+        const d = new Date(ev.start_date);
+        if (ev.recurrence_type === 'none' || !ev.recurrence_type) {
+            if (toLocalDateString(d) === todayStr) {
+                const isCompleted = ev.completed_occurrences?.includes?.(todayStr);
+                if (!isCompleted) {
+                    todayItems.push({
+                        id: ev.id,
+                        title: ev.title || 'Untitled',
+                        color: ev.color || 'var(--accent)',
+                        date: todayStr
+                    });
+                }
+            }
+        } else {
+            const todayStart = new Date(today);
+            const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1);
+            const recDates = getRecurrenceDates(ev, todayStart, todayEnd);
+            recDates.forEach(rd => {
+                const dateStr = toLocalDateString(rd);
+                const isCompleted = ev.completed_occurrences?.includes?.(dateStr);
+                if (!isCompleted && dateStr === todayStr) {
+                    todayItems.push({
+                        id: ev.id,
+                        title: ev.title || 'Untitled',
+                        color: ev.color || 'var(--accent)',
+                        date: todayStr
+                    });
+                }
+            });
+        }
+    });
+
+    return { todayItems, overdueItems };
+}
+
 /* =========================== MODAL HELPERS ============================ */
 function openModal(modal) {
     if (!modal) return;
