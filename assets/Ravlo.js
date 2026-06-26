@@ -2595,33 +2595,27 @@ async function openEditModal(ev) {
     openModal(eventModal);
 }
 // =========================== APP INITIALIZATION ============================
-// Wait for the sidebar component to be fully defined, then start the app.
-customElements.whenDefined('sidebar-component').then(async () => {
-    console.log('Sidebar component ready. Starting Ravlo...');
+// Start the app immediately (don't wait for sidebar component)
+showApp();
 
-    // 1. Initialize sidebar integration (set up event listeners on the component)
-    getSidebarComponent();
-
-    // 2. Show the app (this also calls showGlobalLoader -> hides it eventually)
-    await showApp();
-
-    // 3. Restore any existing session
+// Restore session and sync sidebar later
+(async function restoreSessionAndSidebar() {
     try {
         const { data: { session } } = await sb.auth.getSession();
         if (session?.user) {
             currentUser = session.user;
             currentProfile = await buildCurrentProfile(currentUser);
             currentUserRole = currentProfile?.role || 'recruit';
-            syncSidebarComponent();
             events = await fetchEvents();
             renderCalendar();
+            // sync after we have everything, safe even if component not ready
+            syncSidebarComponent();
             await updateNotificationDot();
         }
     } catch (e) {
         console.warn('Session restore failed:', e);
     }
 
-    // 4. Handle OAuth redirect (access_token in URL)
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get('access_token');
     const refreshToken = urlParams.get('refresh_token');
@@ -2637,11 +2631,17 @@ customElements.whenDefined('sidebar-component').then(async () => {
                 currentUser = user;
                 currentProfile = await buildCurrentProfile(currentUser);
                 currentUserRole = currentProfile?.role || 'recruit';
-                syncSidebarComponent();
                 events = await fetchEvents();
                 renderCalendar();
+                syncSidebarComponent();
                 await updateNotificationDot();
             }
         }
     }
+})();
+
+// When sidebar component finally becomes available, hook it up properly
+customElements.whenDefined('sidebar-component').then(() => {
+    getSidebarComponent(); // sets up event listeners
+    syncSidebarComponent();
 });
