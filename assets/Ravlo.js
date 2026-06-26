@@ -2594,3 +2594,54 @@ async function openEditModal(ev) {
     updateAllDayAndTimeRows();
     openModal(eventModal);
 }
+// =========================== APP INITIALIZATION ============================
+// Wait for the sidebar component to be fully defined, then start the app.
+customElements.whenDefined('sidebar-component').then(async () => {
+    console.log('Sidebar component ready. Starting Ravlo...');
+
+    // 1. Initialize sidebar integration (set up event listeners on the component)
+    getSidebarComponent();
+
+    // 2. Show the app (this also calls showGlobalLoader -> hides it eventually)
+    await showApp();
+
+    // 3. Restore any existing session
+    try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session?.user) {
+            currentUser = session.user;
+            currentProfile = await buildCurrentProfile(currentUser);
+            currentUserRole = currentProfile?.role || 'recruit';
+            syncSidebarComponent();
+            events = await fetchEvents();
+            renderCalendar();
+            await updateNotificationDot();
+        }
+    } catch (e) {
+        console.warn('Session restore failed:', e);
+    }
+
+    // 4. Handle OAuth redirect (access_token in URL)
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    if (accessToken && refreshToken) {
+        const { error } = await sb.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+        });
+        if (!error) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            const { data: { user } } = await sb.auth.getUser();
+            if (user) {
+                currentUser = user;
+                currentProfile = await buildCurrentProfile(currentUser);
+                currentUserRole = currentProfile?.role || 'recruit';
+                syncSidebarComponent();
+                events = await fetchEvents();
+                renderCalendar();
+                await updateNotificationDot();
+            }
+        }
+    }
+});
