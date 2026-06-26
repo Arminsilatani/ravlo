@@ -925,6 +925,56 @@ async function logout() {
     hideGlobalLoader();
 }
 
+// Wait for the sidebar component to be fully defined, then restore session
+customElements.whenDefined('sidebar-component').then(async () => {
+    const comp = document.querySelector('sidebar-component');
+    if (!comp) return;
+
+    try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session?.user) {
+            currentUser = session.user;
+            currentProfile = await buildCurrentProfile(currentUser);
+            currentUserRole = currentProfile?.role || 'recruit';
+            comp.setUser(currentUser, currentProfile);    // این خط کلیدی است
+            events = await fetchEvents();
+            comp.setEvents(events);
+            renderCalendar();
+            await updateNotificationDot();
+        } else {
+            comp.clearUser();   // در صورت عدم وجود کاربر، UI را ریست کن
+        }
+    } catch (e) {
+        console.warn('Session restore failed:', e);
+        comp.clearUser();
+    }
+
+    // OAuth redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    if (accessToken && refreshToken) {
+        const { error } = await sb.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+        });
+        if (!error) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            const { data: { user } } = await sb.auth.getUser();
+            if (user) {
+                currentUser = user;
+                currentProfile = await buildCurrentProfile(currentUser);
+                currentUserRole = currentProfile?.role || 'recruit';
+                comp.setUser(currentUser, currentProfile);
+                events = await fetchEvents();
+                comp.setEvents(events);
+                renderCalendar();
+                await updateNotificationDot();
+            }
+        }
+    }
+});
+
 /* =========================== LEAFLET MAP HELPERS ============================ */
 function isLeafletReady() {
     return typeof L !== 'undefined';
