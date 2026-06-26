@@ -269,6 +269,19 @@ function animateMonthYearChange(newText) {
     });
 }
 
+function animateTabIndicator() {
+    const activeTab = viewTabsEl.querySelector('.view-tab.active');
+    if (!activeTab || !tabIndicator) return;
+    const tabRect = activeTab.getBoundingClientRect(),
+        containerRect = viewTabsEl.getBoundingClientRect();
+    gsap.to(tabIndicator, {
+        left: tabRect.left - containerRect.left,
+        width: tabRect.width,
+        duration: 0.4,
+        ease: 'power2.out'
+    });
+}
+
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
