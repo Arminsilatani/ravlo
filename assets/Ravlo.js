@@ -2680,6 +2680,399 @@ function openTitlePicker() {
     openGregPicker(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
 }
 
+function openEventDetail(ev, occurrenceDate) {
+    currentDetailEventId = ev.id;
+    ev.__occurrenceDate = occurrenceDate;
+
+    document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
+    const colorDot = document.getElementById('detail-color-dot');
+    colorDot.style.backgroundColor = ev.color || '#f5f5f5';
+
+    const detailHeader = document.querySelector('#event-detail-modal .detail-header');
+    let iconSpan = document.getElementById('detail-icon');
+    if (!iconSpan) {
+        iconSpan = document.createElement('span');
+        iconSpan.id = 'detail-icon';
+        iconSpan.className = 'detail-icon';
+        colorDot.after(iconSpan);
+    }
+
+    if (ev.icon) {
+        iconSpan.innerHTML = ev.icon;
+        iconSpan.style.color = ev.color || 'var(--accent)';
+        iconSpan.style.display = 'inline-block';
+        colorDot.style.display = 'none';
+    } else {
+        iconSpan.innerHTML = '';
+        iconSpan.style.display = 'none';
+        colorDot.style.display = 'inline-block';
+    }
+
+    const descIcon = document.getElementById('detail-desc-icon');
+    if (descIcon) descIcon.style.color = ev.color || 'var(--accent)';
+    const calIcon = document.getElementById('detail-calendar-icon');
+    calIcon.style.color = ev.color || 'var(--accent)';
+
+    const start = ev.start_date ? new Date(ev.start_date) : null;
+    const end = ev.end_date ? new Date(ev.end_date) : null;
+    let dateText = '', timeText = '', durationParen = '';
+
+    if (start) {
+        dateText = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (ev.all_day) {
+            timeText = 'All day';
+        } else {
+            const fmtTime = d => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+            timeText = fmtTime(start);
+            if (end) {
+                const diffMs = end.getTime() - start.getTime();
+                if (diffMs > 0) {
+                    const totalMinutes = Math.floor(diffMs / 60000);
+                    const days = Math.floor(totalMinutes / 1440);
+                    const hours = Math.floor((totalMinutes % 1440) / 60);
+                    const mins = totalMinutes % 60;
+                    let parts = [];
+                    if (days > 0) parts.push(days + 'd');
+                    if (hours > 0) parts.push(hours + 'h');
+                    if (mins > 0) parts.push(mins + 'm');
+                    if (parts.length > 0) durationParen = ' (' + parts.join(' ') + ')';
+                }
+            }
+        }
+    }
+
+    document.getElementById('detail-date-text').textContent = dateText;
+    document.getElementById('detail-time-text').textContent = timeText;
+    document.getElementById('detail-duration-paren').textContent = durationParen;
+
+    const dividers = eventDetailModal.querySelectorAll('.detail-divider-h');
+    if (ev.type === 'task') {
+        dividers.forEach(hr => hr.style.display = 'none');
+    } else {
+        dividers.forEach(hr => hr.style.display = '');
+    }
+
+    const descContainer = document.getElementById('detail-description-container');
+    const descText = document.getElementById('detail-description-text');
+    let cleanDescription = ev.description || '';
+    if (cleanDescription) {
+        const lines = cleanDescription.split('\n');
+        const filteredLines = lines.filter(line =>
+            !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
+            !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
+        );
+        cleanDescription = filteredLines.join('\n').trim();
+    }
+    if (cleanDescription) {
+        descContainer.style.display = 'block';
+        descText.textContent = cleanDescription;
+    } else {
+        descContainer.style.display = 'none';
+    }
+
+    let checklistContainer = document.getElementById('detail-checklist-container');
+    if (!checklistContainer) {
+        const descContainer2 = document.getElementById('detail-description-container');
+        if (descContainer2 && descContainer2.parentNode) {
+            checklistContainer = document.createElement('div');
+            checklistContainer.id = 'detail-checklist-container';
+            checklistContainer.className = 'detail-checklist-container';
+            checklistContainer.style.display = 'none';
+            const header = document.createElement('div');
+            header.className = 'detail-checklist-header';
+            header.innerHTML = `
+                <span id="detail-checklist-icon" class="detail-icon" style="color:var(--accent);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </span>
+                <span style="font-weight:600;font-size:14px;">Checklist</span>
+            `;
+            checklistContainer.appendChild(header);
+            const listItems = document.createElement('div');
+            listItems.id = 'detail-checklist-items';
+            listItems.className = 'detail-checklist-items';
+            checklistContainer.appendChild(listItems);
+            descContainer2.parentNode.insertBefore(checklistContainer, descContainer2.nextSibling);
+        }
+    }
+    if (checklistContainer) {
+        renderChecklistInDetail(ev);
+    }
+
+    const inviteesSection = document.getElementById('detail-invitees-section');
+    if (inviteesSection) {
+        if (ev.type === 'event') {
+            inviteesSection.style.display = 'block';
+            const attendIcon = document.getElementById('detail-attendees-icon');
+            if (attendIcon) attendIcon.style.color = ev.color || 'var(--accent)';
+            const attendeesList = document.getElementById('detail-attendees-list');
+            attendeesList.innerHTML = '';
+            const invitees = ev.invitees || [];
+            if (invitees.length === 0) {
+                attendeesList.innerHTML = `<div class="attendee-empty"><div class="attendee-avatar empty-plus">+</div><span class="attendee-empty-text">Invite more people</span></div>`;
+            } else if (invitees.length <= 3) {
+                const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
+                invitees.forEach((name, i) => {
+                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
+                    attendeesList.innerHTML += `<div class="attendee-item"><div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div><span class="attendee-name">${name}</span></div>`;
+                });
+            } else {
+                const colors = ['#f97316','#e11d48'];
+                const firstTwo = invitees.slice(0,2);
+                const restCount = invitees.length - 2;
+                let html = '<div class="attendees-overlap-row">';
+                firstTwo.forEach((name, i) => {
+                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
+                    html += `<div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
+                });
+                html += `<span class="attendee-extra-count">+${restCount} more</span></div>`;
+                attendeesList.innerHTML = html;
+            }
+        } else {
+            inviteesSection.style.display = 'none';
+        }
+    }
+
+    const mapContainer = document.getElementById('detail-location-container');
+    if (ev.location && (ev.location.lat || ev.location.lng)) {
+        const lat = ev.location.lat;
+        const lng = ev.location.lng;
+        if (lat != null && lng != null && isLeafletReady() && mapContainer) {
+            mapContainer.style.display = 'block';
+            const coordsText = document.getElementById('detail-location-coords-text');
+            if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            const overlay = document.getElementById('detail-map-address-overlay');
+            if (ev.location.address) {
+                const addr = ev.location.address;
+                const place = addr.name || addr.road || addr.amenity || addr.shop || addr.tourism || '';
+                const city = addr.city || addr.town || addr.village || addr.county || '';
+                const country = addr.country || '';
+                const parts = [place, city, country].filter(Boolean);
+                if (overlay) {
+                    overlay.textContent = parts.join(', ');
+                    overlay.style.display = 'block';
+                }
+            } else if (overlay) {
+                overlay.style.display = 'none';
+            }
+            setTimeout(() => {
+                const detailMapDiv = document.getElementById('detail-location-map');
+                if (detailMapDiv) {
+                    if (detailMapDiv._leaflet_id) {
+                        const oldMap = detailMapDiv._leaflet_map;
+                        if (oldMap) oldMap.remove();
+                        else delete detailMapDiv._leaflet_id;
+                    }
+                    const detailMap = L.map('detail-location-map', {
+                        center: [lat, lng],
+                        zoom: 15,
+                        attributionControl: false,
+                        zoomControl: false,
+                        dragging: false,
+                        scrollWheelZoom: false,
+                        doubleClickZoom: false,
+                        touchZoom: false,
+                        keyboard: false,
+                        interactive: false
+                    });
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                        maxZoom: 19
+                    }).addTo(detailMap);
+                    const icon = getAccentPinIcon();
+                    if (icon) L.marker([lat, lng], { icon }).addTo(detailMap);
+                    else L.marker([lat, lng]).addTo(detailMap);
+                    setTimeout(() => detailMap.invalidateSize(), 100);
+                    const mapDivForClick = document.getElementById('detail-location-map');
+                    if (mapDivForClick) {
+                        mapDivForClick.style.cursor = 'pointer';
+                        mapDivForClick.addEventListener('click', () => {
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+                        });
+                    }
+                }
+            }, 200);
+        }
+    } else if (mapContainer) {
+        mapContainer.style.display = 'none';
+    }
+
+    const oldConfirm = document.getElementById('event-detail-confirm');
+    if (oldConfirm) oldConfirm.classList.add('hidden');
+    const oldAddr = document.getElementById('detail-address-container');
+    if (oldAddr) oldAddr.style.display = 'none';
+
+    const isInvitee = !!ev.parent_event_id;
+
+    const editBtn = document.getElementById('detail-edit-btn-top');
+    if (editBtn) {
+        editBtn.style.display = isInvitee ? 'none' : '';
+        editBtn.onclick = () => {
+            closeModal(eventDetailModal);
+            const evToEdit = events.find(e => e.id == currentDetailEventId);
+            if (evToEdit) openEditModal(evToEdit);
+        };
+    }
+
+    var dateForCompletion = null;
+    if (occurrenceDate) {
+        dateForCompletion = toLocalDateString(occurrenceDate);
+    }
+    var isCompleted = false;
+    if (dateForCompletion && ev.recurrence_type && ev.recurrence_type !== 'none') {
+        isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                        ? ev.completed_occurrences.includes(dateForCompletion)
+                        : false;
+    } else {
+        isCompleted = (ev.status === 'completed' || ev.status === 'done');
+    }
+
+    const completeBtn = document.getElementById('detail-complete-btn');
+    if (completeBtn) {
+        completeBtn.style.display = isInvitee ? 'none' : '';
+
+        if (ev.type === 'task' && ev.recurrence_type === 'smart') {
+            completeBtn.textContent = 'Done';
+            completeBtn.onclick = function() {
+                closeModal(eventDetailModal);
+                completeSmartTask(ev);
+            };
+        }
+        else if (isCompleted) {
+            completeBtn.textContent = 'Undo';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    var idx = ev.completed_occurrences.indexOf(dateForCompletion);
+                    if (idx > -1) ev.completed_occurrences.splice(idx, 1);
+                    if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
+                        delete ev.completed_timestamps[dateForCompletion];
+                    }
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(async () => {
+                        if (currentUser && ev.type === 'task') {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    'Event today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#'
+                                );
+                            }
+                        }
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error undoing.'));
+                } else {
+                    updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
+                        ev.status = 'pending';
+                        ev.completed_at = null;
+                        if (currentUser && ev.type === 'task') {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    'Event today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#'
+                                );
+                            }
+                        }
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error undoing.'));
+                }
+            };
+        } else {
+            completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    if (!ev.completed_occurrences) ev.completed_occurrences = [];
+                    ev.completed_occurrences.push(dateForCompletion);
+                    if (!ev.completed_timestamps) ev.completed_timestamps = {};
+                    ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(async () => {
+                        if (currentUser) {
+                            await removeNotificationsForEvent(ev.id, currentUser.id);
+                        }
+                        showToast('Occurrence marked done. Auto‑deleted in 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error completing.'));
+                } else {
+                    var newStatus = ev.type === 'task' ? 'done' : 'completed';
+                    var payload = { status: newStatus, completed_at: new Date().toISOString() };
+                    updateEventInDB(ev.id, payload).then(async () => {
+                        ev.status = newStatus;
+                        ev.completed_at = payload.completed_at;
+                        if (currentUser) {
+                            await removeNotificationsForEvent(ev.id, currentUser.id);
+                        }
+                        showToast('Item marked done. Auto‑deleted in 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error completing.'));
+                }
+            };
+        }
+    }
+
+    const cancelBtn = document.getElementById('detail-cancel-btn');
+    if (cancelBtn) {
+        if (isInvitee) {
+            cancelBtn.textContent = 'Leave Event';
+            cancelBtn.onclick = () => {
+                showConfirmModal('Leave this event?', async () => {
+                    await deleteEventFromDB(ev.id);
+                    events = events.filter(e => e.id !== ev.id);
+                    closeModal(eventDetailModal);
+                    renderCalendar();
+                });
+            };
+        } else {
+            cancelBtn.textContent = 'Delete';
+            cancelBtn.onclick = () => {
+                showConfirmModal('Are you sure you want to delete this event?', () => {
+                    deleteEventById(ev.id).then(() => {
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                    }).catch(() => showToast('Failed to delete event.'));
+                });
+            };
+        }
+    }
+
+    const postponeBtn = document.getElementById('detail-postpone-btn');
+    if (postponeBtn) {
+        if (isInvitee) {
+            postponeBtn.style.display = 'none';
+        } else {
+            postponeBtn.style.display = '';
+            postponeBtn.onclick = () => openPostponeModal();
+        }
+    }
+
+    openModal(eventDetailModal);
+}
+
 async function openEditModal(ev) {
     if (!ev) return;
     editingEventId = ev.id;
