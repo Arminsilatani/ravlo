@@ -638,21 +638,10 @@
         </div>
     </footer>
 
-    <!-- ------------------------- SIDEBAR TOGGLE ------------------------- -->
-    <button id="menu-toggle-btn" class="hamburger-btn" aria-label="Menu">
-        <span class="hamburger-line"></span>
-        <span class="hamburger-line"></span>
-        <span class="hamburger-line"></span>
-    </button>
-
-    <!-- ------------------------- SIDEBAR ------------------------- -->
-    <div id="sidebar-overlay" class="sidebar-overlay"></div>
-    <aside id="sidebar" class="sidebar">
-        <div id="sidebar-close-row" class="sidebar-close-row">
-            <span>Close</span>
-        </div>
-        <div class="sidebar-separator"></div>
-        <nav class="sidebar-nav" id="sidebar-nav">
+    <!-- =========================== SIDEBAR COMPONENT =========================== -->
+    <sidebar-component current-app="Ravlo Calendar">
+        <!-- Slot for app-specific sidebar content -->
+        <div slot="app-content">
             <button id="sidebar-new-event" class="sidebar-item hidden">
                 <span class="sidebar-icon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -661,57 +650,8 @@
                 </span>
                 <span>New Event / Task</span>
             </button>
-
-            <div id="sidebar-today-list" class="sidebar-today-list"></div>
-
-            <div class="sidebar-separator"></div>
-            <div id="sidebar-menu-items"></div>
-            <div class="sidebar-separator"></div>
-
-            <a id="sidebar-dashboard" class="sidebar-item hidden" href="https://arminsilatani.github.io/dashboard/" target="_blank">
-                <span class="sidebar-icon" style="position: relative;">
-                    <span class="avatar-content"></span>
-                    <span class="notification-dot" id="avatar-notif-dot" style="display: none;"></span>
-                </span>
-                <span class="sidebar-dashboard-text">Dashboard</span>
-            </a>
-
-            <button id="sidebar-login" class="sidebar-item login-item hidden">
-                <span class="sidebar-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                        <polyline points="10 17 15 12 10 7"/>
-                        <line x1="15" y1="12" x2="3" y2="12"/>
-                    </svg>
-                </span>
-                <span>Sign In</span>
-            </button>
-
-            <button id="sidebar-logout" class="sidebar-item logout-item hidden">
-                <span class="sidebar-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
-                </span>
-                <span>Logout</span>
-            </button>
-
-            <a id="sidebar-coffee" class="sidebar-item" href="#" target="_blank" rel="noopener noreferrer">
-                <span class="sidebar-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-                        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-                        <line x1="6" y1="1" x2="6" y2="4"/>
-                        <line x1="10" y1="1" x2="10" y2="4"/>
-                        <line x1="14" y1="1" x2="14" y2="4"/>
-                    </svg>
-                </span>
-                <span>Buy Me a Coffee</span>
-            </a>
-        </nav>
-    </aside>
+        </div>
+    </sidebar-component>
 
 </div>
 
@@ -729,6 +669,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<!-- Shared Sidebar Component -->
+<script type="module" src="../shared/sidebar-component.js"></script>
+
+<!-- Ravlo Specific Logic -->
 <script src="assets/Ravlo.js"></script>
 
 </body>
