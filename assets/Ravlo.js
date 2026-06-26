@@ -522,9 +522,8 @@ function syncSidebarComponent() {
 async function updateNotificationDot() {
     const comp = getSidebarComponent();
     if (!comp) return;
-    console.log('updateNotificationDot called, hasNotifications:', hasNotifications, 'events length:', events.length);
 
-    let hasNotifications = false;
+    let hasNotifications = false;   // ← اول تعریف شود
 
     // 1. Check unread notifications in DB
     if (currentUser) {
@@ -562,16 +561,11 @@ async function updateNotificationDot() {
                 return false;
             });
         }
-        console.log('About to set dot to', hasNotifications);
-if (comp && typeof comp.setNotificationDot === 'function') {
-    comp.setNotificationDot(hasNotifications);
-} else {
-    console.warn('setNotificationDot not available on component');
-}
     }
+
     if (comp && typeof comp.setNotificationDot === 'function') {
-    comp.setNotificationDot(hasNotifications);
-}
+        comp.setNotificationDot(hasNotifications);
+    }
 }
 
 /* =========================== MODAL HELPERS ============================ */
