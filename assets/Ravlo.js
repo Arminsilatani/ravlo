@@ -562,7 +562,9 @@ async function updateNotificationDot() {
             });
         }
     }
+    if (comp && typeof comp.setNotificationDot === 'function') {
     comp.setNotificationDot(hasNotifications);
+}
 }
 
 /* =========================== MODAL HELPERS ============================ */
