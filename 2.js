@@ -1,11 +1,3 @@
-/*
- ****************************************************
- *  Author: Armin Silatani
- *  Date: 2026-06-23
- *  Version: 0.0.0
- ****************************************************
- */
-
 /* =========================== RAVLO CALENDAR APP ============================ */
 
 /* :::::::::::::::::::::::::: SUPABASE CLIENT :::::::::::::::::::::::::: */
@@ -3033,6 +3025,16 @@ async function openEditModal(ev) {
     updateAllDayAndTimeRows();
     openModal(eventModal);
 }
+
+
+
+
+
+
+
+
+
+
 
 /* =========================== EVENT SAVE ============================ */
 async function saveEvent() {
