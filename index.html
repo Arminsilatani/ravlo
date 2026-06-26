@@ -2,7 +2,7 @@
 ****************************************************
 * Author: Armin Silatani
 * Date: 2026-06-23
-* Version: 0.0.0 (Refactored with Web Component sidebar)
+* Version: 0.0.0
 ****************************************************
 -->
 <!DOCTYPE html>
@@ -22,7 +22,6 @@
     <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
-    <!-- استایل‌های اختصاصی Ravlo (بعد از حذف کامل بخش‌های سایدبار) -->
     <link rel="stylesheet" href="assets/Ravlo.css">
 
     <!-- :::::::::::::::::::::::::: TWITTER CARD :::::::::::::::::::::::::: -->
@@ -36,7 +35,74 @@
 
 <!-- =========================== AUTH OVERLAY ============================ -->
 <div id="auth-overlay">
-    <!-- ... (بدون تغییر) ... -->
+    <div class="auth-box">
+        <img src="assets/Ra.svg" alt="Ravlo" onerror="this.style.display='none'">
+        <h2>Ravlo Calendar</h2>
+        <p class="sub">Sign in to sync your events</p>
+
+        <!-- Step 1: Email -->
+        <div id="step-1" class="auth-step">
+            <input type="email" id="auth-email" class="auth-field" placeholder="Email" required>
+            <button id="auth-continue-btn" class="accent-btn">Continue</button>
+            <div class="auth-error" id="auth-error"></div>
+        </div>
+
+        <!-- Step 2: Login (existing user) -->
+        <div id="step-2-login" class="auth-step hidden">
+            <p class="auth-user-email" id="auth-user-email"></p>
+            <input type="password" id="auth-password" class="auth-field" placeholder="Password" required>
+            <button id="auth-signin-btn" class="accent-btn">Sign In</button>
+            <a href="#" id="auth-forgot-link" class="auth-forgot-link">Forgot password?</a>
+            <div class="auth-error" id="auth-error-login"></div>
+        </div>
+
+        <!-- Step 2: Register (new user) -->
+        <div id="step-2-register" class="auth-step hidden">
+            <div id="reg-form-fields">
+                <input type="text" id="reg-firstname" class="auth-field" placeholder="First Name" required>
+                <input type="text" id="reg-lastname" class="auth-field" placeholder="Last Name" required>
+
+                <div class="password-field-wrapper">
+                    <input type="password" id="reg-password" class="auth-field" placeholder="Password (min 6 chars)" required>
+                    <button type="button" class="toggle-password-btn" data-target="reg-password" aria-label="Show password">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="password-field-wrapper">
+                    <input type="password" id="reg-confirm" class="auth-field" placeholder="Confirm Password" required>
+                    <button type="button" class="toggle-password-btn" data-target="reg-confirm" aria-label="Show password">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <button id="auth-register-btn" class="accent-btn">Create Account</button>
+            </div>
+
+            <!-- Success message (hidden) -->
+            <div id="reg-success" style="display:none; text-align:center;">
+                <p class="reg-success-text">We've sent a confirmation link to your email.<br>Check your inbox and click the link to activate your account.</p>
+                <button id="reg-to-login-btn" class="accent-btn" style="width:auto; margin-top:16px;">Go to Sign In</button>
+            </div>
+
+            <div class="auth-error" id="auth-error-register"></div>
+        </div>
+
+        <!-- Forgot password form (swapped in step 2) -->
+        <div id="step-forgot" class="auth-step hidden">
+            <p class="auth-hint">Enter your email to receive a reset link.</p>
+            <input type="email" id="forgot-email" class="auth-field" placeholder="Email" required>
+            <button id="auth-send-reset-btn" class="accent-btn">Send Reset Link</button>
+            <a href="#" id="auth-back-to-login" class="auth-back-link">Back to login</a>
+            <div class="auth-success" id="auth-success-msg"></div>
+        </div>
+    </div>
 </div>
 
 <!-- =========================== APP CONTAINER ============================ -->
@@ -44,29 +110,550 @@
 
     <!-- ------------------------- HEADER ------------------------- -->
     <div class="glass-header">
-        <!-- ... (بدون تغییر) ... -->
+        <div class="header-inner">
+            <img src="assets/Ra.svg" alt="Ravlo Logo" class="header-logo" onerror="this.style.display='none'">
+            <div class="header-text">
+                <h1 class="tool-name">Ravlo</h1>
+                <h2 class="tool-tagline">Synchronized Web Calendar</h2>
+            </div>
+        </div>
+        <div class="header-description-container">
+            <p class="tool-description">Your personal syncable calendar – add events and stay in sync everywhere.</p>
+        </div>
     </div>
 
     <!-- ------------------------- MAIN CONTENT ------------------------- -->
     <main class="container">
-        <!-- ... (بدون تغییر) ... -->
+
+        <!-- ------------------------- CALENDAR CONTROLS ------------------------- -->
+        <div class="calendar-controls">
+            <div class="nav-bar">
+                <button class="nav-arrow" id="prev-month" aria-label="Previous month">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <button class="month-year-btn" id="current-month-year-btn">
+                    <span id="current-month-year"></span>
+                </button>
+                <button class="nav-arrow" id="next-month" aria-label="Next month">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+            <div class="right-controls">
+                <span class="divider"></span>
+                <div class="view-tabs" id="view-tabs">
+                    <button class="view-tab active" data-view="day">Day</button>
+                    <button class="view-tab" data-view="month">Month</button>
+                    <button class="view-tab" data-view="year">Year</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ------------------------- CALENDAR GRID ------------------------- -->
+        <div class="calendar-grid" id="calendar-grid"></div>
+
     </main>
 
     <!-- ------------------------- MODALS ------------------------- -->
-    <!-- ... (همهٔ modalها بدون تغییر باقی می‌مانند) ... -->
+
+    <!-- ------------------------- EVENT MODAL ------------------------- -->
+    <div id="event-modal" class="modal">
+        <div class="modal-content">
+            <!-- Event type toggle -->
+            <div class="event-type-toggle" id="event-type-toggle">
+                <span class="event-type-label active" data-type="event">Event</span>
+                <span class="event-type-label" data-type="task">Task</span>
+                <span class="event-type-thumb"></span>
+            </div>
+
+            <!-- Title -->
+            <input type="text" id="event-title" placeholder="Event title" required>
+
+            <!-- Gregorian date row -->
+            <div id="greg-date-row">
+                <div id="greg-picker-trigger" class="calendar-trigger">
+                    <span id="greg-trigger-text">Select date</span>
+                    <span class="calendar-trigger-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                    </span>
+                </div>
+                <input type="hidden" id="event-start-greg">
+                <input type="hidden" id="event-start">
+                <input type="hidden" id="event-end">
+            </div>
+
+            <!-- Recurrence trigger button -->
+            <button id="open-recurrence-btn" class="tag-modal-btn" type="button">
+                Repeat
+                <span id="recurrence-preview" class="recurrence-preview">Does not repeat</span>
+            </button>
+
+            <!-- Description + inline checklist + location -->
+            <div id="description-container" class="desc-container">
+                <div id="textarea-wrapper" class="textarea-wrapper">
+    <textarea id="event-description" class="auth-field" placeholder="Add description..." rows="3"></textarea>
+    <div class="textarea-actions">
+        <!-- دکمه آیکون (همیشه نمایش داده می‌شود) -->
+        <button id="toggle-icon-btn" class="action-btn" title="Choose Icon" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z"/>
+            </svg>
+        </button>
+
+        <!-- دکمه رنگ (همیشه نمایش داده می‌شود) -->
+        <button id="toggle-color-btn" class="action-btn" title="Change Color" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/>
+            </svg>
+        </button>
+
+        <!-- دکمه مکان (فقط در تب Event نمایش داده می‌شود) -->
+        <button id="toggle-location-btn" class="action-btn" title="Add Location" type="button" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+            </svg>
+        </button>
+
+        <!-- دکمه دعوت (فقط در تب Event نمایش داده می‌شود) -->
+        <button id="toggle-invite-btn" class="action-btn" title="Invite People" type="button" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"/>
+            </svg>
+        </button>
+
+        <!-- دکمه چک‌لیست (فقط در تب Task نمایش داده می‌شود) -->
+        <button id="toggle-checklist-mode-btn" class="action-btn" title="Checklist" type="button" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+                <div id="checklist-inline-editor" class="checklist-inline-editor">
+                    <div id="checklist-inline-items"></div>
+                    <input type="text" id="checklist-new-item-input" class="checklist-new-item-input" placeholder="Add item...">
+                </div>
+            </div>
+
+            <!-- Legacy hidden sections (kept for compatibility) -->
+            <div id="location-section" class="location-section-hidden">
+                <div class="location-input-row">
+                    <input type="text" id="location-coords-input" class="auth-field"
+                           placeholder="48.845385, 2.352205"
+                           style="margin-bottom:0; padding-right:32px;">
+                    <button id="clear-location-btn" class="location-close-btn" title="Remove location" type="button">✕</button>
+                </div>
+                <div id="location-map" class="location-map"></div>
+            </div>
+
+            <div id="checklist-section" class="checklist-section">
+                <label class="checklist-section-label">Checklist</label>
+                <div id="checklist-items"></div>
+                <div class="checklist-add-row">
+                    <input type="text" id="new-checklist-item" placeholder="New item..." class="auth-field" style="margin-bottom:0;">
+                    <button id="add-checklist-btn" class="accent-btn checklist-add-btn">Add</button>
+                </div>
+            </div>
+
+            <!-- Save button -->
+            <button id="save-event" class="accent-btn">Save</button>
+        </div>
+    </div>
+
+    <!-- ------------------------- TAG PICKER MODAL ------------------------- -->
+    <div id="tag-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="tag-modal-close">&times;</span>
+            <h3 class="modal-heading">Tag Color</h3>
+            <div class="tag-panel" id="tag-panel">
+                <div class="tag-panel-section">
+                    <div class="tag-panel-label">Color</div>
+                    <div class="tag-grid tag-colors-grid">
+                        <span class="tag-color-item selected" data-color="#f5f5f5" style="background:#f5f5f5"></span>
+                        <span class="tag-color-item" data-color="#FFB3BA" style="background:#FFB3BA"></span>
+                        <span class="tag-color-item" data-color="#FFD9B3" style="background:#FFD9B3"></span>
+                        <span class="tag-color-item" data-color="#FFFFBA" style="background:#FFFFBA"></span>
+                        <span class="tag-color-item" data-color="#BAE1FF" style="background:#BAE1FF"></span>
+                        <span class="tag-color-item" data-color="#E8BAFF" style="background:#E8BAFF"></span>
+                        <span class="tag-color-item" data-color="#B3FFE0" style="background:#B3FFE0"></span>
+                        <span class="tag-color-item" data-color="#FF8A80" style="background:#FF8A80"></span>
+                    </div>
+                </div>
+            </div>
+            <button id="tag-done-btn" class="accent-btn tag-done-btn">Done</button>
+        </div>
+    </div>
+
+    <!-- ------------------------- DAY DETAIL MODAL ------------------------- -->
+    <div id="day-detail-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 id="day-date-title"></h3>
+            <ul id="day-events-list"></ul>
+            <button id="add-event-from-day" class="accent-btn day-add-btn">Add Event</button>
+        </div>
+    </div>
+
+    <!-- ------------------------- EVENT DETAIL MODAL ------------------------- -->
+    <div id="event-detail-modal" class="modal">
+        <div class="modal-content event-detail-content">
+            <div class="detail-top-actions">
+                <button id="detail-edit-btn-top" class="detail-icon-btn" title="Edit">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Row 1: Color + Title -->
+            <div class="detail-header">
+                <span class="detail-color-dot" id="detail-color-dot"></span>
+                <h3 id="event-detail-title">Title</h3>
+            </div>
+
+            <!-- Row 2: Date and Time -->
+            <div class="detail-datetime-row" id="detail-datetime-row">
+                <svg class="detail-calendar-icon" id="detail-calendar-icon"
+                     width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span id="detail-date-text"></span>
+                <span class="detail-divider-v">|</span>
+                <span id="detail-time-text"></span>
+                <span id="detail-duration-paren"></span>
+            </div>
+
+            <!-- Row 3: Description -->
+            <div class="detail-description" id="detail-description-container" style="display:none">
+                <div style="display: flex; align-items: flex-start; gap: 6px;">
+                    <svg class="detail-desc-icon" id="detail-desc-icon"
+                         width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                         style="flex-shrink: 0; margin-top: 2px;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    <p id="detail-description-text"></p>
+                </div>
+            </div>
+
+            <!-- Row 4: CHECKLIST (for tasks) -->
+            <div id="detail-checklist-container" class="detail-checklist-container" style="display:none;">
+                <div class="detail-checklist-header">
+                    <span id="detail-checklist-icon" class="detail-icon" style="color:var(--accent);">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    </span>
+                    <span style="font-weight:600;font-size:14px;">Checklist</span>
+                </div>
+                <div id="detail-checklist-items" class="detail-checklist-items"></div>
+            </div>
+
+            <!-- Horizontal separator 1 -->
+            <hr class="detail-divider-h">
+
+            <!-- Attendees section (only for event) -->
+            <div id="detail-invitees-section" style="display:none;">
+                <div class="attendees-header">
+                    <svg class="detail-attendees-icon" id="detail-attendees-icon"
+                         width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span>Attendees</span>
+                </div>
+                <div class="attendees-list" id="detail-attendees-list">
+                    <!-- Content filled by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Map -->
+            <div class="detail-location" id="detail-location-container" style="display:none">
+                <div id="detail-location-coords-text" style="display:none"></div>
+                <div id="detail-location-map" class="detail-map"></div>
+                <div id="detail-map-address-overlay" class="map-address-overlay"></div>
+            </div>
+
+            <!-- Horizontal separator 2 -->
+            <hr class="detail-divider-h">
+
+            <!-- Action buttons -->
+            <div class="detail-actions-row">
+                <button class="detail-action-btn" id="detail-cancel-btn">Cancel</button>
+                <button class="detail-action-btn" id="detail-postpone-btn">Postpone</button>
+                <button class="detail-action-btn" id="detail-complete-btn">Complete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ------------------------- INVITE MODAL ------------------------- -->
+    <div id="invite-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="invite-modal-close">&times;</span>
+            <h3 class="modal-heading">Invite People</h3>
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                <input type="text" id="invite-name-input" class="auth-field" placeholder="Name" style="margin-bottom:0;">
+                <button id="invite-add-btn" class="accent-btn" style="width:auto; padding:10px 14px; font-size:14px;">Add</button>
+            </div>
+            <ul id="invite-list" class="invite-list" style="max-height:160px; overflow-y:auto;"></ul>
+            <div id="invite-code-section" style="display:none; margin-top:12px;">
+                <p style="font-size:12px; color:#aaa; margin-bottom:4px;">Not in your friends? Share this code:</p>
+                <div style="display:flex; gap:8px; background:#111; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);">
+                    <code id="invite-code-text">XXXX-XXXX-XXXX</code>
+                    <button id="copy-invite-code-btn" class="icon-btn" title="Copy">📋</button>
+                </div>
+            </div>
+            <button id="invite-done-btn" class="accent-btn tag-done-btn" style="margin-top:16px;">Done</button>
+        </div>
+    </div>
+
+    <!-- ------------------------- LOCATION MODAL ------------------------- -->
+    <div id="location-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="location-modal-close">&times;</span>
+            <h3 class="modal-heading">Add Location</h3>
+            <input type="text" id="location-search-input" class="auth-field" placeholder="Search for a place..." autocomplete="off">
+            <ul id="location-suggestions" class="location-suggestions"></ul>
+            <div id="location-modal-map" style="height:180px; border-radius:8px; border:1px solid var(--border); margin:12px 0;"></div>
+            <div id="selected-location-info" style="font-size:12px; color:#aaa; text-align:center; margin-bottom:12px;"></div>
+            <button id="location-done-btn" class="accent-btn">Done</button>
+        </div>
+    </div>
+
+    <!-- ------------------------- CHECKLIST MODAL ------------------------- -->
+    <div id="checklist-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="checklist-modal-close">&times;</span>
+            <h3 class="modal-heading">Checklist</h3>
+            <div id="checklist-modal-items" style="max-height:200px; overflow-y:auto; margin-bottom:12px;"></div>
+            <div style="display:flex; gap:8px;">
+                <input type="text" id="checklist-modal-input" class="auth-field" placeholder="New item..." style="margin-bottom:0;">
+                <button id="checklist-modal-add-btn" class="accent-btn" style="width:auto; padding:10px 14px; font-size:14px;">Add</button>
+            </div>
+            <button id="checklist-done-btn" class="accent-btn tag-done-btn" style="margin-top:16px;">Done</button>
+        </div>
+    </div>
+
+    <!-- ------------------------- RECURRENCE MODAL ------------------------- -->
+    <div id="recurrence-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="recurrence-modal-close">&times;</span>
+            <h3 class="modal-heading">Repeat</h3>
+            <select id="recurrence-select" class="auth-field" style="margin-bottom:12px;">
+                <option value="none">Does not repeat</option>
+                <option value="daily">Every day</option>
+                <option value="weekly">Every week</option>
+                <option value="monthly">Every month</option>
+                <option value="yearly">Every year</option>
+                <option id="smart-option" value="smart">Smart Recurrence</option>
+                <option value="custom">Custom...</option>
+            </select>
+            <div id="smart-options" class="rec-row-hidden" style="margin-bottom:12px;">
+                <label class="smart-radio">
+                    <input type="radio" name="smartInterval" value="weekly"> Weekly
+                </label>
+                <label class="smart-radio">
+                    <input type="radio" name="smartInterval" value="10day"> Every 10 Days
+                </label>
+                <label class="smart-radio">
+                    <input type="radio" name="smartInterval" value="monthly"> Monthly
+                </label>
+            </div>
+            <div id="rec-interval-row" class="rec-row-hidden interval-row">
+                <span class="rec-label">Every</span>
+                <div class="rec-interval-spinner">
+                    <button class="interval-btn interval-minus" aria-label="Decrease" type="button">−</button>
+                    <span class="interval-display" id="recurrence-interval-display">1</span>
+                    <button class="interval-btn interval-plus" aria-label="Increase" type="button">+</button>
+                </div>
+                <span class="rec-unit" id="rec-interval-label">day(s)</span>
+            </div>
+            <div id="rec-days-row" class="rec-row-hidden">
+                <label class="rec-days-label">On</label>
+                <div id="rec-days-container" class="rec-days-container"></div>
+            </div>
+            <button id="recurrence-done-btn" class="accent-btn">Done</button>
+        </div>
+    </div>
+
+    <!-- ------------------------- LOGOUT CONFIRMATION MODAL ------------------------- -->
+    <div id="logout-confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3>Are you sure you want to log out?</h3>
+            <div class="confirm-actions" style="margin-top:20px;">
+                <button id="logout-confirm-yes" class="confirm-btn yes-btn">Yes, logout</button>
+                <button id="logout-confirm-no" class="confirm-btn no-btn">No, stay</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ------------------------- CONFIRMATION MODAL ------------------------- -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content" style="max-width:360px; text-align:center;">
+            <p id="confirm-modal-message" style="margin-bottom:20px; color:#ccc;"></p>
+            <div class="confirm-actions">
+                <button id="confirm-modal-yes" class="confirm-btn yes-btn">Yes</button>
+                <button id="confirm-modal-no" class="confirm-btn no-btn">No</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ------------------------- GREGORIAN PICKER POPUP ------------------------- -->
+    <div id="greg-picker-popup" class="picker-popup">
+        <div class="picker-popup-inner ltr-direction">
+            <div class="picker-header">
+                <button class="picker-nav" id="greg-prev">‹</button>
+                <div class="picker-month-year">
+                    <button class="month-btn" id="greg-month-btn">January</button>
+                    <button class="year-btn" id="greg-year-btn">2026</button>
+                </div>
+                <button class="picker-nav" id="greg-next">›</button>
+            </div>
+            <div class="picker-day-names">
+                <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+            </div>
+            <div class="picker-month-popup" id="greg-month-popup"></div>
+            <div class="picker-year-popup" id="greg-year-popup">
+                <div class="picker-year-panel" id="greg-year-panel"></div>
+            </div>
+            <div class="picker-days" id="greg-days"></div>
+            <div class="picker-time-row ltr-direction">
+                <div class="time-group">
+                    <div class="time-spinner">
+                        <button type="button" class="time-arrow up" data-target="greg-hour" data-step="1">‹</button>
+                        <input type="text" id="greg-hour" class="picker-time-field" placeholder="09" maxlength="2">
+                        <button type="button" class="time-arrow down" data-target="greg-hour" data-step="-1">‹</button>
+                    </div>
+                    <span class="picker-time-sep">:</span>
+                    <div class="time-spinner">
+                        <button type="button" class="time-arrow up" data-target="greg-minute" data-step="15">‹</button>
+                        <input type="text" id="greg-minute" class="picker-time-field" placeholder="00" maxlength="2">
+                        <button type="button" class="time-arrow down" data-target="greg-minute" data-step="-15">‹</button>
+                    </div>
+                </div>
+                <span class="time-range-sep">to</span>
+                <div class="time-group">
+                    <div class="time-spinner">
+                        <button type="button" class="time-arrow up" data-target="greg-end-hour" data-step="1">‹</button>
+                        <input type="text" id="greg-end-hour" class="picker-time-field" placeholder="10" maxlength="2">
+                        <button type="button" class="time-arrow down" data-target="greg-end-hour" data-step="-1">‹</button>
+                    </div>
+                    <span class="picker-time-sep">:</span>
+                    <div class="time-spinner">
+                        <button type="button" class="time-arrow up" data-target="greg-end-minute" data-step="15">‹</button>
+                        <input type="text" id="greg-end-minute" class="picker-time-field" placeholder="00" maxlength="2">
+                        <button type="button" class="time-arrow down" data-target="greg-end-minute" data-step="-15">‹</button>
+                    </div>
+                </div>
+            </div>
+            <div class="all-day-popup-row ltr-direction" id="all-day-greg-row">
+                <input type="checkbox" id="event-all-day-greg" class="neon-checkbox">
+                <span class="neon-checkbox-label">All day</span>
+            </div>
+            <button class="picker-confirm picker-today-btn" id="greg-today-btn" style="display:none; margin-bottom:8px;">Today</button>
+            <button class="picker-confirm" id="greg-confirm">Confirm</button>
+        </div>
+    </div>
+
+    <!-- ------------------------- INVITATION RESPONSE MODAL ------------------------- -->
+    <div id="invitation-response-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="invitation-response-close">&times;</span>
+            <div id="invitation-response-header">
+                <h3 id="invitation-response-title">Event Invitation</h3>
+                <p id="invitation-response-message">You are invited to this event.</p>
+                <div class="invitation-response-actions">
+                    <button id="invitation-accept-btn" class="accent-btn">Accept</button>
+                    <button id="invitation-decline-btn" class="ghost-btn">Decline</button>
+                </div>
+            </div>
+            <hr class="detail-divider-h" />
+            <div id="invitation-detail-container">
+            </div>
+        </div>
+    </div>
+
+    <!-- ------------------------- ICON PICKER MODAL ------------------------- -->
+    <div id="icon-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="icon-modal-close">&times;</span>
+            <h3 class="modal-heading">Choose Icon</h3>
+            <div id="icon-grid" class="icon-grid"></div>
+            <button id="icon-done-btn" class="accent-btn tag-done-btn" style="margin-top:16px;">Done</button>
+        </div>
+    </div>
+
+    <!-- ------------------------- POSTPONE MODAL ------------------------- -->
+    <div id="postpone-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="postpone-modal-close">&times;</span>
+            <h3>Postpone Event</h3>
+            <p id="postpone-event-title" style="margin-bottom:12px; color:var(--text-light);"></p>
+            <div class="postpone-options">
+                <button class="postpone-option" data-offset="5">5 minutes</button>
+                <button class="postpone-option" data-offset="15">15 minutes</button>
+                <button class="postpone-option" data-offset="30">30 minutes</button>
+                <button class="postpone-option" data-offset="60">1 hour</button>
+                <button class="postpone-option" data-offset="1440">1 day</button>
+                <button class="postpone-option" data-offset="10080">1 week</button>
+                <button class="postpone-option" id="postpone-custom-btn">Custom…</button>
+            </div>
+            <div id="postpone-custom-row" style="display:none; margin-top:12px;">
+                <label for="postpone-custom-input" style="color:var(--text-light);">Minutes:</label>
+                <input type="number" id="postpone-custom-input" min="1" value="30" style="width:80px; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px;">
+                <button id="postpone-custom-apply" class="accent-btn" style="margin-left:8px;">Apply</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ------------------------- FOOTER ------------------------- -->
     <footer class="footer">
-        <!-- ... (بدون تغییر) ... -->
+        <div class="footer-signature">
+            <a href="https://arminsilatani.com/en/" target="_blank" rel="noopener noreferrer">
+                <span class="crafted">crafted by</span>
+                <img src="assets/ArminSilatani.svg" alt="Armin Silatani" class="signature">
+            </a>
+        </div>
     </footer>
 
-    <!-- ======================== SIDEBAR WEB COMPONENT ======================== -->
-    <!-- جایگزین تمام سایدبار قبلی: دکمه همبرگر، overlay، <aside> ... حذف شده‌اند -->
-    <sidebar-component current-app="Ravlo Calendar">
-        <!-- هر چیزی که داخل slot="app-content" قرار بگیرد به بخش اختصاصی سایدبار رندر می‌شود -->
-        <div slot="app-content">
-            <!-- دکمه "رویداد/تسک جدید" (در سایدبار همیشه قابل دسترس) -->
-            <button id="sidebar-new-event" class="sidebar-item">
+    <!-- ------------------------- SIDEBAR TOGGLE ------------------------- -->
+    <button id="menu-toggle-btn" class="hamburger-btn" aria-label="Menu">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+    </button>
+
+    <!-- ------------------------- SIDEBAR ------------------------- -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    <aside id="sidebar" class="sidebar">
+        <div id="sidebar-close-row" class="sidebar-close-row">
+            <span>Close</span>
+        </div>
+        <div class="sidebar-separator"></div>
+        <nav class="sidebar-nav" id="sidebar-nav">
+            <button id="sidebar-new-event" class="sidebar-item hidden">
                 <span class="sidebar-icon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -74,11 +661,57 @@
                 </span>
                 <span>New Event / Task</span>
             </button>
-            <!-- لیست رویدادهای امروز (در سایدبار) -->
+
             <div id="sidebar-today-list" class="sidebar-today-list"></div>
-            <!-- توجه: سایر آیتم‌ها (Dashboard, Sign In/Out, Buy Coffee) توسط خود کامپوننت مدیریت می‌شود -->
-        </div>
-    </sidebar-component>
+
+            <div class="sidebar-separator"></div>
+            <div id="sidebar-menu-items"></div>
+            <div class="sidebar-separator"></div>
+
+            <a id="sidebar-dashboard" class="sidebar-item hidden" href="https://arminsilatani.github.io/dashboard/" target="_blank">
+                <span class="sidebar-icon" style="position: relative;">
+                    <span class="avatar-content"></span>
+                    <span class="notification-dot" id="avatar-notif-dot" style="display: none;"></span>
+                </span>
+                <span class="sidebar-dashboard-text">Dashboard</span>
+            </a>
+
+            <button id="sidebar-login" class="sidebar-item login-item hidden">
+                <span class="sidebar-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                        <polyline points="10 17 15 12 10 7"/>
+                        <line x1="15" y1="12" x2="3" y2="12"/>
+                    </svg>
+                </span>
+                <span>Sign In</span>
+            </button>
+
+            <button id="sidebar-logout" class="sidebar-item logout-item hidden">
+                <span class="sidebar-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </span>
+                <span>Logout</span>
+            </button>
+
+            <a id="sidebar-coffee" class="sidebar-item" href="#" target="_blank" rel="noopener noreferrer">
+                <span class="sidebar-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+                        <line x1="6" y1="1" x2="6" y2="4"/>
+                        <line x1="10" y1="1" x2="10" y2="4"/>
+                        <line x1="14" y1="1" x2="14" y2="4"/>
+                    </svg>
+                </span>
+                <span>Buy Me a Coffee</span>
+            </a>
+        </nav>
+    </aside>
 
 </div>
 
@@ -96,11 +729,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-
-<!-- بارگذاری کامپوننت سایدبار مشترک -->
-<script type="module" src="../shared/sidebar-component.js"></script>
-
-<!-- اسکریپت اختصاصی Ravlo (باید برای اتصال به کامپوننت به‌روز شود) -->
 <script src="assets/Ravlo.js"></script>
 
 </body>
