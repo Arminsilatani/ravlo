@@ -517,33 +517,6 @@ function syncSidebarComponent() {
     comp.setTodayList(todayItems, overdueItems);
     comp.setEvents(events);
     updateNotificationDot();
-
-    // ************************************************************
-    // اتصال مستقیم رویداد کلیک روی آیتم‌های Today/Overdue
-    // ************************************************************
-    if (comp.shadowRoot) {
-        const container = comp.shadowRoot.getElementById('sidebar-today-list');
-        if (container) {
-            // برای جلوگیری از ثبت چندباره، ابتدا listenerهای قبلی را حذف می‌کنیم
-            container.querySelectorAll('.sidebar-today-item').forEach(el => {
-                el.replaceWith(el.cloneNode(true)); // حذف listenerهای قبلی
-            });
-            // اکنون listener جدید اضافه می‌کنیم
-            container.querySelectorAll('.sidebar-today-item').forEach(itemEl => {
-                itemEl.addEventListener('click', () => {
-                    const eventId = itemEl.dataset.eventId;
-                    const date = itemEl.dataset.date;
-                    if (eventId && window.ravloOpenEvent) {
-                        // بستن سایدبار
-                        if (window.ravloCloseSidebar) {
-                            window.ravloCloseSidebar();
-                        }
-                        window.ravloOpenEvent(eventId, date);
-                    }
-                });
-            });
-        }
-    }
 }
 
 async function updateNotificationDot() {
@@ -6169,30 +6142,37 @@ showApp();
 
 // When sidebar component finally becomes available, hook it up properly
 customElements.whenDefined('sidebar-component').then(() => {
-    
-    getSidebarComponent(); // sets up event listeners
+    getSidebarComponent();
     syncSidebarComponent();
-    
-    // مخفی‌سازی خط زمان هنگام باز بودن سایدبار
+
     const sidebar = document.querySelector('sidebar-component');
-    if (sidebar && sidebar.shadowRoot) {
-        const overlay = sidebar.shadowRoot.getElementById('sidebar-overlay');
-        
-        if (overlay) {
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach(mutation => {
-                    if (mutation.target.classList.contains('open')) {
-                        document.body.classList.add('sidebar-open');
-                    } else {
-                        document.body.classList.remove('sidebar-open');
-                    }
-                });
+    if (!sidebar || !sidebar.shadowRoot) return;
+
+    // ── مدیریت blur خط زمان هنگام باز شدن سایدبار ──
+    const overlay = sidebar.shadowRoot.getElementById('sidebar-overlay');
+    if (overlay) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(mutation => {
+                document.body.classList.toggle('sidebar-open', mutation.target.classList.contains('open'));
             });
-            
-            observer.observe(overlay, { 
-                attributes: true, 
-                attributeFilter: ['class'] 
-            });
-        }
+        });
+        observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
     }
+
+    // ── گوش دادن به کلیک روی آیتم‌های Today/Overdue (رویداد سفارشی) ──
+    sidebar.addEventListener('today-item-click', (e) => {
+        const { eventId, date } = e.detail;
+        // بستن سایدبار
+        if (window.ravloCloseSidebar) {
+            window.ravloCloseSidebar();
+        }
+        // باز کردن جزئیات رویداد
+        if (eventId && window.ravloOpenEvent) {
+            try {
+                window.ravloOpenEvent(eventId, date);
+            } catch (err) {
+                console.error('Error opening event detail:', err);
+            }
+        }
+    });
 });
