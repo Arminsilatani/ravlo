@@ -6124,7 +6124,6 @@ showApp();
 })();
 
 // When sidebar component finally becomes available, hook it up properly
-```javascript
 customElements.whenDefined('sidebar-component').then(() => {
     
     getSidebarComponent(); // sets up event listeners
@@ -6153,4 +6152,3 @@ customElements.whenDefined('sidebar-component').then(() => {
         }
     }
 });
-```
