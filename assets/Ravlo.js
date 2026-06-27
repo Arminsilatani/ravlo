@@ -185,7 +185,7 @@ async function checkAndCreateTodayNotifications() {
             await addNotificationToUser(
                 currentUser.id,
                 'event',
-                '📅 Event Today',
+                'Event Today',
                 `${ev.title || 'Untitled'} is today!`,
                 '#',
                 ev.id
@@ -3055,7 +3055,7 @@ async function saveEvent() {
                     addNotificationToUser(
                         inv.id, 
                         'invitation',                           // ← نوع دعوت (متمایز از event)
-                        '📨 New Invitation',                    // ← عنوان واضح
+                        'New Invitation',                    // ← عنوان واضح
                         `${currentProfile?.first_name || 'Someone'} invited you to "${eventTitle}"`, 
                         '#',
                         saved?.id || null                       // ← شناسه رویداد دعوت‌شده
@@ -3110,7 +3110,7 @@ async function saveEvent() {
                         addNotificationToUser(
                             invitee.user_id,
                             'event',
-                            '📝 Event Updated',
+                            'Event Updated',
                             `${editorName} updated "${eventTitle}"`,
                             '#',
                             invitee.id
@@ -3288,7 +3288,7 @@ async function approveEditRequest(eventId) {
             await addNotificationToUser(
                 uid,
                 'event',
-                '✅ Edit Approved',
+                'Edit Approved',
                 `Changes to "${ev.title || 'Untitled'}" were approved by ${editorName}.`,
                 '#',
                 eventId
@@ -3335,7 +3335,7 @@ async function rejectEditRequest(eventId, reason) {
             await addNotificationToUser(
                 ev.edit_request_by,
                 'event',
-                '❌ Edit Rejected',
+                'Edit Rejected',
                 msg,
                 '#',
                 eventId
@@ -3871,7 +3871,7 @@ async function leaveInvitedEvent(ev) {
                 await addNotificationToUser(
                     parentEvent.user_id,
                     'event',
-                    '👋 Someone Left',
+                    'Someone Left',
                     `${myName} left your event "${parentEvent.title || 'Untitled'}"`,
                     '#',
                     ev.parent_event_id
@@ -4258,7 +4258,7 @@ if (completeBtn) {
                             await addNotificationToUser(
                                 currentUser.id,
                                 'event',
-                                '📅 Event Today',
+                                'Event Today',
                                 `${ev.title || 'Untitled'} is today!`,
                                 '#',
                                 ev.id
