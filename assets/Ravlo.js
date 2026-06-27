@@ -5686,11 +5686,13 @@ function openInvitationResponse(ev) {
     const container = document.getElementById('invitation-detail-container');
     container.innerHTML = '';
 
-    // ─── دریافت اطلاعات دعوت‌کننده ───
-    if (ev.user_id) {
+    // ─── دریافت اطلاعات دعوت‌کننده (با اولویت inviter_user_id) ───
+    const inviterId = ev.inviter_user_id || ev.user_id;
+    
+    if (inviterId) {
         sb.from('profiles')
             .select('first_name, last_name, photo_url')
-            .eq('id', ev.user_id)
+            .eq('id', inviterId)
             .single()
             .then(({ data: inviter }) => {
                 const inviterName = inviter 
@@ -5699,16 +5701,15 @@ function openInvitationResponse(ev) {
                 const inviterAvatar = inviter?.photo_url || null;
                 const inviterInitial = inviterName.charAt(0).toUpperCase();
                 
-                // آپدیت پیام دعوت با نام و آواتار
                 const messageEl = document.getElementById('invitation-response-message');
                 if (messageEl) {
                     messageEl.innerHTML = `
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                             ${inviterAvatar 
-                                ? `<img src="${inviterAvatar}" alt="${inviterName}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`
-                                : `<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;">${inviterInitial}</div>`
+                                ? `<img src="${inviterAvatar}" alt="${inviterName}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
+                                : `<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:400;font-size:16px;">${inviterInitial}</div>`
                             }
-                            <span style="color:#fff;font-weight:400;">${inviterName}</span>
+                            <span style="color:#fff;font-weight:400;font-size:16px;">${inviterName}</span>
                         </div>
                         <span style="color:#aaa;">invited you to this event</span>
                     `;
@@ -5822,9 +5823,7 @@ function openInvitationResponse(ev) {
         events = events.filter(e => e.id !== ev.id);
 
         if (ev.parent_event_id) {
-            const {
-                data: parentData
-            } = await sb
+            const { data: parentData } = await sb
                 .from('ravlo')
                 .select('user_id, title')
                 .eq('id', ev.parent_event_id)
