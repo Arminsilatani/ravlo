@@ -2201,9 +2201,7 @@ function renderDayView() {
                     leaveBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
                         showConfirmModal('Leave this event?', async function() {
-                            await deleteEventFromDB(item.ev.id);
-                            events = events.filter(e => e.id !== item.ev.id);
-                            renderCalendar();
+                            await leaveInvitedEvent(item.ev);
                         });
                     });
                     actionsDiv.appendChild(leaveBtn);
@@ -3515,10 +3513,8 @@ function openEventDetail(ev, occurrenceDate) {
             cancelBtn.textContent = 'Leave Event';
             cancelBtn.onclick = () => {
                 showConfirmModal('Leave this event?', async () => {
-                    await deleteEventFromDB(ev.id);
-                    events = events.filter(e => e.id !== ev.id);
                     closeModal(eventDetailModal);
-                    renderCalendar();
+                    await leaveInvitedEvent(ev);
                 });
             };
         } else {
@@ -3549,6 +3545,67 @@ function openEventDetail(ev, occurrenceDate) {
 
 
 /* =========================== DELETE CONFIRMATION ============================ */
+
+async function leaveInvitedEvent(ev) {
+    if (!currentUser || !ev.parent_event_id) return;
+    
+    showGlobalLoader();
+    
+    try {
+        // ۱. حذف ردیف دعوت‌شده
+        await deleteEventFromDB(ev.id);
+        
+        // ۲. حذف نام از لیست invitees رویداد اصلی
+        const { data: parentEvent } = await sb
+            .from('ravlo')
+            .select('invitees, invitee_ids, user_id, title')
+            .eq('id', ev.parent_event_id)
+            .single();
+        
+        if (parentEvent) {
+            const myName = [currentProfile?.first_name, currentProfile?.last_name]
+                .filter(Boolean).join(' ') || 'Someone';
+            const myId = currentUser.id;
+            
+            // حذف نام و آیدی از آرایه‌ها
+            const updatedInvitees = (parentEvent.invitees || []).filter(name => name !== myName);
+            const updatedInviteeIds = (parentEvent.invitee_ids || []).filter(id => id !== myId);
+            
+            // آپدیت رویداد اصلی
+            await updateEventInDB(ev.parent_event_id, {
+                invitees: updatedInvitees,
+                invitee_ids: updatedInviteeIds
+            });
+            
+            // ۳. ارسال نوتیفیکیشن به دعوت‌کننده
+            if (parentEvent.user_id && parentEvent.user_id !== myId) {
+                await addNotificationToUser(
+                    parentEvent.user_id,
+                    'event',
+                    '👋 Someone Left',
+                    `${myName} left your event "${parentEvent.title || 'Untitled'}"`,
+                    '#',
+                    ev.parent_event_id
+                );
+            }
+            
+            // ۴. پاک کردن نوتیفیکیشن‌های مربوط به این رویداد برای کاربر جاری
+            await removeNotificationsForEvent(ev.id, myId);
+        }
+        
+        // ۵. حذف از آرایهٔ محلی
+        events = events.filter(e => e.id !== ev.id);
+        
+        showToast('You left the event.');
+    } catch (error) {
+        console.error('Leave event error:', error);
+        showToast('Error leaving event.');
+    } finally {
+        hideGlobalLoader();
+        renderCalendar();
+        updateNotificationDot();
+    }
+}
 
 async function deleteEventById(id) {
     showGlobalLoader();
