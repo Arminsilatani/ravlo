@@ -1549,7 +1549,7 @@ function openGregPicker(gy, gm, gd) {
     gregPickerPopup.classList.add('open');
 
     if (gregState.selectedGd !== null) {
-        setDefaultTimeForToday('greg', gregState.gy, gregState.gm, gregState.selectedGd, true);
+        setDefaultTimeForToday('greg', gregState.gy, gregState.gm, gregState.selectedGd, false);
     } else {
         setDefaultTimeForToday('greg', now.getFullYear(), now.getMonth(), now.getDate(), true);
     }
@@ -2697,6 +2697,21 @@ function openNewEventAtTime(date) {
     eventStartGreg.value = dateStr;
     eventStartInput.value = dateStr + 'T' + pad(hours) + ':' + pad(mins);
     gregDateRow.style.display = 'block';
+    // به‌روزرسانی وضعیت داخلی پیکر
+    gregState.gy = year;
+    gregState.gm = month;
+    gregState.selectedGd = day;
+
+    // مقداردهی ورودی‌های ساعت در پیکر
+    if (gregHourInput) gregHourInput.value = pad(hours);
+    if (gregMinuteInput) gregMinuteInput.value = pad(mins);
+
+    // تنظیم زمان پایان (۱ ساعت بعد)
+    const endH = (hours + 1) % 24;
+    const endM = mins;
+    document.getElementById('greg-end-hour').value = pad(endH);
+    document.getElementById('greg-end-minute').value = pad(endM);
+
     gregTriggerText.textContent = GREG_MONTH_NAMES[month] + ' ' + day + ', ' + year + '  ' + pad(hours) + ':' + pad(mins);
     gregPickerTrigger.classList.add('has-value');
 
