@@ -3490,7 +3490,7 @@ async function rejectEditRequest(eventId, reason) {
     }
 
     // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
-        // ─── Attendees (فقط از RPC برای فرزند استفاده می‌کنیم) ───
+        // ─── Attendees (فقط از RPC استفاده کن) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3507,20 +3507,18 @@ async function rejectEditRequest(eventId, reason) {
             let inviteeIds = [];
 
             if (ev.parent_event_id) {
-                // حتماً از RPC استفاده کن
                 const { data: parentData, error } = await sb.rpc('get_parent_event', {
                     child_event_id: ev.id
                 });
                 if (error || !parentData) {
                     console.error('Failed to get parent event:', error);
                     attendeesList.innerHTML = '<div style="color:#ff6b6b;">Could not load attendees.</div>';
-                    return; // متوقف شو
+                    return;
                 }
                 ownerId = parentData.user_id;
                 inviteeNames = parentData.invitees || [];
                 inviteeIds = parentData.invitee_ids || [];
             } else {
-                // رویداد اصلی
                 ownerId = ev.user_id;
                 inviteeNames = ev.invitees || [];
                 inviteeIds = ev.invitee_ids || [];
