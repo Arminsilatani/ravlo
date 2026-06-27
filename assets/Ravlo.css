@@ -1627,7 +1627,7 @@ body.modal-open {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 6;
+  z-index: 7;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.7);
