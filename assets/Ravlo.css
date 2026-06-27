@@ -3354,7 +3354,7 @@ body.modal-open {
 }
 
 .invite-user-name {
-  font-weight: 600;
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3362,9 +3362,9 @@ body.modal-open {
 }
 
 .invite-user-status {
-  font-size: 12px;
+  font-size: 10px;
   color: #aaa;
-  margin-top: 2px;
+  margin-top: -2px;
 }
 
 .invite-selected-list {
