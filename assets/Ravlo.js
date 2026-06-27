@@ -2843,7 +2843,6 @@ async function openEditModal(ev) {
         if (locBtn) locBtn.classList.remove('active');
     }
 
-    // Load invitees
     // Load invitees from invitee_ids (ecosystem)
     currentInvitees = [];
     if (ev.invitee_ids && Array.isArray(ev.invitee_ids) && ev.invitee_ids.length > 0) {
@@ -2873,6 +2872,29 @@ async function openEditModal(ev) {
 
     if (gregDateRow) gregDateRow.style.display = 'block';
     updateAllDayAndTimeRows();
+    // تنظیم وضعیت داخلی پیکر با تاریخ/ساعت رویداد
+if (ev.start_date) {
+    const startDate = new Date(ev.start_date);
+    gregState.gy = startDate.getFullYear();
+    gregState.gm = startDate.getMonth();
+    gregState.selectedGd = startDate.getDate();
+    
+    if (gregHourInput) gregHourInput.value = pad(startDate.getHours());
+    if (gregMinuteInput) gregMinuteInput.value = pad(startDate.getMinutes());
+    
+    // تنظیم زمان پایان (اگر وجود دارد)
+    if (ev.end_date) {
+        const endDate = new Date(ev.end_date);
+        document.getElementById('greg-end-hour').value = pad(endDate.getHours());
+        document.getElementById('greg-end-minute').value = pad(endDate.getMinutes());
+    } else {
+        // پیش‌فرض: ۱ ساعت بعد
+        const endH = (startDate.getHours() + 1) % 24;
+        const endM = startDate.getMinutes();
+        document.getElementById('greg-end-hour').value = pad(endH);
+        document.getElementById('greg-end-minute').value = pad(endM);
+    }
+}
     openModal(eventModal);
 }
 
