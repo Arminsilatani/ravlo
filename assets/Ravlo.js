@@ -3490,7 +3490,6 @@ async function rejectEditRequest(eventId, reason) {
     }
 
     // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
-        // ─── Attendees (نمایش کامل همهٔ افراد شامل دعوت‌کننده) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3502,18 +3501,35 @@ async function rejectEditRequest(eventId, reason) {
             attendeesList.style.maxHeight = '200px';
             attendeesList.style.overflowY = 'auto';
 
-            const names = ev.invitees || [];
-            const ids = ev.invitee_ids || [];
+            // اگر این یک رویداد فرزند (دعوت‌شده) است، اطلاعات را از والد بگیریم
+            let ownerId = ev.user_id;
+            let inviteeNames = ev.invitees || [];
+            let inviteeIds = ev.invitee_ids || [];
+            let isChildView = false;
 
-            // همیشه یک لیست واحد می‌سازیم که شامل صاحب رویداد + مهمان‌ها باشد
-            // ۱. اطلاعات صاحب رویداد
+            if (ev.parent_event_id) {
+                isChildView = true;
+                // دریافت اطلاعات والد
+                const { data: parent } = await sb
+                    .from('ravlo')
+                    .select('user_id, invitees, invitee_ids')
+                    .eq('id', ev.parent_event_id)
+                    .single();
+                if (parent) {
+                    ownerId = parent.user_id;
+                    inviteeNames = parent.invitees || [];
+                    inviteeIds = parent.invitee_ids || [];
+                }
+            }
+
+            // ۱. اطلاعات صاحب رویداد (ownerId)
             let ownerName = 'Unknown';
             let ownerPhoto = null;
             try {
                 const { data: ownerProfile } = await sb
                     .from('profiles')
                     .select('first_name, last_name, photo_url')
-                    .eq('id', ev.user_id)
+                    .eq('id', ownerId)
                     .single();
                 if (ownerProfile) {
                     ownerName = [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean).join(' ') || 'Someone';
@@ -3521,50 +3537,46 @@ async function rejectEditRequest(eventId, reason) {
                 }
             } catch (e) { /* ignore */ }
 
-            // ۲. وضعیت دعوت مهمان‌ها (فقط برای صاحب رویداد اصلی)
+            // ۲. وضعیت دعوت مهمان‌ها (فقط برای صاحب اصلی)
             let statusMap = {};
-            if (!ev.parent_event_id && ev.user_id === currentUser?.id && ids.length > 0) {
+            if (!isChildView && ownerId === currentUser?.id && inviteeIds.length > 0) {
                 try {
-                    const { data: childRows, error } = await sb
+                    const { data: childRows } = await sb
                         .from('ravlo')
                         .select('user_id, invitation_status')
                         .eq('parent_event_id', ev.id);
-                    if (!error && childRows) {
-                        childRows.forEach(row => {
-                            statusMap[row.user_id] = row.invitation_status;
-                        });
+                    if (childRows) {
+                        childRows.forEach(row => { statusMap[row.user_id] = row.invitation_status; });
                     }
                 } catch (e) { /* ignore */ }
             }
 
             // ۳. تصاویر پروفایل مهمان‌ها
             let profilesMap = {};
-            if (ids.length > 0) {
+            if (inviteeIds.length > 0) {
                 try {
                     const { data: profiles } = await sb
                         .from('profiles')
                         .select('id, photo_url')
-                        .in('id', ids);
+                        .in('id', inviteeIds);
                     if (profiles) {
                         profiles.forEach(p => { profilesMap[p.id] = p.photo_url; });
                     }
                 } catch (e) { /* ignore */ }
             }
 
-            // ۴. ساخت آرایه نهایی: اول صاحب رویداد، سپس مهمان‌ها
+            // ۴. ساخت آرایه نهایی
             const allPeople = [];
-
-            // افزودن صاحب رویداد
+            // صاحب رویداد
             allPeople.push({
                 name: ownerName,
                 photoUrl: ownerPhoto,
                 isOwner: true,
-                status: 'accepted' // صاحب رویداد همیشه پذیرفته است
+                status: 'accepted'
             });
-
-            // افزودن مهمان‌ها
-            names.forEach((name, idx) => {
-                const uid = ids[idx];
+            // مهمان‌ها
+            inviteeNames.forEach((name, idx) => {
+                const uid = inviteeIds[idx];
                 const status = statusMap[uid] || 'unknown';
                 const photoUrl = uid ? profilesMap[uid] : null;
                 allPeople.push({ name, photoUrl, status, isOwner: false });
