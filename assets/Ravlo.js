@@ -513,11 +513,37 @@ function syncSidebarComponent() {
     } else {
         comp.clearUser();
     }
-    // محاسبه آیتم‌های امروز و عقب‌افتاده
     const { todayItems, overdueItems } = getTodayAndOverdueItems();
     comp.setTodayList(todayItems, overdueItems);
     comp.setEvents(events);
     updateNotificationDot();
+
+    // ************************************************************
+    // اتصال مستقیم رویداد کلیک روی آیتم‌های Today/Overdue
+    // ************************************************************
+    if (comp.shadowRoot) {
+        const container = comp.shadowRoot.getElementById('sidebar-today-list');
+        if (container) {
+            // برای جلوگیری از ثبت چندباره، ابتدا listenerهای قبلی را حذف می‌کنیم
+            container.querySelectorAll('.sidebar-today-item').forEach(el => {
+                el.replaceWith(el.cloneNode(true)); // حذف listenerهای قبلی
+            });
+            // اکنون listener جدید اضافه می‌کنیم
+            container.querySelectorAll('.sidebar-today-item').forEach(itemEl => {
+                itemEl.addEventListener('click', () => {
+                    const eventId = itemEl.dataset.eventId;
+                    const date = itemEl.dataset.date;
+                    if (eventId && window.ravloOpenEvent) {
+                        // بستن سایدبار
+                        if (window.ravloCloseSidebar) {
+                            window.ravloCloseSidebar();
+                        }
+                        window.ravloOpenEvent(eventId, date);
+                    }
+                });
+            });
+        }
+    }
 }
 
 async function updateNotificationDot() {
@@ -2605,10 +2631,10 @@ function resetEventForm() {
     const descField = document.getElementById('event-description');
     if (descField) descField.value = '';
 
-    if (saveEventBtn) {
+if (saveEventBtn && typeof saveEvent === 'function') {
     saveEventBtn.textContent = 'Save';
     saveEventBtn.onclick = saveEvent;
-    }
+}
 
     // تاریخ و زمان
     if (eventStartInput) eventStartInput.value = '';
@@ -6000,6 +6026,24 @@ async function cleanupChecklistFromDescriptions() {
     }
 }
 
+// ---- دسترسی از سایدبار و سایر بخش‌ها ----
+window.ravloOpenEvent = function(eventId, dateStr) {
+    const ev = events.find(e => e.id === eventId);
+    if (ev) {
+        const occDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+        openEventDetail(ev, occDate);
+    }
+};
+
+window.ravloCloseSidebar = function() {
+    const sidebar = document.querySelector('sidebar-component');
+    if (sidebar && sidebar.shadowRoot) {
+        const overlay = sidebar.shadowRoot.getElementById('sidebar-overlay');
+        if (overlay && overlay.classList.contains('open')) {
+            overlay.click();
+        }
+    }
+};
 /* =========================== INITIALIZATION ============================ */
 
 async function initCalendar() {
