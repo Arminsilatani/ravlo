@@ -3052,8 +3052,14 @@ async function saveEvent() {
                 // ── 8. Send notifications ─────────────────
                 const eventTitle = title || 'Untitled event';
                 currentInvitees.forEach(inv => {
-                    addNotificationToUser(inv.id, 'event', 'You have been invited to an event',
-                        `${currentProfile?.first_name || 'Someone'} invited you to "${eventTitle}"`, '#');
+                    addNotificationToUser(
+                        inv.id, 
+                        'invitation',                           // ← نوع دعوت (متمایز از event)
+                        '📨 New Invitation',                    // ← عنوان واضح
+                        `${currentProfile?.first_name || 'Someone'} invited you to "${eventTitle}"`, 
+                        '#',
+                        saved?.id || null                       // ← شناسه رویداد دعوت‌شده
+                    );
                 });
             }
         }
