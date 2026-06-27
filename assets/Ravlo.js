@@ -2604,12 +2604,82 @@ function syncEndTimeOnStartChange(prefix) {
 }
 
 /* ------------------------- OPEN NEW EVENT AT TIME ------------------------- */
+function resetEventForm() {
+    // فیلدهای متنی
+    if (eventTitleInput) eventTitleInput.value = '';
+    const descField = document.getElementById('event-description');
+    if (descField) descField.value = '';
+
+    // تاریخ و زمان
+    if (eventStartInput) eventStartInput.value = '';
+    if (eventEndInput) eventEndInput.value = '';
+    if (eventStartGreg) eventStartGreg.value = '';
+    if (gregTriggerText) gregTriggerText.textContent = 'Select date';
+    if (gregPickerTrigger) gregPickerTrigger.classList.remove('has-value');
+    const gregCheck = document.getElementById('event-all-day-greg');
+    if (gregCheck) gregCheck.checked = false;
+
+    // وضعیت ویرایش
+    editingEventId = null;
+
+    // تکرار
+    recurrence = { type: 'none', interval: 1, days: [], smartInterval: 'weekly' };
+    updateRecurrencePreview();
+
+    // رنگ
+    selectedTagColor = '#f5f5f5';
+    const colorBtn = document.getElementById('toggle-color-btn');
+    if (colorBtn) colorBtn.classList.remove('active');
+
+    // آیکون
+    selectedIcon = null;
+    updateIconButton();
+    const iconBtn = document.getElementById('toggle-icon-btn');
+    if (iconBtn) iconBtn.classList.remove('active');
+
+    // دعوت‌شده‌ها
+    currentInvitees = [];
+    const inviteBtn = document.getElementById('toggle-invite-btn');
+    if (inviteBtn) inviteBtn.classList.remove('active');
+
+    // مکان
+    currentLocationCoords = null;
+    currentLocationName = '';
+    currentLocationAddress = null;
+    const locationInput = document.getElementById('location-coords-input');
+    if (locationInput) locationInput.value = '';
+    const locationSection = document.getElementById('location-section');
+    if (locationSection) locationSection.style.display = 'none';
+    const locBtn = document.getElementById('toggle-location-btn');
+    if (locBtn) locBtn.classList.remove('active');
+
+    // چک‌لیست
+    currentChecklistItems = [];
+    hideInlineChecklist();
+    const checklistToggleBtn = document.getElementById('toggle-checklist-mode-btn');
+    if (checklistToggleBtn) {
+        checklistToggleBtn.style.display = 'none';
+        checklistToggleBtn.classList.remove('active');
+    }
+
+    // نوع رویداد (پیش‌فرض event)
+    eventType = 'event';
+    const toggle = document.getElementById('event-type-toggle');
+    if (toggle) toggle.style.display = '';
+    setEventType('event');
+
+    // ردیف‌های All‑day و زمان
+    updateAllDayAndTimeRows();
+}
+
 function openNewEventAtTime(date) {
     if (!currentUser) {
         openModal(authOverlay);
         authError.textContent = 'Please sign in to add events.';
         return;
     }
+
+    resetEventForm();
 
     editingEventId = null;
     eventTitleInput.value = '';
@@ -4297,48 +4367,8 @@ if (addEventBtn) addEventBtn.addEventListener('click', () => {
         authError.textContent = 'Please sign in to add events.';
         return;
     }
-    if (eventTitleInput) eventTitleInput.value = '';
-    if (eventStartInput) eventStartInput.value = '';
-    if (eventEndInput) eventEndInput.value = '';
-    if (eventStartGreg) eventStartGreg.value = '';
-    if (gregTriggerText) gregTriggerText.textContent = 'Select date';
-    if (gregPickerTrigger) gregPickerTrigger.classList.remove('has-value');
-    editingEventId = null;
-
-    recurrence = {
-        type: 'none',
-        interval: 1,
-        days: []
-    };
-    currentInvitees = [];
-    updateRecurrencePreview();
-
-    selectedTagColor = '#f5f5f5';
-    currentLocationCoords = null;
-    document.getElementById('location-coords-input').value = '';
-    document.getElementById('location-section').style.display = 'none';
-    document.getElementById('toggle-location-btn')?.classList.remove('active');
-    document.getElementById('toggle-invite-btn')?.classList.remove('active');
-    eventType = 'event';
-    document.getElementById('event-type-toggle').style.display = '';
-    const gregCheck = document.getElementById('event-all-day-greg');
-    if (gregCheck) gregCheck.checked = false;
-
-    const descField = document.getElementById('event-description');
-    if (descField) descField.value = '';
-    currentChecklistItems = [];
-    hideInlineChecklist();
-    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
-    if (toggleBtn) {
-        toggleBtn.style.display = 'none';
-        toggleBtn.classList.remove('active');
-    }
-
-    updateAllDayAndTimeRows();
+    resetEventForm();
     openModal(eventModal);
-    requestAnimationFrame(() => {
-        setEventType('event');
-    });
 });
 
 // Save event
