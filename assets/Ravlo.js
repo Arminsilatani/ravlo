@@ -6126,6 +6126,49 @@ showApp();
 // When sidebar component finally becomes available, hook it up properly
 // وقتی کامپوننت سایدبار آماده شد
 customElements.whenDefined('sidebar-component').then(() => {
+    customElements.whenDefined('sidebar-component').then(() => {
+    getSidebarComponent();
+    syncSidebarComponent();
+    
+    // مخفی‌سازی خط زمان هنگام باز بودن سایدبار
+    const sidebar = document.querySelector('sidebar-component');
+    if (sidebar && sidebar.shadowRoot) {
+        const overlay = sidebar.shadowRoot.getElementById('sidebar-overlay');
+        if (overlay) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach(mutation => {
+                    if (mutation.target.classList.contains('open')) {
+                        document.body.classList.add('sidebar-open');
+                    } else {
+                        document.body.classList.remove('sidebar-open');
+                    }
+                });
+            });
+            observer.observe(overlay, { 
+                attributes: true, 
+                attributeFilter: ['class'] 
+            });
+        }
+    }
+
+    // 🆕 گوش دادن به کلیک روی آیتم‌های Today/Overdue
+    if (sidebar) {
+        sidebar.addEventListener('today-item-click', (e) => {
+            const { eventId, date } = e.detail;
+            const ev = events.find(ev => ev.id === eventId);
+            if (ev) {
+                // بستن سایدبار (با کلیک روی overlay)
+                const overlay = sidebar.shadowRoot.getElementById('sidebar-overlay');
+                if (overlay && overlay.classList.contains('open')) {
+                    overlay.click();
+                }
+                // باز کردن جزئیات رویداد
+                const occurrenceDate = date ? new Date(date + 'T00:00:00') : new Date();
+                openEventDetail(ev, occurrenceDate);
+            }
+        });
+    }
+});
     getSidebarComponent(); // sets up event listeners
     syncSidebarComponent();
     
