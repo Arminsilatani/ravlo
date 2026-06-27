@@ -3490,6 +3490,7 @@ async function rejectEditRequest(eventId, reason) {
     }
 
     // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
+        // ─── Attendees (نسخه نهایی با RPC اصلاح‌شده و لاگ) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3506,16 +3507,23 @@ async function rejectEditRequest(eventId, reason) {
             let inviteeIds = ev.invitee_ids || [];
             let isChildView = false;
 
-            // اگر این یک رویداد فرزند است، اطلاعات والد را با RPC بگیریم
             if (ev.parent_event_id) {
                 isChildView = true;
-                const { data: parentData, error: parentErr } = await sb.rpc('get_parent_event', {
-                    child_event_id: ev.id
-                });
-                if (!parentErr && parentData) {
-                    ownerId = parentData.user_id;
-                    inviteeNames = parentData.invitees || [];
-                    inviteeIds = parentData.invitee_ids || [];
+                console.log('Fetching parent for child event:', ev.id, 'parent:', ev.parent_event_id);
+                try {
+                    const { data: parentData, error: parentErr } = await sb.rpc('get_parent_event', {
+                        child_event_id: ev.id
+                    });
+                    console.log('RPC result:', parentData, 'error:', parentErr);
+                    if (parentErr) throw parentErr;
+                    if (parentData) {
+                        ownerId = parentData.user_id;
+                        inviteeNames = parentData.invitees || [];
+                        inviteeIds = parentData.invitee_ids || [];
+                        console.log('Owner set to', ownerId, 'invitees:', inviteeNames);
+                    }
+                } catch (e) {
+                    console.error('get_parent_event failed:', e);
                 }
             }
 
