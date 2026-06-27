@@ -2978,6 +2978,7 @@ async function saveEvent() {
                             user_id: invitee.id,
                             parent_event_id: saved.id,
                             invitation_status: 'pending',
+                            inviter_user_id: currentUser.id,
                             invitees: [],
                             invitee_ids: [],
                             completed_occurrences: [],
@@ -5265,10 +5266,41 @@ function fallbackCopy(text) {
 /* =========================== INVITATION RESPONSE =========================== */
 function openInvitationResponse(ev) {
     document.getElementById('invitation-response-title').textContent = 'Event Invitation';
-    document.getElementById('invitation-response-message').textContent = 'You are invited to this event.';
-
+    
     const container = document.getElementById('invitation-detail-container');
     container.innerHTML = '';
+
+    // ─── دریافت اطلاعات دعوت‌کننده ───
+    if (ev.user_id) {
+        sb.from('profiles')
+            .select('first_name, last_name, photo_url')
+            .eq('id', ev.user_id)
+            .single()
+            .then(({ data: inviter }) => {
+                const inviterName = inviter 
+                    ? [inviter.first_name, inviter.last_name].filter(Boolean).join(' ') || 'Someone'
+                    : 'Someone';
+                const inviterAvatar = inviter?.photo_url || null;
+                const inviterInitial = inviterName.charAt(0).toUpperCase();
+                
+                // آپدیت پیام دعوت با نام و آواتار
+                const messageEl = document.getElementById('invitation-response-message');
+                if (messageEl) {
+                    messageEl.innerHTML = `
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            ${inviterAvatar 
+                                ? `<img src="${inviterAvatar}" alt="${inviterName}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`
+                                : `<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;">${inviterInitial}</div>`
+                            }
+                            <span style="color:#fff;font-weight:600;">${inviterName}</span>
+                        </div>
+                        <span style="color:#aaa;">invited you to this event</span>
+                    `;
+                }
+            });
+    } else {
+        document.getElementById('invitation-response-message').textContent = 'You are invited to this event.';
+    }
 
     // هدر جزئیات (رنگ + آیکون + عنوان)
     const headerDiv = document.createElement('div');
