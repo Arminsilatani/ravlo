@@ -3348,6 +3348,7 @@ async function rejectEditRequest(eventId, reason) {
 }
 
 async function openEventDetail(ev, occurrenceDate) {
+    console.log('openEventDetail started', ev?.id, occurrenceDate);
     currentDetailEventId = ev.id;
     ev.__occurrenceDate = occurrenceDate;
 
@@ -5892,10 +5893,14 @@ async function cleanupChecklistFromDescriptions() {
 
 // ---- دسترسی از سایدبار و سایر بخش‌ها ----
 window.ravloOpenEvent = function(eventId, dateStr) {
+    console.log('ravloOpenEvent called', eventId, dateStr);
     const ev = events.find(e => e.id === eventId);
+    console.log('Found event:', ev);
     if (ev) {
         const occDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
         openEventDetail(ev, occDate);
+    } else {
+        console.warn('Event not found in events array. Current events IDs:', events.map(e => e.id));
     }
 };
 
@@ -6052,18 +6057,21 @@ customElements.whenDefined('sidebar-component').then(() => {
 
     // ── گوش دادن به کلیک روی آیتم‌های Today/Overdue (رویداد سفارشی) ──
     sidebar.addEventListener('today-item-click', (e) => {
+        console.log('🔥 today-item-click received', e.detail);
         const { eventId, date } = e.detail;
-        // بستن سایدبار
         if (window.ravloCloseSidebar) {
             window.ravloCloseSidebar();
+            console.log('Sidebar closed');
         }
-        // باز کردن جزئیات رویداد
         if (eventId && window.ravloOpenEvent) {
+            console.log('Calling ravloOpenEvent with', eventId, date);
             try {
                 window.ravloOpenEvent(eventId, date);
             } catch (err) {
-                console.error('Error opening event detail:', err);
+                console.error('Error in ravloOpenEvent:', err);
             }
+        } else {
+            console.warn('ravloOpenEvent not available or eventId missing', { eventId, exists: !!window.ravloOpenEvent });
         }
     });
 });
