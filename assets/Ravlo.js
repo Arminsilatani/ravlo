@@ -3499,26 +3499,40 @@ async function rejectEditRequest(eventId, reason) {
             const attendeesList = document.getElementById('detail-attendees-list');
             attendeesList.innerHTML = '';
 
-            // آرایهٔ نام مهمان‌ها
-            let invitees = (ev.invitees || []).map(name => ({ name, status: 'unknown' }));
+            // استخراج لیست نام‌ها و شناسه‌ها از رویداد اصلی
+            const names = ev.invitees || [];
+            const ids = ev.invitee_ids || [];
 
-            // اگر کاربر صاحب رویداد اصلی باشد، وضعیت واقعی را از child rows بخوانیم
-            if (!ev.parent_event_id && ev.user_id === currentUser?.id && ev.invitee_ids && ev.invitee_ids.length) {
+            // شیء وضعیت برای هر مهمان (پیش‌فرض unknown)
+            let statusMap = {};
+            names.forEach(name => { statusMap[name] = 'unknown'; });
+
+            // اگر کاربر صاحب رویداد اصلی است، وضعیت واقعی را از child rows بخوانیم
+            if (!ev.parent_event_id && ev.user_id === currentUser?.id && ids.length > 0) {
                 try {
                     const { data: childRows, error } = await sb
                         .from('ravlo')
                         .select('user_id, invitation_status')
                         .eq('parent_event_id', ev.id);
                     if (!error && childRows) {
-                        invitees = ev.invitees.map(name => {
-                            const idx = ev.invitees.indexOf(name);
-                            const inviteeId = ev.invitee_ids?.[idx];
-                            const child = childRows.find(r => r.user_id === inviteeId);
-                            return { name, status: child?.invitation_status || 'unknown' };
+                        // ساخت یک map از user_id به وضعیت
+                        const statusByUserId = {};
+                        childRows.forEach(row => {
+                            statusByUserId[row.user_id] = row.invitation_status;
+                        });
+                        // حالا به ازای هر مهمان، وضعیت را از روی شناسه پیدا کن
+                        names.forEach((name, idx) => {
+                            const uid = ids[idx];
+                            if (uid && statusByUserId.hasOwnProperty(uid)) {
+                                statusMap[name] = statusByUserId[uid];
+                            }
                         });
                     }
-                } catch (e) { /* در صورت خطا، وضعیت unknown می‌ماند */ }
+                } catch (e) { /* در صورت خطا، وضعیت unknown باقی می‌ماند */ }
             }
+
+            // ساخت آرایه نهایی با نام و وضعیت
+            const invitees = names.map(name => ({ name, status: statusMap[name] || 'unknown' }));
 
             if (invitees.length === 0) {
                 attendeesList.innerHTML = `<div class="attendee-empty"><div class="attendee-avatar empty-plus">+</div><span class="attendee-empty-text">Invite more people</span></div>`;
@@ -3546,7 +3560,7 @@ async function rejectEditRequest(eventId, reason) {
             inviteesSection.style.display = 'none';
         }
     }
-
+    
     // ─── Location map ───
     const mapContainer = document.getElementById('detail-location-container');
     if (ev.location && (ev.location.lat || ev.location.lng)) {
