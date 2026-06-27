@@ -3489,7 +3489,7 @@ async function rejectEditRequest(eventId, reason) {
         renderChecklistInDetail(ev);
     }
 
-    // ─── Attendees (با تصویر واقعی برای صاحب رویداد) ───
+    // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3505,7 +3505,23 @@ async function rejectEditRequest(eventId, reason) {
             if (names.length === 0) {
                 attendeesList.innerHTML = `<div class="attendee-empty"><div class="attendee-avatar empty-plus">+</div><span class="attendee-empty-text">Invite more people</span></div>`;
             } else {
-                // گرفتن عکس پروفایل مهمان‌ها
+                // ۱. وضعیت دعوت (فقط برای صاحب رویداد اصلی)
+                let statusMap = {};
+                if (!ev.parent_event_id && ev.user_id === currentUser?.id && ids.length > 0) {
+                    try {
+                        const { data: childRows, error } = await sb
+                            .from('ravlo')
+                            .select('user_id, invitation_status')
+                            .eq('parent_event_id', ev.id);
+                        if (!error && childRows) {
+                            childRows.forEach(row => {
+                                statusMap[row.user_id] = row.invitation_status;
+                            });
+                        }
+                    } catch (e) { /* در خطا، وضعیت unknown می‌ماند */ }
+                }
+
+                // ۲. تصاویر پروفایل
                 let profilesMap = {};
                 if (ids.length > 0) {
                     try {
@@ -3516,35 +3532,41 @@ async function rejectEditRequest(eventId, reason) {
                         if (profiles) {
                             profiles.forEach(p => { profilesMap[p.id] = p.photo_url; });
                         }
-                    } catch (e) { /* در صورت خطا، فقط حروف اول نمایش داده می‌شود */ }
+                    } catch (e) { /* بدون عکس */ }
                 }
 
-                // رندر لیست (حداکثر ۳ نفر با overlap)
+                // ۳. ساخت آرایهٔ نهایی
+                const invitees = names.map((name, idx) => {
+                    const uid = ids[idx];
+                    const status = statusMap[uid] || 'unknown';
+                    const photoUrl = uid ? profilesMap[uid] : null;
+                    return { name, status, photoUrl };
+                });
+
                 const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
-                if (names.length <= 3) {
-                    names.forEach((name, i) => {
-                        const uid = ids[i];
-                        const photoUrl = profilesMap[uid];
-                        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
-                        const avatarHtml = photoUrl 
-                            ? `<img src="${photoUrl}" alt="${name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+
+                if (invitees.length <= 3) {
+                    invitees.forEach((inv, i) => {
+                        const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
+                        const avatarHtml = inv.photoUrl
+                            ? `<img src="${inv.photoUrl}" alt="${inv.name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;">`
                             : `<div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div>`;
-                        attendeesList.innerHTML += `<div class="attendee-item">${avatarHtml}<span class="attendee-name">${name}</span></div>`;
+                        const pendingBadge = inv.status === 'pending'
+                            ? ' <span style="background:#ffc107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>'
+                            : '';
+                        attendeesList.innerHTML += `<div class="attendee-item">${avatarHtml}<span class="attendee-name">${inv.name}${pendingBadge}</span></div>`;
                     });
                 } else {
-                    // نمایش overlap برای بیش از ۳ نفر
                     let html = '<div class="attendees-overlap-row">';
-                    const firstTwo = names.slice(0,2);
-                    firstTwo.forEach((name, i) => {
-                        const uid = ids[i];
-                        const photoUrl = profilesMap[uid];
-                        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
-                        const avatarHtml = photoUrl 
-                            ? `<img src="${photoUrl}" alt="${name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid #1e1e1e;">`
+                    const firstTwo = invitees.slice(0,2);
+                    firstTwo.forEach((inv, i) => {
+                        const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
+                        const avatarHtml = inv.photoUrl
+                            ? `<img src="${inv.photoUrl}" alt="${inv.name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid #1e1e1e;">`
                             : `<div class="attendee-avatar" style="background-color:${colors[i]};border:2px solid #1e1e1e;">${initials}</div>`;
                         html += avatarHtml;
                     });
-                    html += `<span class="attendee-extra-count">+${names.length - 2} more</span></div>`;
+                    html += `<span class="attendee-extra-count">+${invitees.length - 2} more</span></div>`;
                     attendeesList.innerHTML = html;
                 }
             }
