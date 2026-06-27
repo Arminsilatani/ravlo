@@ -2137,6 +2137,11 @@ function renderDayView() {
                     }
                 }
 
+                // ✨ افکت چشمک‌زن برای رویدادهای دارای درخواست ویرایش (فقط رویداد اصلی)
+                if (item.ev.edit_request_status === 'pending' && !item.ev.parent_event_id) {
+                    evEl.classList.add('event-edit-requested');
+                }
+
                 // عنوان
                 var titleSpan = document.createElement('div');
                 titleSpan.className = 'event-title';
@@ -3185,7 +3190,6 @@ async function saveEvent() {
 }
 
 /* =========================== EVENT DETAIL MODAL ============================ */
-// ─── درخواست ویرایش رویداد (توسط مهمان) ───
 async function requestEditEvent(ev, newPayload) {
     if (!currentUser || !ev.parent_event_id) {
         showToast('Only invited guests can request edits.');
@@ -3194,51 +3198,42 @@ async function requestEditEvent(ev, newPayload) {
 
     showGlobalLoader();
     try {
-        // ۱. ذخیرهٔ درخواست روی رویداد اصلی (parent)
-        const { error } = await sb
-            .from('ravlo')
-            .update({
-                edit_request: newPayload,
-                edit_request_status: 'pending',
-                edit_request_by: currentUser.id
-            })
-            .eq('id', ev.parent_event_id);
+        const { error } = await sb.rpc('request_edit_event', {
+            p_parent_id: ev.parent_event_id,
+            p_edit_request: newPayload
+        });
 
         if (error) throw error;
 
-        // ۲. ارسال نوتیفیکیشن به سازنده
+        // ارسال نوتیفیکیشن به سازنده
         const { data: parent } = await sb
             .from('ravlo')
-            .select('user_id, title, invitee_ids')
+            .select('user_id, title')
             .eq('id', ev.parent_event_id)
             .single();
 
-        if (parent) {
+        if (parent && parent.user_id) {
             const requesterName = [currentProfile?.first_name, currentProfile?.last_name]
                 .filter(Boolean).join(' ') || 'Someone';
 
             await addNotificationToUser(
                 parent.user_id,
                 'event',
-                '✏️ Edit Request',
+                'Edit Request',
                 `${requesterName} requested to edit "${parent.title || 'Untitled'}"`,
                 '#',
                 ev.parent_event_id
             );
         }
 
-        // ۳. چشمک‌زن کردن رویداد برای همه (با آپدیت یک فیلد موقت)
-        //    از completed_occurrences سوءاستفاده نمی‌کنیم،
-        //    یک کلاس CSS شرطی بر اساس edit_request_status اضافه می‌کنیم.
-        
         showToast('Edit request sent to event owner.');
         closeModal(eventModal);
         hideGlobalLoader();
-        renderCalendar();   // تا چشمک‌زن اعمال شود
+        renderCalendar();
         updateNotificationDot();
     } catch (err) {
         console.error('Edit request error:', err);
-        showToast('Error sending edit request.');
+        showToast('Error sending edit request: ' + err.message);
         hideGlobalLoader();
     }
 }
@@ -3769,7 +3764,6 @@ async function openEventDetail(ev, occurrenceDate) {
 
     // اگر درخواست ویرایش در حال بررسی است
     if (ev.edit_request_status === 'pending' && !ev.parent_event_id) {
-        evEl.classList.add('event-edit-requested');
         const editReqContainer = document.createElement('div');
         editReqContainer.style.cssText = 'background:rgba(255,200,0,0.1); border:1px solid rgba(255,200,0,0.3); border-radius:8px; padding:12px; margin:12px 0;';
         
