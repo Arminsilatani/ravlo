@@ -3490,6 +3490,7 @@ async function rejectEditRequest(eventId, reason) {
     }
 
     // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
+        // ─── Attendees (نمایش کامل همهٔ مهمان‌ها) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3498,6 +3499,9 @@ async function rejectEditRequest(eventId, reason) {
             if (attendIcon) attendIcon.style.color = ev.color || 'var(--accent)';
             const attendeesList = document.getElementById('detail-attendees-list');
             attendeesList.innerHTML = '';
+            // کانتینر با اسکرول برای تعداد بالا
+            attendeesList.style.maxHeight = '200px';
+            attendeesList.style.overflowY = 'auto';
 
             const names = ev.invitees || [];
             const ids = ev.invitee_ids || [];
@@ -3543,32 +3547,25 @@ async function rejectEditRequest(eventId, reason) {
                     return { name, status, photoUrl };
                 });
 
+                // ۴. رندر همه در یک لیست
                 const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
-
-                if (invitees.length <= 3) {
-                    invitees.forEach((inv, i) => {
-                        const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
-                        const avatarHtml = inv.photoUrl
-                            ? `<img src="${inv.photoUrl}" alt="${inv.name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;">`
-                            : `<div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div>`;
-                        const pendingBadge = inv.status === 'pending'
-                            ? ' <span style="background:#ffc107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>'
-                            : '';
-                        attendeesList.innerHTML += `<div class="attendee-item">${avatarHtml}<span class="attendee-name">${inv.name}${pendingBadge}</span></div>`;
-                    });
-                } else {
-                    let html = '<div class="attendees-overlap-row">';
-                    const firstTwo = invitees.slice(0,2);
-                    firstTwo.forEach((inv, i) => {
-                        const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
-                        const avatarHtml = inv.photoUrl
-                            ? `<img src="${inv.photoUrl}" alt="${inv.name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid #1e1e1e;">`
-                            : `<div class="attendee-avatar" style="background-color:${colors[i]};border:2px solid #1e1e1e;">${initials}</div>`;
-                        html += avatarHtml;
-                    });
-                    html += `<span class="attendee-extra-count">+${invitees.length - 2} more</span></div>`;
-                    attendeesList.innerHTML = html;
-                }
+                invitees.forEach((inv, i) => {
+                    const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
+                    const avatarHtml = inv.photoUrl
+                        ? `<img src="${inv.photoUrl}" alt="${inv.name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+                        : `<div class="attendee-avatar" style="background-color:${colors[i % colors.length]};flex-shrink:0;">${initials}</div>`;
+                    const pendingBadge = inv.status === 'pending'
+                        ? ' <span style="background:#ffc107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>'
+                        : '';
+                    // هر ردیف
+                    const row = document.createElement('div');
+                    row.className = 'attendee-item';
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'center';
+                    row.style.marginBottom = '6px';
+                    row.innerHTML = avatarHtml + `<span class="attendee-name" style="margin-left:8px;">${inv.name}${pendingBadge}</span>`;
+                    attendeesList.appendChild(row);
+                });
             }
         } else {
             inviteesSection.style.display = 'none';
