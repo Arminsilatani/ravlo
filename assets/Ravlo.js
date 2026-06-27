@@ -6124,8 +6124,6 @@ showApp();
 })();
 
 // When sidebar component finally becomes available, hook it up properly
-// وقتی کامپوننت سایدبار آماده شد
-customElements.whenDefined('sidebar-component').then(() => {
     customElements.whenDefined('sidebar-component').then(() => {
     getSidebarComponent();
     syncSidebarComponent();
