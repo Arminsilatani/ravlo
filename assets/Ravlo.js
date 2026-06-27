@@ -3490,7 +3490,8 @@ async function rejectEditRequest(eventId, reason) {
     }
 
     // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
-        const inviteesSection = document.getElementById('detail-invitees-section');
+        // ─── Attendees (فقط از RPC برای فرزند استفاده می‌کنیم) ───
+    const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
             inviteesSection.style.display = 'block';
@@ -3501,23 +3502,28 @@ async function rejectEditRequest(eventId, reason) {
             attendeesList.style.maxHeight = '200px';
             attendeesList.style.overflowY = 'auto';
 
-            let ownerId = ev.user_id;
-            let inviteeNames = ev.invitees || [];
-            let inviteeIds = ev.invitee_ids || [];
-            let isChildView = false;
+            let ownerId = null;
+            let inviteeNames = [];
+            let inviteeIds = [];
 
             if (ev.parent_event_id) {
-                isChildView = true;
-                try {
-                    const { data: parentData, error: parentErr } = await sb.rpc('get_parent_event', {
-                        child_event_id: ev.id   // عدد صحیح
-                    });
-                    if (!parentErr && parentData) {
-                        ownerId = parentData.user_id;
-                        inviteeNames = parentData.invitees || [];
-                        inviteeIds = parentData.invitee_ids || [];
-                    }
-                } catch (e) { /* ignore */ }
+                // حتماً از RPC استفاده کن
+                const { data: parentData, error } = await sb.rpc('get_parent_event', {
+                    child_event_id: ev.id
+                });
+                if (error || !parentData) {
+                    console.error('Failed to get parent event:', error);
+                    attendeesList.innerHTML = '<div style="color:#ff6b6b;">Could not load attendees.</div>';
+                    return; // متوقف شو
+                }
+                ownerId = parentData.user_id;
+                inviteeNames = parentData.invitees || [];
+                inviteeIds = parentData.invitee_ids || [];
+            } else {
+                // رویداد اصلی
+                ownerId = ev.user_id;
+                inviteeNames = ev.invitees || [];
+                inviteeIds = ev.invitee_ids || [];
             }
 
             // ۱. اطلاعات صاحب رویداد
@@ -3535,16 +3541,14 @@ async function rejectEditRequest(eventId, reason) {
                 }
             } catch (e) { /* ignore */ }
 
-            // ۲. وضعیت دعوت مهمان‌ها (با RPC، فقط برای صاحب اصلی)
+            // ۲. وضعیت دعوت مهمان‌ها (فقط برای صاحب اصلی)
             let statusMap = {};
-            if (!isChildView && ownerId === currentUser?.id && inviteeIds.length > 0) {
+            if (!ev.parent_event_id && ownerId === currentUser?.id && inviteeIds.length > 0) {
                 try {
-                    const { data: statuses, error: statusErr } = await sb.rpc('get_event_invitee_statuses', {
+                    const { data: statuses } = await sb.rpc('get_event_invitee_statuses', {
                         p_event_id: ev.id
                     });
-                    if (!statusErr && statuses) {
-                        statusMap = statuses; // کلیدها user_id رشته‌ای، مقادیر وضعیت
-                    }
+                    if (statuses) statusMap = statuses;
                 } catch (e) { /* ignore */ }
             }
 
