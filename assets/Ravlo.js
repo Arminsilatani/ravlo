@@ -1843,6 +1843,14 @@ function renderDayView() {
     var hourHeights = occupiedHours.map(occ => occ ? 60 : 20);
     var totalHeight = hourHeights.reduce((sum, h) => sum + h, 0);
 
+    // ─── پاک‌سازی نقشه‌های مینیاتوری قبلی ───
+    var oldMiniMaps = calendarGrid.querySelectorAll('.event-map-bg');
+    oldMiniMaps.forEach(function(mapDiv) {
+        if (mapDiv._leaflet_id && mapDiv._leaflet_map && mapDiv._leaflet_map.remove) {
+            mapDiv._leaflet_map.remove();
+        }
+    });
+
     // ─── پاک کردن گرید ───
     calendarGrid.className = 'day-view-timeline';
     calendarGrid.innerHTML = '';
@@ -1860,7 +1868,7 @@ function renderDayView() {
                 if (!ev.start_date) return;
                 if (ev.status === 'done' || ev.status === 'completed') return;
                 if (!ev.recurrence_type || ev.recurrence_type === 'none') return;
-                if (ev.recurrence_type === 'smart') return; // smart tasks handled separately
+                if (ev.recurrence_type === 'smart') return;
 
                 var start = new Date(ev.start_date);
                 var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
@@ -2067,7 +2075,6 @@ function renderDayView() {
                 evEl.style.left = leftPx + 'px';
                 evEl.style.width = laneWidthPx + 'px';
                 evEl.style.borderRadius = '6px';
-                evEl.style.padding = '6px 15px';
                 evEl.style.fontSize = '12px';
                 evEl.style.color = '#f5f5f5';
                 evEl.style.overflow = 'hidden';
@@ -2075,6 +2082,39 @@ function renderDayView() {
                 evEl.style.cursor = 'pointer';
                 evEl.style.zIndex = '2';
                 evEl.style.transition = 'background 0.2s';
+                evEl.style.position = 'relative';  // ← مهم برای لایه‌بندی
+
+                // ─── نقشهٔ پس‌زمینه در صورت وجود لوکیشن ───
+                if (item.ev.location && item.ev.location.lat != null && item.ev.location.lng != null && isLeafletReady()) {
+                    var mapDiv = document.createElement('div');
+                    mapDiv.className = 'event-map-bg';
+                    evEl.appendChild(mapDiv);
+
+                    var overlay = document.createElement('div');
+                    overlay.className = 'event-map-overlay';
+                    evEl.appendChild(overlay);
+
+                    setTimeout(function() {
+                        if (!mapDiv._leaflet_id) {
+                            var miniMap = L.map(mapDiv, {
+                                center: [item.ev.location.lat, item.ev.location.lng],
+                                zoom: 15,
+                                attributionControl: false,
+                                zoomControl: false,
+                                dragging: false,
+                                scrollWheelZoom: false,
+                                doubleClickZoom: false,
+                                touchZoom: false,
+                                keyboard: false,
+                                interactive: false
+                            });
+                            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                                maxZoom: 19
+                            }).addTo(miniMap);
+                            mapDiv._leaflet_map = miniMap;
+                        }
+                    }, 150);
+                }
 
                 // استایل
                 if (item.ev.invitation_status === 'pending') {
@@ -2181,7 +2221,6 @@ function renderDayView() {
                     endBtn.className = 'event-action-btn';
                     endBtn.style.cssText = 'background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;line-height:1.2;';
 
-                    // ── تسک هوشمند ──
                     if (item.ev.type === 'task' && item.ev.recurrence_type === 'smart') {
                         endBtn.textContent = 'Done';
                         endBtn.addEventListener('click', function(e) {
@@ -2189,7 +2228,6 @@ function renderDayView() {
                             completeSmartTask(item.ev);
                         });
                     }
-                    // ── تسک عادی ──
                     else if (item.ev.type === 'task') {
                         var occDate = toLocalDateString(new Date(vy, vm, vd));
                         var isDone = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
@@ -2236,7 +2274,6 @@ function renderDayView() {
                             evEl.style.textDecoration = 'line-through';
                         }
                     }
-                    // ── ایونت ──
                     else {
                         var occDate = toLocalDateString(new Date(vy, vm, vd));
                         var isCompleted = item.ev.completed_occurrences && Array.isArray(item.ev.completed_occurrences)
@@ -2374,6 +2411,7 @@ function renderDayView() {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 }
+
 /* ------------------------- YEAR VIEW ------------------------- */
 function renderYearView() {
     calendarGrid.className = 'year-grid';
