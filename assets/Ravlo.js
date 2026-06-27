@@ -1357,62 +1357,84 @@ function getRecurrenceDates(ev, fromDate, toDate) {
     const maxDate = new Date(start);
     maxDate.setFullYear(maxDate.getFullYear() + 2);
 
-    let current = new Date(start);
     const end = toDate > maxDate ? maxDate : toDate;
-    let iterations = 0;
-    const MAX_ITERATIONS = 500;
 
-    while (current <= end && iterations < MAX_ITERATIONS) {
-        iterations++;
-        if (current >= fromDate && current >= start) {
-            occurrences.push(new Date(current));
+    if (type === 'daily') {
+        let current = new Date(start);
+        while (current <= end) {
+            if (current >= fromDate && current >= start) {
+                occurrences.push(new Date(current));
+            }
+            current.setDate(current.getDate() + interval);
         }
-
-        switch (type) {
-            case 'daily':
-                current.setDate(current.getDate() + interval);
-                break;
-            case 'weekly':
-                if (days.length > 0) {
-                    let found = false;
-                    for (let i = 0; i < 7; i++) {
-                        current.setDate(current.getDate() + 1);
-                        if (days.includes(current.getDay())) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) current.setDate(current.getDate() + 7 * interval);
-                } else {
-                    current.setDate(current.getDate() + 7 * interval);
-                }
-                break;
-            case 'monthly':
-                current.setMonth(current.getMonth() + interval);
-                break;
-            case 'yearly':
-                current.setFullYear(current.getFullYear() + interval);
-                break;
-            case 'custom':
-                if (days.length > 0) {
-                    let found = false;
-                    for (let i = 0; i < 7; i++) {
-                        current.setDate(current.getDate() + 1);
-                        if (days.includes(current.getDay())) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) current.setDate(current.getDate() + 7 * interval);
-                }
-                break;
-            default:
-                return occurrences;
-        }
+        return occurrences;
     }
+
+    if (type === 'monthly') {
+        let current = new Date(start);
+        while (current <= end) {
+            if (current >= fromDate && current >= start) {
+                occurrences.push(new Date(current));
+            }
+            current.setMonth(current.getMonth() + interval);
+        }
+        return occurrences;
+    }
+
+    if (type === 'yearly') {
+        let current = new Date(start);
+        while (current <= end) {
+            if (current >= fromDate && current >= start) {
+                occurrences.push(new Date(current));
+            }
+            current.setFullYear(current.getFullYear() + interval);
+        }
+        return occurrences;
+    }
+
+    // ── weekly / custom (با پشتیبانی از چند روز در هفته و interval) ──
+    if (type === 'weekly' || type === 'custom') {
+        if (days.length === 0) {
+            // بدون روز خاص: هر 7*interval روز یکبار
+            let current = new Date(start);
+            while (current <= end) {
+                if (current >= fromDate && current >= start) {
+                    occurrences.push(new Date(current));
+                }
+                current.setDate(current.getDate() + 7 * interval);
+            }
+            return occurrences;
+        }
+
+        // با روزهای انتخاب‌شده: پیمایش بر اساس هفته (مبنای یکشنبه)
+        const startSunday = new Date(start);
+        startSunday.setDate(startSunday.getDate() - startSunday.getDay());
+
+        let weekOffset = 0;
+        while (weekOffset < 500) { // محدودیت جلوگیری از حلقه بی‌نهایت
+            const targetSunday = new Date(startSunday);
+            targetSunday.setDate(targetSunday.getDate() + weekOffset * 7);
+
+            // اگر یکشنبهٔ این هفته از پایان بازه رد شده، متوقف شو
+            if (targetSunday > end) break;
+
+            // بررسی تمام روزهای انتخاب‌شده در این هفته
+            for (let d of days) {
+                const eventDate = new Date(targetSunday);
+                eventDate.setDate(eventDate.getDate() + d);
+                // فقط تاریخ‌هایی که در بازه و بعد از start هستند
+                if (eventDate >= start && eventDate <= end && eventDate >= fromDate) {
+                    occurrences.push(new Date(eventDate));
+                }
+            }
+            weekOffset += interval;   // پرش به اندازهٔ interval هفته
+        }
+        return occurrences;
+    }
+
+    // fallback (نباید به اینجا برسد)
     return occurrences;
 }
-
 /* =========================== GREGORIAN PICKER ============================ */
 
 function renderYearPanel(container, selectedYear, fromYear, toYear, persian, onSelect) {
