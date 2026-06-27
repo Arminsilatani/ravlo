@@ -3501,28 +3501,25 @@ async function rejectEditRequest(eventId, reason) {
             attendeesList.style.maxHeight = '200px';
             attendeesList.style.overflowY = 'auto';
 
-            // اگر این یک رویداد فرزند (دعوت‌شده) است، اطلاعات را از والد بگیریم
             let ownerId = ev.user_id;
             let inviteeNames = ev.invitees || [];
             let inviteeIds = ev.invitee_ids || [];
             let isChildView = false;
 
+            // اگر این یک رویداد فرزند است، اطلاعات والد را با RPC بگیریم
             if (ev.parent_event_id) {
                 isChildView = true;
-                // دریافت اطلاعات والد
-                const { data: parent } = await sb
-                    .from('ravlo')
-                    .select('user_id, invitees, invitee_ids')
-                    .eq('id', ev.parent_event_id)
-                    .single();
-                if (parent) {
-                    ownerId = parent.user_id;
-                    inviteeNames = parent.invitees || [];
-                    inviteeIds = parent.invitee_ids || [];
+                const { data: parentData, error: parentErr } = await sb.rpc('get_parent_event', {
+                    child_event_id: ev.id
+                });
+                if (!parentErr && parentData) {
+                    ownerId = parentData.user_id;
+                    inviteeNames = parentData.invitees || [];
+                    inviteeIds = parentData.invitee_ids || [];
                 }
             }
 
-            // ۱. اطلاعات صاحب رویداد (ownerId)
+            // ۱. اطلاعات صاحب رویداد
             let ownerName = 'Unknown';
             let ownerPhoto = null;
             try {
@@ -3567,14 +3564,12 @@ async function rejectEditRequest(eventId, reason) {
 
             // ۴. ساخت آرایه نهایی
             const allPeople = [];
-            // صاحب رویداد
             allPeople.push({
                 name: ownerName,
                 photoUrl: ownerPhoto,
                 isOwner: true,
                 status: 'accepted'
             });
-            // مهمان‌ها
             inviteeNames.forEach((name, idx) => {
                 const uid = inviteeIds[idx];
                 const status = statusMap[uid] || 'unknown';
