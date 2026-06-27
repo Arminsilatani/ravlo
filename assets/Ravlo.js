@@ -582,6 +582,15 @@ function getTodayAndOverdueItems() {
         if (!ev.start_date) return;
         if (ev.status === 'done' || ev.status === 'completed') return;
 
+        // تابع کمکی برای افزودن برچسب "Invited" به عنوان آیتم
+        function buildTitle(event) {
+            const base = event.title || 'Untitled';
+            if (event.invitation_status === 'pending' && event.parent_event_id) {
+                return base + ' <span style="font-size:10px;font-weight:400;background:#3a3a3a;color:#ccc;padding:1px 4px;border-radius:3px;margin-left:4px;">Invited</span>';
+            }
+            return base;
+        }
+
         // 1. Overdue (only recurring tasks that are past due)
         if (ev.recurrence_type && ev.recurrence_type !== 'none' && ev.type === 'task') {
             const start = new Date(ev.start_date);
@@ -593,7 +602,7 @@ function getTodayAndOverdueItems() {
                 if (!isCompleted && dateStr < todayStr) {
                     overdueItems.push({
                         id: ev.id,
-                        title: ev.title || 'Untitled',
+                        title: buildTitle(ev),
                         color: ev.color || 'var(--accent)',
                         date: dateStr
                     });
@@ -609,7 +618,7 @@ function getTodayAndOverdueItems() {
                 if (!isCompleted) {
                     todayItems.push({
                         id: ev.id,
-                        title: ev.title || 'Untitled',
+                        title: buildTitle(ev),
                         color: ev.color || 'var(--accent)',
                         date: todayStr
                     });
@@ -625,7 +634,7 @@ function getTodayAndOverdueItems() {
                 if (!isCompleted && dateStr === todayStr) {
                     todayItems.push({
                         id: ev.id,
-                        title: ev.title || 'Untitled',
+                        title: buildTitle(ev),
                         color: ev.color || 'var(--accent)',
                         date: todayStr
                     });
@@ -3480,8 +3489,7 @@ async function rejectEditRequest(eventId, reason) {
         renderChecklistInDetail(ev);
     }
 
-    // ─── Attendees ───
-        // ─── Attendees (با وضعیت دعوت برای صاحب رویداد) ───
+    // ─── Attendees (با وضعیت واقعی دعوت برای صاحب رویداد) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3491,24 +3499,25 @@ async function rejectEditRequest(eventId, reason) {
             const attendeesList = document.getElementById('detail-attendees-list');
             attendeesList.innerHTML = '';
 
-            // تعیین لیست مهمان‌ها و وضعیتشان
+            // آرایهٔ نام مهمان‌ها
             let invitees = (ev.invitees || []).map(name => ({ name, status: 'unknown' }));
-            
-            // اگر کاربر صاحب رویداد است، وضعیت واقعی را از child rows بخوانیم
-            if (!ev.parent_event_id && ev.user_id === currentUser?.id && ev.invitee_ids?.length) {
+
+            // اگر کاربر صاحب رویداد اصلی باشد، وضعیت واقعی را از child rows بخوانیم
+            if (!ev.parent_event_id && ev.user_id === currentUser?.id && ev.invitee_ids && ev.invitee_ids.length) {
                 try {
-                    const { data: childRows } = await sb
+                    const { data: childRows, error } = await sb
                         .from('ravlo')
                         .select('user_id, invitation_status')
                         .eq('parent_event_id', ev.id);
-                    if (childRows) {
-                        invitees = (ev.invitees || []).map(name => {
-                            const inviteeId = ev.invitee_ids?.[ev.invitees.indexOf(name)];
+                    if (!error && childRows) {
+                        invitees = ev.invitees.map(name => {
+                            const idx = ev.invitees.indexOf(name);
+                            const inviteeId = ev.invitee_ids?.[idx];
                             const child = childRows.find(r => r.user_id === inviteeId);
                             return { name, status: child?.invitation_status || 'unknown' };
                         });
                     }
-                } catch (e) { /* در صورت خطا، وضعیت unknown باقی می‌ماند */ }
+                } catch (e) { /* در صورت خطا، وضعیت unknown می‌ماند */ }
             }
 
             if (invitees.length === 0) {
@@ -3517,7 +3526,7 @@ async function rejectEditRequest(eventId, reason) {
                 const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
                 invitees.forEach((inv, i) => {
                     const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
-                    const pendingBadge = inv.status === 'pending' ? ' <span style="background:#ffc107;color:#000;font-size:10px;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>' : '';
+                    const pendingBadge = inv.status === 'pending' ? ' <span style="background:#ffc107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>' : '';
                     attendeesList.innerHTML += `<div class="attendee-item"><div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div><span class="attendee-name">${inv.name}${pendingBadge}</span></div>`;
                 });
             } else {
@@ -3529,7 +3538,7 @@ async function rejectEditRequest(eventId, reason) {
                     const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
                     html += `<div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
                 });
-                // اگر یکی از دو نفر اول pending بود، نمی‌توان نشان داد چون در overlap جا نمی‌شود؛ می‌توانیم بعداً بهبود دهیم.
+                // برای بیش از ۳ نفر، وضعیت‌ها را می‌توان در tooltip نشان داد (فعلاً تعداد)
                 html += `<span class="attendee-extra-count">+${restCount} more</span></div>`;
                 attendeesList.innerHTML = html;
             }
