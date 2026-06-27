@@ -1807,14 +1807,15 @@ function renderDayView() {
         vm = viewDate.getMonth(),
         vd = viewDate.getDate();
 
-    // ─── دریافت رویدادهای این روز ───
+    // ─── دریافت رویدادهای این روز (با تصحیح timezone برای تاریخ‌های UTC) ───
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
-        var d = new Date(ev.start_date);
+        // تبدیل تاریخ UTC به محلی برای مقایسهٔ دقیق روز
+        var d = new Date(ev.start_date + (ev.start_date.endsWith('Z') ? '' : ''));
         if (d.getFullYear() === vy && d.getMonth() === vm && d.getDate() === vd) return true;
         if (ev.recurrence_type !== 'none') {
             var dayStart = new Date(vy, vm, vd, 0, 0, 0);
-            var dayEnd   = new Date(vy, vm, vd, 23, 59, 59);
+            var dayEnd   = new Date(vy, vm, vd, 23, 59, 59, 999);
             var recDates = getRecurrenceDates(ev, dayStart, dayEnd);
             return recDates.some(rd => rd.getFullYear() === vy && rd.getMonth() === vm && rd.getDate() === vd);
         }
@@ -1825,7 +1826,7 @@ function renderDayView() {
     var allDayEvents = dayEvents.filter(ev => ev.all_day === true);
     var timedEvents = dayEvents.filter(ev => ev.all_day !== true);
 
-    // ─── محاسبه ارتفاع ساعات ───
+    // ─── محاسبه ارتفاع ساعات (بر اساس وجود رویداد زمان‌دار) ───
     var occupiedHours = new Array(24).fill(false);
     timedEvents.forEach(ev => {
         var start = new Date(ev.start_date);
@@ -1984,7 +1985,7 @@ function renderDayView() {
     timelineWrapper.appendChild(slots);
     calendarGrid.appendChild(timelineWrapper);
 
-    // ─── خطوط افقی ───
+    // ─── خطوط افقی (grid lines) ───
     var cumulativeTop = 0;
     for (var h = 0; h < 24; h++) {
         var lineEl = document.createElement('div');
@@ -2000,7 +2001,7 @@ function renderDayView() {
         cumulativeTop += hourHeights[h];
     }
 
-    // ─── رندر رویدادهای زمان‌دار ───
+    // ─── رندر رویدادهای زمان‌دار (با تصحیح موقعیت ساعت) ───
     requestAnimationFrame(function() {
         var eventsWithMinutes = timedEvents.map(ev => {
             var start = new Date(ev.start_date);
@@ -2011,6 +2012,23 @@ function renderDayView() {
                 endMin: end.getHours() * 60 + end.getMinutes()
             };
         }).sort((a, b) => a.startMin - b.startMin);
+
+        // محاسبهٔ مجموع ارتفاع تا یک ساعت مشخص (برای استفاده در محاسبهٔ top)
+        function getCumulativeHeightUntil(minuteOfDay) {
+            var h = Math.floor(minuteOfDay / 60);
+            var m = minuteOfDay % 60;
+            var acc = 0;
+            for (var i = 0; i < h; i++) {
+                acc += hourHeights[i];
+            }
+            acc += (m / 60) * hourHeights[h];
+            return acc;
+        }
+
+        // محاسبهٔ ارتفاع بین دو دقیقه از روز
+        function getHeightBetween(startMin, endMin) {
+            return getCumulativeHeightUntil(endMin) - getCumulativeHeightUntil(startMin);
+        }
 
         var lanes = [];
         eventsWithMinutes.forEach(item => {
@@ -2039,27 +2057,12 @@ function renderDayView() {
                 var endMin = item.endMin;
                 if (endMin <= startMin) endMin = startMin + 15;
 
-                // محاسبه top
-                var topPx = 0;
-                for (var h = 0; h < 24; h++) {
-                    if (h < Math.floor(startMin / 60)) {
-                        topPx += hourHeights[h];
-                    } else if (h === Math.floor(startMin / 60)) {
-                        topPx += (startMin % 60) / 60 * hourHeights[h];
-                        break;
-                    }
-                }
+                // محاسبهٔ top دقیق با استفاده از تابع کمکی
+                var topPx = getCumulativeHeightUntil(startMin);
 
-                // محاسبه ارتفاع
-                var heightPx = 0;
-                var curMin = startMin;
-                while (curMin < endMin && curMin < 24 * 60) {
-                    var hourIdx = Math.floor(curMin / 60);
-                    var minsLeft = 60 - (curMin % 60);
-                    var minsToEnd = Math.min(endMin - curMin, minsLeft);
-                    heightPx += (minsToEnd / 60) * hourHeights[hourIdx];
-                    curMin += minsToEnd;
-                }
+                // محاسبهٔ ارتفاع دقیق
+                var heightPx = getHeightBetween(startMin, endMin);
+                if (heightPx < 20) heightPx = 28; // حداقل ارتفاع برای دیده شدن
 
                 var gapPx = 15;
                 var totalGap = gapPx * (laneCount - 1);
@@ -2082,7 +2085,6 @@ function renderDayView() {
                 evEl.style.cursor = 'pointer';
                 evEl.style.zIndex = '2';
                 evEl.style.transition = 'background 0.2s';
-                evEl.style.position = 'relative';  // ← مهم برای لایه‌بندی
 
                 // ─── نقشهٔ پس‌زمینه در صورت وجود لوکیشن ───
                 if (item.ev.location && item.ev.location.lat != null && item.ev.location.lng != null && isLeafletReady()) {
@@ -2148,6 +2150,8 @@ function renderDayView() {
                 titleSpan.style.padding = '2px 6px';
                 titleSpan.style.borderRadius = '4px';
                 titleSpan.style.lineHeight = '1.3';
+                titleSpan.style.position = 'relative';
+                titleSpan.style.zIndex = '3';
 
                 if (item.ev.icon) {
                     var iconWrapper = document.createElement('span');
@@ -2204,7 +2208,6 @@ function renderDayView() {
                     });
                     actionsDiv.appendChild(leaveBtn);
                 } else if (item.ev.invitation_status !== 'pending') {
-                    // دکمه Cancel
                     var cancelBtn = document.createElement('button');
                     cancelBtn.className = 'event-action-btn';
                     cancelBtn.textContent = 'Cancel';
@@ -2216,7 +2219,6 @@ function renderDayView() {
                         });
                     });
 
-                    // دکمه Done / End / Undo
                     var endBtn = document.createElement('button');
                     endBtn.className = 'event-action-btn';
                     endBtn.style.cssText = 'background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;line-height:1.2;';
@@ -2324,7 +2326,6 @@ function renderDayView() {
 
                 evEl.appendChild(actionsDiv);
 
-                // کلیک اصلی
                 evEl.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (item.ev.invitation_status === 'pending') {
@@ -2334,7 +2335,6 @@ function renderDayView() {
                     }
                 });
 
-                // هاور
                 evEl.addEventListener('mouseenter', function() {
                     var acts = this.querySelector('.event-actions');
                     if (acts) acts.style.opacity = '1';
@@ -2352,15 +2352,7 @@ function renderDayView() {
         var now = new Date();
         if (now.getFullYear() === vy && now.getMonth() === vm && now.getDate() === vd) {
             var nowMin = now.getHours() * 60 + now.getMinutes();
-            var nowTopPx = 0;
-            for (var h = 0; h < 24; h++) {
-                if (h < Math.floor(nowMin / 60)) {
-                    nowTopPx += hourHeights[h];
-                } else if (h === Math.floor(nowMin / 60)) {
-                    nowTopPx += (nowMin % 60) / 60 * hourHeights[h];
-                    break;
-                }
-            }
+            var nowTopPx = getCumulativeHeightUntil(nowMin);
             var line = document.createElement('div');
             line.className = 'current-time-line';
             line.style.position = 'absolute';
