@@ -3490,7 +3490,7 @@ async function rejectEditRequest(eventId, reason) {
     }
 
     // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
-        // ─── Attendees (نمایش کامل همهٔ مهمان‌ها) ───
+        // ─── Attendees (نمایش کامل همهٔ افراد شامل دعوت‌کننده) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3499,74 +3499,98 @@ async function rejectEditRequest(eventId, reason) {
             if (attendIcon) attendIcon.style.color = ev.color || 'var(--accent)';
             const attendeesList = document.getElementById('detail-attendees-list');
             attendeesList.innerHTML = '';
-            // کانتینر با اسکرول برای تعداد بالا
             attendeesList.style.maxHeight = '200px';
             attendeesList.style.overflowY = 'auto';
 
             const names = ev.invitees || [];
             const ids = ev.invitee_ids || [];
 
-            if (names.length === 0) {
-                attendeesList.innerHTML = `<div class="attendee-empty"><div class="attendee-avatar empty-plus">+</div><span class="attendee-empty-text">Invite more people</span></div>`;
-            } else {
-                // ۱. وضعیت دعوت (فقط برای صاحب رویداد اصلی)
-                let statusMap = {};
-                if (!ev.parent_event_id && ev.user_id === currentUser?.id && ids.length > 0) {
-                    try {
-                        const { data: childRows, error } = await sb
-                            .from('ravlo')
-                            .select('user_id, invitation_status')
-                            .eq('parent_event_id', ev.id);
-                        if (!error && childRows) {
-                            childRows.forEach(row => {
-                                statusMap[row.user_id] = row.invitation_status;
-                            });
-                        }
-                    } catch (e) { /* در خطا، وضعیت unknown می‌ماند */ }
+            // همیشه یک لیست واحد می‌سازیم که شامل صاحب رویداد + مهمان‌ها باشد
+            // ۱. اطلاعات صاحب رویداد
+            let ownerName = 'Unknown';
+            let ownerPhoto = null;
+            try {
+                const { data: ownerProfile } = await sb
+                    .from('profiles')
+                    .select('first_name, last_name, photo_url')
+                    .eq('id', ev.user_id)
+                    .single();
+                if (ownerProfile) {
+                    ownerName = [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean).join(' ') || 'Someone';
+                    ownerPhoto = ownerProfile.photo_url;
                 }
+            } catch (e) { /* ignore */ }
 
-                // ۲. تصاویر پروفایل
-                let profilesMap = {};
-                if (ids.length > 0) {
-                    try {
-                        const { data: profiles } = await sb
-                            .from('profiles')
-                            .select('id, photo_url')
-                            .in('id', ids);
-                        if (profiles) {
-                            profiles.forEach(p => { profilesMap[p.id] = p.photo_url; });
-                        }
-                    } catch (e) { /* بدون عکس */ }
-                }
-
-                // ۳. ساخت آرایهٔ نهایی
-                const invitees = names.map((name, idx) => {
-                    const uid = ids[idx];
-                    const status = statusMap[uid] || 'unknown';
-                    const photoUrl = uid ? profilesMap[uid] : null;
-                    return { name, status, photoUrl };
-                });
-
-                // ۴. رندر همه در یک لیست
-                const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
-                invitees.forEach((inv, i) => {
-                    const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
-                    const avatarHtml = inv.photoUrl
-                        ? `<img src="${inv.photoUrl}" alt="${inv.name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
-                        : `<div class="attendee-avatar" style="background-color:${colors[i % colors.length]};flex-shrink:0;">${initials}</div>`;
-                    const pendingBadge = inv.status === 'pending'
-                        ? ' <span style="background:#ffc107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>'
-                        : '';
-                    // هر ردیف
-                    const row = document.createElement('div');
-                    row.className = 'attendee-item';
-                    row.style.display = 'flex';
-                    row.style.alignItems = 'center';
-                    row.style.marginBottom = '6px';
-                    row.innerHTML = avatarHtml + `<span class="attendee-name" style="margin-left:8px;">${inv.name}${pendingBadge}</span>`;
-                    attendeesList.appendChild(row);
-                });
+            // ۲. وضعیت دعوت مهمان‌ها (فقط برای صاحب رویداد اصلی)
+            let statusMap = {};
+            if (!ev.parent_event_id && ev.user_id === currentUser?.id && ids.length > 0) {
+                try {
+                    const { data: childRows, error } = await sb
+                        .from('ravlo')
+                        .select('user_id, invitation_status')
+                        .eq('parent_event_id', ev.id);
+                    if (!error && childRows) {
+                        childRows.forEach(row => {
+                            statusMap[row.user_id] = row.invitation_status;
+                        });
+                    }
+                } catch (e) { /* ignore */ }
             }
+
+            // ۳. تصاویر پروفایل مهمان‌ها
+            let profilesMap = {};
+            if (ids.length > 0) {
+                try {
+                    const { data: profiles } = await sb
+                        .from('profiles')
+                        .select('id, photo_url')
+                        .in('id', ids);
+                    if (profiles) {
+                        profiles.forEach(p => { profilesMap[p.id] = p.photo_url; });
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            // ۴. ساخت آرایه نهایی: اول صاحب رویداد، سپس مهمان‌ها
+            const allPeople = [];
+
+            // افزودن صاحب رویداد
+            allPeople.push({
+                name: ownerName,
+                photoUrl: ownerPhoto,
+                isOwner: true,
+                status: 'accepted' // صاحب رویداد همیشه پذیرفته است
+            });
+
+            // افزودن مهمان‌ها
+            names.forEach((name, idx) => {
+                const uid = ids[idx];
+                const status = statusMap[uid] || 'unknown';
+                const photoUrl = uid ? profilesMap[uid] : null;
+                allPeople.push({ name, photoUrl, status, isOwner: false });
+            });
+
+            // ۵. رندر
+            const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
+            allPeople.forEach((person, i) => {
+                const initials = person.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || person.name[0].toUpperCase();
+                const avatarHtml = person.photoUrl
+                    ? `<img src="${person.photoUrl}" alt="${person.name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+                    : `<div class="attendee-avatar" style="background-color:${colors[i % colors.length]};flex-shrink:0;">${initials}</div>`;
+                const badge = person.isOwner
+                    ? ' <span style="background:#2ecc71;color:#fff;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Organizer</span>'
+                    : (person.status === 'pending'
+                        ? ' <span style="background:#ffc107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>'
+                        : '');
+                const row = document.createElement('div');
+                row.className = 'attendee-item';
+                row.style.display = 'flex';
+                row.style.alignItems = 'center';
+                row.style.marginBottom = '6px';
+                row.innerHTML = avatarHtml + `<span class="attendee-name" style="margin-left:8px;">${person.name}${badge}</span>`;
+                attendeesList.appendChild(row);
+            });
+
         } else {
             inviteesSection.style.display = 'none';
         }
