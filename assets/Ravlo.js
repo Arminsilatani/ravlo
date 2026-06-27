@@ -5893,7 +5893,6 @@ async function cleanupChecklistFromDescriptions() {
 
 // ---- دسترسی از سایدبار و سایر بخش‌ها ----
 window.ravloOpenEvent = function(eventId, dateStr) {
-    // تبدیل به مقایسهٔ نرم (عدد/رشته)
     const ev = events.find(e => e.id == eventId);
     if (ev) {
         const occDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
@@ -6041,7 +6040,7 @@ customElements.whenDefined('sidebar-component').then(() => {
     const sidebar = document.querySelector('sidebar-component');
     if (!sidebar || !sidebar.shadowRoot) return;
 
-    // ── مدیریت blur خط زمان هنگام باز شدن سایدبار ──
+    // مدیریت blur خط زمان هنگام باز شدن سایدبار
     const overlay = sidebar.shadowRoot.getElementById('sidebar-overlay');
     if (overlay) {
         const observer = new MutationObserver((mutations) => {
@@ -6052,23 +6051,14 @@ customElements.whenDefined('sidebar-component').then(() => {
         observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // ── گوش دادن به کلیک روی آیتم‌های Today/Overdue (رویداد سفارشی) ──
+    // گوش دادن به کلیک روی آیتم‌های Today/Overdue
     sidebar.addEventListener('today-item-click', (e) => {
-        console.log('🔥 today-item-click received', e.detail);
         const { eventId, date } = e.detail;
         if (window.ravloCloseSidebar) {
             window.ravloCloseSidebar();
-            console.log('Sidebar closed');
         }
         if (eventId && window.ravloOpenEvent) {
-            console.log('Calling ravloOpenEvent with', eventId, date);
-            try {
-                window.ravloOpenEvent(eventId, date);
-            } catch (err) {
-                console.error('Error in ravloOpenEvent:', err);
-            }
-        } else {
-            console.warn('ravloOpenEvent not available or eventId missing', { eventId, exists: !!window.ravloOpenEvent });
+            window.ravloOpenEvent(eventId, date);
         }
     });
 });
