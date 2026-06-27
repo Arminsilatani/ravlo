@@ -3578,7 +3578,8 @@ a:hover {
 }
 
 body.sidebar-open .current-time-line {
-    display: none;
+    filter: blur(4px);
+    opacity: 0.5;
 }
 
 /* =========================== MEDIA QUERIES ============================ */
