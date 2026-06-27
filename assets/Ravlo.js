@@ -2888,6 +2888,41 @@ if (ev.start_date) {
     openModal(eventModal);
 }
 
+async function openEditModalForInvitee(ev) {
+    if (!ev) return;
+    // استفاده از همان openEditModal برای پر کردن فیلدها
+    await openEditModal(ev);
+    
+    // اما دکمه Save را به "Send Edit Request" تغییر بده
+    if (saveEventBtn) {
+        saveEventBtn.textContent = 'Send Edit Request';
+        saveEventBtn.onclick = async function() {
+            // ساخت payload جدید از فیلدهای فعلی
+            const newPayload = {
+                title: eventTitleInput?.value?.trim() || ev.title,
+                description: document.getElementById('event-description')?.value?.trim() || ev.description,
+                start_date: eventStartInput?.value ? new Date(eventStartInput.value).toISOString() : ev.start_date,
+                end_date: eventEndInput?.value ? new Date(eventEndInput.value).toISOString() : ev.end_date,
+                all_day: document.getElementById('event-all-day-greg')?.checked || false,
+                color: selectedTagColor,
+                icon: selectedIcon,
+                location: currentLocationCoords ? {
+                    lat: currentLocationCoords.lat,
+                    lng: currentLocationCoords.lng,
+                    name: currentLocationName,
+                    address: currentLocationAddress
+                } : ev.location,
+                recurrence_type: recurrence.type,
+                recurrence_interval: recurrence.interval,
+                recurrence_days: recurrence.days,
+                recurrence_smart_interval: recurrence.smartInterval
+            };
+            
+            await requestEditEvent(ev, newPayload);
+        };
+    }
+}
+
 /* =========================== EVENT SAVE ============================ */
 async function saveEvent() {
     try {
@@ -3139,6 +3174,174 @@ async function saveEvent() {
 }
 
 /* =========================== EVENT DETAIL MODAL ============================ */
+// ─── درخواست ویرایش رویداد (توسط مهمان) ───
+async function requestEditEvent(ev, newPayload) {
+    if (!currentUser || !ev.parent_event_id) {
+        showToast('Only invited guests can request edits.');
+        return;
+    }
+
+    showGlobalLoader();
+    try {
+        // ۱. ذخیرهٔ درخواست روی رویداد اصلی (parent)
+        const { error } = await sb
+            .from('ravlo')
+            .update({
+                edit_request: newPayload,
+                edit_request_status: 'pending',
+                edit_request_by: currentUser.id
+            })
+            .eq('id', ev.parent_event_id);
+
+        if (error) throw error;
+
+        // ۲. ارسال نوتیفیکیشن به سازنده
+        const { data: parent } = await sb
+            .from('ravlo')
+            .select('user_id, title, invitee_ids')
+            .eq('id', ev.parent_event_id)
+            .single();
+
+        if (parent) {
+            const requesterName = [currentProfile?.first_name, currentProfile?.last_name]
+                .filter(Boolean).join(' ') || 'Someone';
+
+            await addNotificationToUser(
+                parent.user_id,
+                'event',
+                '✏️ Edit Request',
+                `${requesterName} requested to edit "${parent.title || 'Untitled'}"`,
+                '#',
+                ev.parent_event_id
+            );
+        }
+
+        // ۳. چشمک‌زن کردن رویداد برای همه (با آپدیت یک فیلد موقت)
+        //    از completed_occurrences سوءاستفاده نمی‌کنیم،
+        //    یک کلاس CSS شرطی بر اساس edit_request_status اضافه می‌کنیم.
+        
+        showToast('Edit request sent to event owner.');
+        closeModal(eventModal);
+        hideGlobalLoader();
+        renderCalendar();   // تا چشمک‌زن اعمال شود
+        updateNotificationDot();
+    } catch (err) {
+        console.error('Edit request error:', err);
+        showToast('Error sending edit request.');
+        hideGlobalLoader();
+    }
+}
+
+// ─── پذیرش درخواست ویرایش (توسط سازنده) ───
+async function approveEditRequest(eventId) {
+    showGlobalLoader();
+    try {
+        const { data: ev } = await sb
+            .from('ravlo')
+            .select('*')
+            .eq('id', eventId)
+            .single();
+
+        if (!ev || !ev.edit_request) throw new Error('No edit request found.');
+
+        // ۱. اعمال تغییرات
+        const updatePayload = {
+            ...ev.edit_request,
+            edit_request: null,
+            edit_request_status: 'approved',
+            edit_request_by: null
+        };
+        await updateEventInDB(eventId, updatePayload);
+
+        // ۲. به‌روزرسانی ردیف‌های دعوت‌شده‌ها
+        const { data: invitees } = await sb
+            .from('ravlo')
+            .select('id')
+            .eq('parent_event_id', eventId);
+
+        if (invitees) {
+            const inviteeUpdate = { ...ev.edit_request };
+            delete inviteeUpdate.invitees;
+            delete inviteeUpdate.invitee_ids;
+            for (const inv of invitees) {
+                await updateEventInDB(inv.id, inviteeUpdate);
+            }
+        }
+
+        // ۳. نوتیفیکیشن به همهٔ مهمان‌ها
+        const allIds = [ev.user_id, ...(ev.invitee_ids || [])].filter(id => id !== ev.edit_request_by);
+        const editorName = [currentProfile?.first_name, currentProfile?.last_name]
+            .filter(Boolean).join(' ') || 'Owner';
+
+        for (const uid of allIds) {
+            await addNotificationToUser(
+                uid,
+                'event',
+                '✅ Edit Approved',
+                `Changes to "${ev.title || 'Untitled'}" were approved by ${editorName}.`,
+                '#',
+                eventId
+            );
+        }
+
+        showToast('Edit approved. All guests notified.');
+    } catch (err) {
+        console.error(err);
+        showToast('Error approving edit.');
+    } finally {
+        hideGlobalLoader();
+        renderCalendar();
+        updateNotificationDot();
+    }
+}
+
+// ─── رد درخواست ویرایش (توسط سازنده) ───
+async function rejectEditRequest(eventId, reason) {
+    showGlobalLoader();
+    try {
+        const { data: ev } = await sb
+            .from('ravlo')
+            .select('*')
+            .eq('id', eventId)
+            .single();
+
+        if (!ev) throw new Error('Event not found');
+
+        await updateEventInDB(eventId, {
+            edit_request: null,
+            edit_request_status: 'rejected',
+            edit_request_by: null,
+            edit_request_reason: reason || ''
+        });
+
+        // نوتیفیکیشن فقط به درخواست‌دهنده
+        if (ev.edit_request_by) {
+            const rejecterName = [currentProfile?.first_name, currentProfile?.last_name]
+                .filter(Boolean).join(' ') || 'Owner';
+            let msg = `${rejecterName} rejected your edit request for "${ev.title || 'Untitled'}"`;
+            if (reason) msg += `\nReason: ${reason}`;
+
+            await addNotificationToUser(
+                ev.edit_request_by,
+                'event',
+                '❌ Edit Rejected',
+                msg,
+                '#',
+                eventId
+            );
+        }
+
+        showToast('Edit request rejected.');
+    } catch (err) {
+        console.error(err);
+        showToast('Error rejecting edit.');
+    } finally {
+        hideGlobalLoader();
+        renderCalendar();
+        updateNotificationDot();
+    }
+}
+
 function openEventDetail(ev, occurrenceDate) {
     currentDetailEventId = ev.id;
     ev.__occurrenceDate = occurrenceDate;
@@ -3375,12 +3578,25 @@ function openEventDetail(ev, occurrenceDate) {
     // ─── دکمه Edit ───
     const editBtn = document.getElementById('detail-edit-btn-top');
     if (editBtn) {
-        editBtn.style.display = isInvitee ? 'none' : '';
-        editBtn.onclick = () => {
-            closeModal(eventDetailModal);
-            const evToEdit = events.find(e => e.id == currentDetailEventId);
-            if (evToEdit) openEditModal(evToEdit);
-        };
+        if (isInvitee) {
+            // مهمان: دکمه "Request Edit"
+            editBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/><path d="M15 5l4 4"/></svg>`;
+            editBtn.title = 'Request Edit';
+            editBtn.style.display = '';
+            editBtn.onclick = () => {
+                closeModal(eventDetailModal);
+                const evToEdit = events.find(e => e.id == currentDetailEventId);
+                if (evToEdit) openEditModalForInvitee(evToEdit);
+            };
+        } else {
+            // سازنده: دکمه ویرایش عادی
+            editBtn.style.display = '';
+            editBtn.onclick = () => {
+                closeModal(eventDetailModal);
+                const evToEdit = events.find(e => e.id == currentDetailEventId);
+                if (evToEdit) openEditModal(evToEdit);
+            };
+        }
     }
 
     // ─── وضعیت تکمیل ───
@@ -3538,6 +3754,67 @@ function openEventDetail(ev, occurrenceDate) {
             postponeBtn.style.display = '';
             postponeBtn.onclick = () => openPostponeModal();
         }
+    }
+
+    // اگر درخواست ویرایش در حال بررسی است
+    if (ev.edit_request_status === 'pending' && !ev.parent_event_id) {
+        const editReqContainer = document.createElement('div');
+        editReqContainer.style.cssText = 'background:rgba(255,200,0,0.1); border:1px solid rgba(255,200,0,0.3); border-radius:8px; padding:12px; margin:12px 0;';
+        
+        const requesterId = ev.edit_request_by;
+        // گرفتن نام درخواست‌دهنده
+        const { data: requester } = await sb
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', requesterId)
+            .single();
+        const reqName = requester ? [requester.first_name, requester.last_name].filter(Boolean).join(' ') : 'A guest';
+        
+        editReqContainer.innerHTML = `
+            <p style="color:#ffc107; margin-bottom:8px;">✏️ <strong>${reqName}</strong> requested to edit this event.</p>
+            <div style="display:flex; gap:8px;">
+                <button id="approve-edit-btn" class="accent-btn" style="width:auto; padding:6px 14px; font-size:13px;">Approve</button>
+                <button id="reject-edit-btn" class="ghost-btn" style="width:auto; padding:6px 14px; font-size:13px;">Reject</button>
+            </div>
+            <div id="reject-reason-row" style="display:none; margin-top:8px;">
+                <textarea id="reject-reason-input" placeholder="Reason for rejection..." style="width:100%; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; font-family:inherit; font-size:12px;"></textarea>
+                <button id="confirm-reject-btn" class="accent-btn" style="width:auto; padding:6px 14px; font-size:13px; margin-top:6px;">Confirm Reject</button>
+            </div>
+        `;
+        
+        const detailContent = eventDetailModal.querySelector('.modal-content');
+        const existing = detailContent.querySelector('#edit-request-section');
+        if (existing) existing.remove();
+        editReqContainer.id = 'edit-request-section';
+        
+        // اضافه کردن قبل از detail-actions-row
+        const actionsRow = detailContent.querySelector('.detail-actions-row');
+        if (actionsRow) {
+            detailContent.insertBefore(editReqContainer, actionsRow);
+        } else {
+            detailContent.appendChild(editReqContainer);
+        }
+        
+        // دکمه Approve
+        document.getElementById('approve-edit-btn').onclick = () => {
+            showConfirmModal('Approve these changes?', async () => {
+                await approveEditRequest(ev.id);
+                closeModal(eventDetailModal);
+            });
+        };
+        
+        // دکمه Reject
+        document.getElementById('reject-edit-btn').onclick = () => {
+            document.getElementById('reject-reason-row').style.display = 'block';
+        };
+        
+        document.getElementById('confirm-reject-btn').onclick = () => {
+            const reason = document.getElementById('reject-reason-input').value.trim();
+            showConfirmModal('Reject this edit request?', async () => {
+                await rejectEditRequest(ev.id, reason);
+                closeModal(eventDetailModal);
+            });
+        };
     }
 
     openModal(eventDetailModal);
