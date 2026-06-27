@@ -2760,7 +2760,7 @@ body.modal-open {
   right: 0;
   height: 1px;
   background: var(--accent);
-  z-index: 3;
+  z-index: 2;
   pointer-events: none;
 }
 
