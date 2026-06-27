@@ -3347,13 +3347,11 @@ async function rejectEditRequest(eventId, reason) {
     }
 }
 
-async function openEventDetail(ev, occurrenceDate) {
     async function openEventDetail(ev, occurrenceDate) {
     // اگر یک دعوت‌نامه در انتظار پاسخ است، پنجرهٔ مخصوص دعوت را باز کن
     if (ev.invitation_status === 'pending' && ev.parent_event_id) {
         openInvitationResponse(ev);
         return;
-    }
     // ... بقیهٔ کد تابع (بدون تغییر)
 }
     console.log('openEventDetail started', ev?.id, occurrenceDate);
