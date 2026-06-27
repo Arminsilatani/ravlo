@@ -3490,8 +3490,7 @@ async function rejectEditRequest(eventId, reason) {
     }
 
     // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
-        // ─── Attendees (نسخه نهایی با RPC اصلاح‌شده و لاگ) ───
-    const inviteesSection = document.getElementById('detail-invitees-section');
+        const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
             inviteesSection.style.display = 'block';
@@ -3509,22 +3508,16 @@ async function rejectEditRequest(eventId, reason) {
 
             if (ev.parent_event_id) {
                 isChildView = true;
-                console.log('Fetching parent for child event:', ev.id, 'parent:', ev.parent_event_id);
                 try {
                     const { data: parentData, error: parentErr } = await sb.rpc('get_parent_event', {
-                        child_event_id: ev.id
+                        child_event_id: ev.id   // عدد صحیح
                     });
-                    console.log('RPC result:', parentData, 'error:', parentErr);
-                    if (parentErr) throw parentErr;
-                    if (parentData) {
+                    if (!parentErr && parentData) {
                         ownerId = parentData.user_id;
                         inviteeNames = parentData.invitees || [];
                         inviteeIds = parentData.invitee_ids || [];
-                        console.log('Owner set to', ownerId, 'invitees:', inviteeNames);
                     }
-                } catch (e) {
-                    console.error('get_parent_event failed:', e);
-                }
+                } catch (e) { /* ignore */ }
             }
 
             // ۱. اطلاعات صاحب رویداد
@@ -3542,16 +3535,15 @@ async function rejectEditRequest(eventId, reason) {
                 }
             } catch (e) { /* ignore */ }
 
-            // ۲. وضعیت دعوت مهمان‌ها (فقط برای صاحب اصلی)
+            // ۲. وضعیت دعوت مهمان‌ها (با RPC، فقط برای صاحب اصلی)
             let statusMap = {};
             if (!isChildView && ownerId === currentUser?.id && inviteeIds.length > 0) {
                 try {
-                    const { data: childRows } = await sb
-                        .from('ravlo')
-                        .select('user_id, invitation_status')
-                        .eq('parent_event_id', ev.id);
-                    if (childRows) {
-                        childRows.forEach(row => { statusMap[row.user_id] = row.invitation_status; });
+                    const { data: statuses, error: statusErr } = await sb.rpc('get_event_invitee_statuses', {
+                        p_event_id: ev.id
+                    });
+                    if (!statusErr && statuses) {
+                        statusMap = statuses; // کلیدها user_id رشته‌ای، مقادیر وضعیت
                     }
                 } catch (e) { /* ignore */ }
             }
@@ -3580,7 +3572,8 @@ async function rejectEditRequest(eventId, reason) {
             });
             inviteeNames.forEach((name, idx) => {
                 const uid = inviteeIds[idx];
-                const status = statusMap[uid] || 'unknown';
+                const uidStr = uid ? uid.toString() : '';
+                const status = statusMap[uidStr] || 'unknown';
                 const photoUrl = uid ? profilesMap[uid] : null;
                 allPeople.push({ name, photoUrl, status, isOwner: false });
             });
