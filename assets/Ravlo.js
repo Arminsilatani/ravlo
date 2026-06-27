@@ -6124,6 +6124,7 @@ showApp();
 })();
 
 // When sidebar component finally becomes available, hook it up properly
+```javascript
 customElements.whenDefined('sidebar-component').then(() => {
     
     getSidebarComponent(); // sets up event listeners
@@ -6150,29 +6151,6 @@ customElements.whenDefined('sidebar-component').then(() => {
                 attributeFilter: ['class'] 
             });
         }
-
-        // گوش دادن به کلیک روی آیتم‌های Today/Overdue در سایدبار
-        sidebar.addEventListener('today-item-click', (e) => {
-            const { eventId, date } = e.detail;
-            const ev = events.find(ev => ev.id === eventId);
-            if (ev) {
-                // بستن سایدبار (شبیه‌سازی کلیک روی overlay)
-                const overlayEl = sidebar.shadowRoot.getElementById('sidebar-overlay');
-                if (overlayEl && overlayEl.classList.contains('open')) {
-                    overlayEl.click();
-                }
-                // باز کردن جزئیات رویداد
-                const occurrenceDate = date ? new Date(date + 'T00:00:00') : new Date();
-                openEventDetail(ev, occurrenceDate);
-            }
-            // دسترسی از سایدبار
-window.ravloOpenEvent = function(eventId, dateStr) {
-    const ev = events.find(e => e.id === eventId);
-    if (ev) {
-        const occDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
-        openEventDetail(ev, occDate);
-    }
-};
-        });
     }
 });
+```
