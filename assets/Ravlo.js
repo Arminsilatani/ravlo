@@ -2600,6 +2600,11 @@ function resetEventForm() {
     const descField = document.getElementById('event-description');
     if (descField) descField.value = '';
 
+    if (saveEventBtn) {
+    saveEventBtn.textContent = 'Save';
+    saveEventBtn.onclick = saveEvent;
+    }
+
     // تاریخ و زمان
     if (eventStartInput) eventStartInput.value = '';
     if (eventEndInput) eventEndInput.value = '';
@@ -3342,7 +3347,7 @@ async function rejectEditRequest(eventId, reason) {
     }
 }
 
-function openEventDetail(ev, occurrenceDate) {
+async function openEventDetail(ev, occurrenceDate) {
     currentDetailEventId = ev.id;
     ev.__occurrenceDate = occurrenceDate;
 
