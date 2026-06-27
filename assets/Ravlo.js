@@ -3006,6 +3006,62 @@ async function saveEvent() {
             }
         }
 
+        // ── به‌روزرسانی رویدادهای دعوت‌شده‌ها (اگر ویرایش است) ──
+        if (editingEventId || (saved && saved.id)) {
+            const eventId = editingEventId || saved.id;
+            
+            // فقط فیلدهایی که دعوت‌شده باید ببیند را آپدیت کن
+            const inviteeUpdatePayload = {
+                title: payload.title,
+                description: payload.description,
+                start_date: payload.start_date,
+                end_date: payload.end_date,
+                all_day: payload.all_day,
+                location: payload.location,
+                color: payload.color,
+                icon: payload.icon,
+                recurrence_type: payload.recurrence_type,
+                recurrence_interval: payload.recurrence_interval,
+                recurrence_days: payload.recurrence_days,
+                recurrence_smart_interval: payload.recurrence_smart_interval,
+                checklist: payload.checklist
+            };
+            
+            const { error: updateInviteesError } = await sb
+                .from('ravlo')
+                .update(inviteeUpdatePayload)
+                .eq('parent_event_id', eventId);
+            
+            if (updateInviteesError) {
+                console.warn('Failed to update invitee events:', updateInviteesError);
+            } else {
+                console.log('✅ Invitee events updated successfully');
+                
+                // ── ارسال نوتیفیکیشن به دعوت‌شده‌ها ──
+                const { data: inviteeRows } = await sb
+                    .from('ravlo')
+                    .select('user_id, id')
+                    .eq('parent_event_id', eventId);
+                
+                if (inviteeRows) {
+                    const eventTitle = payload.title || 'Untitled event';
+                    const editorName = [currentProfile?.first_name, currentProfile?.last_name]
+                        .filter(Boolean).join(' ') || 'Someone';
+                    
+                    inviteeRows.forEach(invitee => {
+                        addNotificationToUser(
+                            invitee.user_id,
+                            'event',
+                            '📝 Event Updated',
+                            `${editorName} updated "${eventTitle}"`,
+                            '#',
+                            invitee.id
+                        );
+                    });
+                }
+            }
+        }
+
         // ── 9. Clean up UI ────────────────────────────────
         hideGlobalLoader();
         closeModal(eventModal);
