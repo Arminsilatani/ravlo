@@ -6165,6 +6165,14 @@ customElements.whenDefined('sidebar-component').then(() => {
                 const occurrenceDate = date ? new Date(date + 'T00:00:00') : new Date();
                 openEventDetail(ev, occurrenceDate);
             }
+            // دسترسی از سایدبار
+window.ravloOpenEvent = function(eventId, dateStr) {
+    const ev = events.find(e => e.id === eventId);
+    if (ev) {
+        const occDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+        openEventDetail(ev, occDate);
+    }
+};
         });
     }
 });
