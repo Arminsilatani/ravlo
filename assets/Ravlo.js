@@ -2218,7 +2218,7 @@ function renderDayView() {
                     cancelBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
                         showConfirmModal('Delete this event?', function() {
-                            deleteEventById(item.ev.id);
+                            deleteEventCascade(item.ev.id);
                         });
                     });
 
@@ -3742,11 +3742,9 @@ async function openEventDetail(ev, occurrenceDate) {
         } else {
             cancelBtn.textContent = 'Delete';
             cancelBtn.onclick = () => {
-                showConfirmModal('Are you sure you want to delete this event?', () => {
-                    deleteEventById(ev.id).then(() => {
-                        closeModal(eventDetailModal);
-                        renderCalendar();
-                    }).catch(() => showToast('Failed to delete event.'));
+                showConfirmModal('Are you sure you want to delete this event? This will remove it for all guests.', () => {
+                    closeModal(eventDetailModal);
+                    deleteEventCascade(ev.id);
                 });
             };
         }
@@ -3904,6 +3902,44 @@ async function deleteEventById(id) {
         showToast('Failed to delete event. Please try again.');
     } finally {
         hideGlobalLoader();
+    }
+}
+
+async function deleteEventCascade(eventId) {
+    showGlobalLoader();
+    try {
+        // حذف آبشاری با RPC
+        const { data, error } = await sb.rpc('delete_event_cascade', { p_event_id: eventId });
+        if (error) throw error;
+
+        // حذف از آرایهٔ محلی (هم رویداد اصلی هم فرزندان)
+        events = events.filter(e => e.id !== eventId && e.parent_event_id !== eventId);
+
+        // ارسال نوتیفیکیشن به همهٔ مهمان‌ها
+        if (data && data.invitee_ids && data.invitee_ids.length > 0) {
+            const ownerName = [currentProfile?.first_name, currentProfile?.last_name]
+                .filter(Boolean).join(' ') || 'Someone';
+            const title = data.title || 'Untitled';
+            for (const uid of data.invitee_ids) {
+                await addNotificationToUser(
+                    uid,
+                    'event',
+                    'Event Deleted',
+                    `${ownerName} deleted the event "${title}"`,
+                    '#',
+                    null
+                );
+            }
+        }
+
+        showToast('Event deleted successfully.');
+    } catch (err) {
+        console.error('Delete cascade error:', err);
+        showToast('Error deleting event: ' + err.message);
+    } finally {
+        hideGlobalLoader();
+        renderCalendar();
+        updateNotificationDot();
     }
 }
 
