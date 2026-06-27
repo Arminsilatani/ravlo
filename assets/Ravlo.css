@@ -178,7 +178,7 @@ body.modal-open {
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(4px);
-  z-index: 10;
+  z-index: 8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -594,7 +594,7 @@ body.modal-open {
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(6px);
-  z-index: 10;
+  z-index: 5;
   justify-content: center;
   align-items: center;
 }
@@ -1627,7 +1627,7 @@ body.modal-open {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 11;
+  z-index: 6;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.7);
@@ -2760,7 +2760,7 @@ body.modal-open {
   right: 0;
   height: 1px;
   background: var(--accent);
-  z-index: 3;
+  z-index: 1;
   pointer-events: none;
 }
 
@@ -3523,7 +3523,7 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 10px;
-  z-index: 2;
+  z-index: 7;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   animation: toastSlideDown 0.3s ease;
   font-size: 14px;
