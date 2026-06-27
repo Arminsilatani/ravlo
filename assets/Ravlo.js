@@ -3489,7 +3489,7 @@ async function rejectEditRequest(eventId, reason) {
         renderChecklistInDetail(ev);
     }
 
-    // ─── Attendees (با وضعیت واقعی دعوت برای صاحب رویداد) ───
+    // ─── Attendees (با تصویر واقعی برای صاحب رویداد) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3499,68 +3499,60 @@ async function rejectEditRequest(eventId, reason) {
             const attendeesList = document.getElementById('detail-attendees-list');
             attendeesList.innerHTML = '';
 
-            // استخراج لیست نام‌ها و شناسه‌ها از رویداد اصلی
             const names = ev.invitees || [];
             const ids = ev.invitee_ids || [];
 
-            // شیء وضعیت برای هر مهمان (پیش‌فرض unknown)
-            let statusMap = {};
-            names.forEach(name => { statusMap[name] = 'unknown'; });
-
-            // اگر کاربر صاحب رویداد اصلی است، وضعیت واقعی را از child rows بخوانیم
-            if (!ev.parent_event_id && ev.user_id === currentUser?.id && ids.length > 0) {
-                try {
-                    const { data: childRows, error } = await sb
-                        .from('ravlo')
-                        .select('user_id, invitation_status')
-                        .eq('parent_event_id', ev.id);
-                    if (!error && childRows) {
-                        // ساخت یک map از user_id به وضعیت
-                        const statusByUserId = {};
-                        childRows.forEach(row => {
-                            statusByUserId[row.user_id] = row.invitation_status;
-                        });
-                        // حالا به ازای هر مهمان، وضعیت را از روی شناسه پیدا کن
-                        names.forEach((name, idx) => {
-                            const uid = ids[idx];
-                            if (uid && statusByUserId.hasOwnProperty(uid)) {
-                                statusMap[name] = statusByUserId[uid];
-                            }
-                        });
-                    }
-                } catch (e) { /* در صورت خطا، وضعیت unknown باقی می‌ماند */ }
-            }
-
-            // ساخت آرایه نهایی با نام و وضعیت
-            const invitees = names.map(name => ({ name, status: statusMap[name] || 'unknown' }));
-
-            if (invitees.length === 0) {
+            if (names.length === 0) {
                 attendeesList.innerHTML = `<div class="attendee-empty"><div class="attendee-avatar empty-plus">+</div><span class="attendee-empty-text">Invite more people</span></div>`;
-            } else if (invitees.length <= 3) {
-                const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
-                invitees.forEach((inv, i) => {
-                    const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
-                    const pendingBadge = inv.status === 'pending' ? ' <span style="background:#ffc107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>' : '';
-                    attendeesList.innerHTML += `<div class="attendee-item"><div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div><span class="attendee-name">${inv.name}${pendingBadge}</span></div>`;
-                });
             } else {
-                const colors = ['#f97316','#e11d48'];
-                const firstTwo = invitees.slice(0,2);
-                const restCount = invitees.length - 2;
-                let html = '<div class="attendees-overlap-row">';
-                firstTwo.forEach((inv, i) => {
-                    const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
-                    html += `<div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
-                });
-                // برای بیش از ۳ نفر، وضعیت‌ها را می‌توان در tooltip نشان داد (فعلاً تعداد)
-                html += `<span class="attendee-extra-count">+${restCount} more</span></div>`;
-                attendeesList.innerHTML = html;
+                // گرفتن عکس پروفایل مهمان‌ها
+                let profilesMap = {};
+                if (ids.length > 0) {
+                    try {
+                        const { data: profiles } = await sb
+                            .from('profiles')
+                            .select('id, photo_url')
+                            .in('id', ids);
+                        if (profiles) {
+                            profiles.forEach(p => { profilesMap[p.id] = p.photo_url; });
+                        }
+                    } catch (e) { /* در صورت خطا، فقط حروف اول نمایش داده می‌شود */ }
+                }
+
+                // رندر لیست (حداکثر ۳ نفر با overlap)
+                const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
+                if (names.length <= 3) {
+                    names.forEach((name, i) => {
+                        const uid = ids[i];
+                        const photoUrl = profilesMap[uid];
+                        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
+                        const avatarHtml = photoUrl 
+                            ? `<img src="${photoUrl}" alt="${name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+                            : `<div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div>`;
+                        attendeesList.innerHTML += `<div class="attendee-item">${avatarHtml}<span class="attendee-name">${name}</span></div>`;
+                    });
+                } else {
+                    // نمایش overlap برای بیش از ۳ نفر
+                    let html = '<div class="attendees-overlap-row">';
+                    const firstTwo = names.slice(0,2);
+                    firstTwo.forEach((name, i) => {
+                        const uid = ids[i];
+                        const photoUrl = profilesMap[uid];
+                        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
+                        const avatarHtml = photoUrl 
+                            ? `<img src="${photoUrl}" alt="${name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid #1e1e1e;">`
+                            : `<div class="attendee-avatar" style="background-color:${colors[i]};border:2px solid #1e1e1e;">${initials}</div>`;
+                        html += avatarHtml;
+                    });
+                    html += `<span class="attendee-extra-count">+${names.length - 2} more</span></div>`;
+                    attendeesList.innerHTML = html;
+                }
             }
         } else {
             inviteesSection.style.display = 'none';
         }
     }
-    
+
     // ─── Location map ───
     const mapContainer = document.getElementById('detail-location-container');
     if (ev.location && (ev.location.lat || ev.location.lng)) {
@@ -5660,7 +5652,7 @@ function openInvitationResponse(ev) {
     container.innerHTML = '';
 
     // ─── دریافت اطلاعات دعوت‌کننده (با اولویت inviter_user_id) ───
-    const inviterId = ev.inviter_user_id || ev.user_id;
+    const inviterId = ev.inviter_user_id;
     
     if (inviterId) {
         sb.from('profiles')
