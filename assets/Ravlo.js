@@ -5893,14 +5893,11 @@ async function cleanupChecklistFromDescriptions() {
 
 // ---- دسترسی از سایدبار و سایر بخش‌ها ----
 window.ravloOpenEvent = function(eventId, dateStr) {
-    console.log('ravloOpenEvent called', eventId, dateStr);
-    const ev = events.find(e => e.id === eventId);
-    console.log('Found event:', ev);
+    // تبدیل به مقایسهٔ نرم (عدد/رشته)
+    const ev = events.find(e => e.id == eventId);
     if (ev) {
         const occDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
         openEventDetail(ev, occDate);
-    } else {
-        console.warn('Event not found in events array. Current events IDs:', events.map(e => e.id));
     }
 };
 
