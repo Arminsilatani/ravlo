@@ -3174,6 +3174,22 @@ body.modal-open {
   color: #888;
 }
 
+/* افکت چشمک‌زن برای رویدادهای دارای درخواست ویرایش */
+.event-edit-requested {
+    animation: editBlink 1.2s ease-in-out infinite;
+}
+
+@keyframes editBlink {
+    0%, 100% { 
+        box-shadow: 0 0 4px rgba(255, 200, 0, 0.3);
+        border-color: rgba(255, 200, 0, 0.5);
+    }
+    50% { 
+        box-shadow: 0 0 12px rgba(255, 200, 0, 0.7);
+        border-color: rgba(255, 200, 0, 0.9);
+    }
+}
+
 /* ------------------------- DETAIL INVITEES ROW ------------------------- */
 .detail-invitees-row {
   display: flex;
