@@ -3758,6 +3758,7 @@ function openEventDetail(ev, occurrenceDate) {
 
     // اگر درخواست ویرایش در حال بررسی است
     if (ev.edit_request_status === 'pending' && !ev.parent_event_id) {
+        evEl.classList.add('event-edit-requested');
         const editReqContainer = document.createElement('div');
         editReqContainer.style.cssText = 'background:rgba(255,200,0,0.1); border:1px solid rgba(255,200,0,0.3); border-radius:8px; padding:12px; margin:12px 0;';
         
