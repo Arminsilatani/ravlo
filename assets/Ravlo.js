@@ -5292,7 +5292,7 @@ function openInvitationResponse(ev) {
                                 ? `<img src="${inviterAvatar}" alt="${inviterName}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`
                                 : `<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;">${inviterInitial}</div>`
                             }
-                            <span style="color:#fff;font-weight:600;">${inviterName}</span>
+                            <span style="color:#fff;font-weight:400;">${inviterName}</span>
                         </div>
                         <span style="color:#aaa;">invited you to this event</span>
                     `;
