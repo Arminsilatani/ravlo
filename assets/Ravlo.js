@@ -5647,7 +5647,31 @@ showApp();
 })();
 
 // When sidebar component finally becomes available, hook it up properly
+// وقتی کامپوننت سایدبار آماده شد
 customElements.whenDefined('sidebar-component').then(() => {
     getSidebarComponent(); // sets up event listeners
     syncSidebarComponent();
+    
+    // مخفی‌سازی خط زمان هنگام باز بودن سایدبار
+    const sidebar = document.querySelector('sidebar-component');
+    if (sidebar && sidebar.shadowRoot) {
+        const overlay = sidebar.shadowRoot.getElementById('sidebar-overlay');
+        
+        if (overlay) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach(mutation => {
+                    if (mutation.target.classList.contains('open')) {
+                        document.body.classList.add('sidebar-open');
+                    } else {
+                        document.body.classList.remove('sidebar-open');
+                    }
+                });
+            });
+            
+            observer.observe(overlay, { 
+                attributes: true, 
+                attributeFilter: ['class'] 
+            });
+        }
+    }
 });
