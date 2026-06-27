@@ -3058,11 +3058,11 @@ async function saveEvent() {
                 currentInvitees.forEach(inv => {
                     addNotificationToUser(
                         inv.id, 
-                        'invitation',                           // ← نوع دعوت (متمایز از event)
-                        'New Invitation',                    // ← عنوان واضح
-                        `${currentProfile?.first_name || 'Someone'} invited you to "${eventTitle}"`, 
+                        'invitation',
+                        '[Invitation] New Invitation',                      // عنوان با پیشوند
+                        `${currentProfile?.first_name || 'Someone'} invited you to "${eventTitle}"`,  // بدنه ساده
                         '#',
-                        saved?.id || null                       // ← شناسه رویداد دعوت‌شده
+                        saved?.id || null
                     );
                 });
             }
@@ -3481,6 +3481,7 @@ async function rejectEditRequest(eventId, reason) {
     }
 
     // ─── Attendees ───
+        // ─── Attendees (با وضعیت دعوت برای صاحب رویداد) ───
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3489,24 +3490,46 @@ async function rejectEditRequest(eventId, reason) {
             if (attendIcon) attendIcon.style.color = ev.color || 'var(--accent)';
             const attendeesList = document.getElementById('detail-attendees-list');
             attendeesList.innerHTML = '';
-            const invitees = ev.invitees || [];
+
+            // تعیین لیست مهمان‌ها و وضعیتشان
+            let invitees = (ev.invitees || []).map(name => ({ name, status: 'unknown' }));
+            
+            // اگر کاربر صاحب رویداد است، وضعیت واقعی را از child rows بخوانیم
+            if (!ev.parent_event_id && ev.user_id === currentUser?.id && ev.invitee_ids?.length) {
+                try {
+                    const { data: childRows } = await sb
+                        .from('ravlo')
+                        .select('user_id, invitation_status')
+                        .eq('parent_event_id', ev.id);
+                    if (childRows) {
+                        invitees = (ev.invitees || []).map(name => {
+                            const inviteeId = ev.invitee_ids?.[ev.invitees.indexOf(name)];
+                            const child = childRows.find(r => r.user_id === inviteeId);
+                            return { name, status: child?.invitation_status || 'unknown' };
+                        });
+                    }
+                } catch (e) { /* در صورت خطا، وضعیت unknown باقی می‌ماند */ }
+            }
+
             if (invitees.length === 0) {
                 attendeesList.innerHTML = `<div class="attendee-empty"><div class="attendee-avatar empty-plus">+</div><span class="attendee-empty-text">Invite more people</span></div>`;
             } else if (invitees.length <= 3) {
                 const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
-                invitees.forEach((name, i) => {
-                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
-                    attendeesList.innerHTML += `<div class="attendee-item"><div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div><span class="attendee-name">${name}</span></div>`;
+                invitees.forEach((inv, i) => {
+                    const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
+                    const pendingBadge = inv.status === 'pending' ? ' <span style="background:#ffc107;color:#000;font-size:10px;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>' : '';
+                    attendeesList.innerHTML += `<div class="attendee-item"><div class="attendee-avatar" style="background-color:${colors[i % colors.length]}">${initials}</div><span class="attendee-name">${inv.name}${pendingBadge}</span></div>`;
                 });
             } else {
                 const colors = ['#f97316','#e11d48'];
                 const firstTwo = invitees.slice(0,2);
                 const restCount = invitees.length - 2;
                 let html = '<div class="attendees-overlap-row">';
-                firstTwo.forEach((name, i) => {
-                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || name[0].toUpperCase();
+                firstTwo.forEach((inv, i) => {
+                    const initials = inv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || inv.name[0].toUpperCase();
                     html += `<div class="attendee-avatar" style="background-color:${colors[i]}">${initials}</div>`;
                 });
+                // اگر یکی از دو نفر اول pending بود، نمی‌توان نشان داد چون در overlap جا نمی‌شود؛ می‌توانیم بعداً بهبود دهیم.
                 html += `<span class="attendee-extra-count">+${restCount} more</span></div>`;
                 attendeesList.innerHTML = html;
             }
