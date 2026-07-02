@@ -4088,7 +4088,7 @@ function renderChecklistInDetail(ev) {
             row.className = 'detail-checklist-row';
             row.style.display = 'flex';
             row.style.alignItems = 'center';
-            row.style.gap = '10px';
+            row.style.gap = '1px';
             row.style.padding = '4px 0';
             row.style.minHeight = '28px';
             
