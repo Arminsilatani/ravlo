@@ -2821,7 +2821,6 @@ async function openEditModal(ev) {
 
     if (gregDateRow) gregDateRow.style.display = 'block';
     updateAllDayAndTimeRows();
-    // تنظیم وضعیت داخلی پیکر با تاریخ/ساعت رویداد
 if (ev.start_date) {
     const startDate = new Date(ev.start_date);
     gregState.gy = startDate.getFullYear();
@@ -2831,13 +2830,11 @@ if (ev.start_date) {
     if (gregHourInput) gregHourInput.value = pad(startDate.getHours());
     if (gregMinuteInput) gregMinuteInput.value = pad(startDate.getMinutes());
     
-    // تنظیم زمان پایان (اگر وجود دارد)
     if (ev.end_date) {
         const endDate = new Date(ev.end_date);
         document.getElementById('greg-end-hour').value = pad(endDate.getHours());
         document.getElementById('greg-end-minute').value = pad(endDate.getMinutes());
     } else {
-        // پیش‌فرض: ۱ ساعت بعد
         const endH = (startDate.getHours() + 1) % 24;
         const endM = startDate.getMinutes();
         document.getElementById('greg-end-hour').value = pad(endH);
@@ -2849,14 +2846,11 @@ if (ev.start_date) {
 
 async function openEditModalForInvitee(ev) {
     if (!ev) return;
-    // استفاده از همان openEditModal برای پر کردن فیلدها
     await openEditModal(ev);
     
-    // اما دکمه Save را به "Send Edit Request" تغییر بده
     if (saveEventBtn) {
         saveEventBtn.textContent = 'Send Edit Request';
         saveEventBtn.onclick = async function() {
-            // ساخت payload جدید از فیلدهای فعلی
             const newPayload = {
                 title: eventTitleInput?.value?.trim() || ev.title,
                 description: document.getElementById('event-description')?.value?.trim() || ev.description,
@@ -4016,14 +4010,7 @@ function renderChecklistInDetail(ev) {
         items.forEach((item, index) => {
             const row = document.createElement('div');
             row.className = 'detail-checklist-row';
-            row.style.display = 'flex';
-            row.style.alignItems = 'center';
-            row.style.gap = '1px';
-            row.style.padding = '4px 0';
-            row.style.minHeight = '28px';
-            
             if (depth > 0) {
-                row.style.paddingLeft = (depth * 20) + 'px';
                 row.classList.add('subtask-row');
             }
 
@@ -4034,20 +4021,11 @@ function renderChecklistInDetail(ev) {
             cb.dataset.parentIndex = index;
             cb.dataset.depth = depth;
 
-            // متن
             const textSpan = document.createElement('span');
             textSpan.className = 'detail-checklist-text';
             textSpan.textContent = item.text || 'Untitled';
-            textSpan.style.flex = '1';
-            textSpan.style.fontSize = '14px';
-            textSpan.style.color = 'var(--text-primary)';
-            textSpan.style.wordBreak = 'break-word';
-            textSpan.style.padding = '2px 4px';
-            textSpan.style.lineHeight = '1.4';
-            
             if (item.done) {
-                textSpan.style.textDecoration = 'line-through';
-                textSpan.style.opacity = '0.6';
+                textSpan.classList.add('done');
             } else {
                 allDone = false;
             }
@@ -4059,7 +4037,6 @@ function renderChecklistInDetail(ev) {
             if (item.subtasks && item.subtasks.length > 0) {
                 const subContainer = document.createElement('div');
                 subContainer.className = 'detail-checklist-subcontainer';
-                subContainer.style.paddingLeft = '24px';
                 renderItems(item.subtasks, subContainer, depth + 1);
                 parentElement.appendChild(subContainer);
             }
@@ -4107,8 +4084,7 @@ function renderChecklistInDetail(ev) {
                 if (row) {
                     const text = row.querySelector('.detail-checklist-text');
                     if (text) {
-                        text.style.textDecoration = this.checked ? 'line-through' : 'none';
-                        text.style.opacity = this.checked ? '0.6' : '1';
+                        text.classList.toggle('done', this.checked);
                     }
                 }
 
