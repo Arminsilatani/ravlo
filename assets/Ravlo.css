@@ -2158,7 +2158,6 @@ body.modal-open {
     line-height: 1.4;
     padding: 2px 0px;
     border-radius: 4px;
-    /* transform removed – checkbox handles alignment with top: -1.5px */
 }
 
 .checklist-text:focus {
