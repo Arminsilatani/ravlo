@@ -1379,37 +1379,6 @@ body.modal-open {
               width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* =========================== NEON CHECKBOX (BASE 20px) ============================ */
-.neon-checkbox {
-  appearance: none;  
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  position: relative;
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  border: none;
-  outline: none;
-  background-color: transparent;
-  --c-base: #555;
-  --c-on: var(--accent);
-  --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
-  --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
-  background-image:
-    var(--base), var(--base), var(--base),
-    var(--base), var(--base), var(--base),
-    var(--base), var(--base), var(--base);
-  background-size: 3.5px 3.5px;
-  background-position:
-    2.5px 2.5px, 8px 2.5px, 13.5px 2.5px,
-    2.5px 8px, 8px 8px, 13.5px 8px,
-    2.5px 13.5px, 8px 13.5px, 13.5px 13.5px;
-  background-repeat: no-repeat;
-  cursor: pointer;
-  flex-shrink: 0;
-  transform: translateY(0);
-}
-
 /* =========================== TAG SECTION & PANEL ============================ */
 .tag-section {
   margin-bottom: 16px;
@@ -2175,7 +2144,7 @@ body.modal-open {
 }
 
 .checklist-text {
-  display: inline-block; 
+    display: inline-block;
     flex: 1 1 auto;
     min-width: 50px;
     word-break: break-word;
@@ -2189,7 +2158,7 @@ body.modal-open {
     line-height: 1.4;
     padding: 2px 0px;
     border-radius: 4px;
-    transform: translateY(1px);
+    /* transform removed – checkbox handles alignment with top: -1.5px */
 }
 
 .checklist-text:focus {
@@ -2267,84 +2236,67 @@ body.modal-open {
     opacity: 0.9;
 }
 
-/* ─── NEON CHECKBOX (single class, uses --accent) ─── */
+/* ─── NEON CHECKBOX (2×2 dots) ─── */
 .neon-checkbox {
-    appearance: none;
     -webkit-appearance: none;
-    position: relative;
+    appearance: none;
     width: 20px;
     height: 20px;
     margin: 0;
+    padding: 0;
     border: none;
-    outline: none;
-    background-color: transparent;
-    flex-shrink: 0;
+    border-radius: 0;
+    background: transparent;
     cursor: pointer;
+    outline: none;
+    box-sizing: border-box;
+    position: relative;
+    top: -1.5px;               /* checkbox 1.5px بالاتر میره → متن پایین‌تر دیده میشه */
 
-    --c-base: #555;
+    --c-base: #2a2a2a;
     --c-on: var(--accent);
 
-    --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
-    --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
-
+    /* ۴ نقطه در حالت unchecked */
     background-image:
-        var(--base), var(--base), var(--base),
-        var(--base), var(--base), var(--base),
-        var(--base), var(--base), var(--base);
-    background-size: 3.5px 3.5px;
+        radial-gradient(circle, var(--c-base) 40%, transparent 65%),
+        radial-gradient(circle, var(--c-base) 40%, transparent 65%),
+        radial-gradient(circle, var(--c-base) 40%, transparent 65%),
+        radial-gradient(circle, var(--c-base) 40%, transparent 65%);
+    background-size: 4px 4px;
     background-position:
-        2.5px 2.5px, 8px 2.5px, 13.5px 2.5px,
-        2.5px 8px, 8px 8px, 13.5px 8px,
-        2.5px 13.5px, 8px 13.5px, 13.5px 13.5px;
+        4px 4px,   10px 4px,
+        4px 10px,  10px 10px;
     background-repeat: no-repeat;
 }
 
-.neon-checkbox::before,
-.neon-checkbox::after {
+/* لایهٔ نقطه‌های رنگی (checked) */
+.neon-checkbox::before {
     content: "";
     position: absolute;
     inset: 0;
+
     background-image:
-        var(--on), var(--on), var(--on),
-        var(--on), var(--on), var(--on),
-        var(--on), var(--on), var(--on);
-    background-size: inherit;
+        radial-gradient(circle, var(--c-on) 40%, transparent 65%),
+        radial-gradient(circle, var(--c-on) 40%, transparent 65%),
+        radial-gradient(circle, var(--c-on) 40%, transparent 65%),
+        radial-gradient(circle, var(--c-on) 40%, transparent 65%);
+    background-size: 4px 4px;
     background-position: inherit;
     background-repeat: no-repeat;
-    pointer-events: none;
+
     opacity: 0;
     filter: drop-shadow(0 0 2px var(--c-on));
-}
-
-.neon-checkbox::before {
-    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.neon-checkbox::after {
-    animation: pulseNeon 1.5s infinite ease-in-out;
+    transition: opacity 0.2s;
+    pointer-events: none;
 }
 
 .neon-checkbox:checked::before {
     opacity: 1;
 }
 
-.neon-checkbox:checked::after {
-    opacity: 0.75;
-}
-
-.neon-checkbox:hover:not(:checked)::after {
-    opacity: 0.75;
-}
-
-/* Animations */
-@keyframes pulseNeon {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 0.75; }
-}
-
-@keyframes fadeInRow {
-    from { opacity: 0; transform: translateY(-6px); }
-    to { opacity: 1; transform: translateY(0); }
+/* غیرفعال‌سازی after (در صورت وجود) – دیگر لازم نیست */
+.neon-checkbox::after {
+    display: none;
 }
 
 /* =========================== LOCATION SECTION ============================ */
@@ -2925,70 +2877,22 @@ body.modal-open {
   transition: background 0.15s;
 }
 
+/* چک‌باکس‌های بزرگ‌تر در جزئیات – ۲۴px با الگوی ۲×۲ */
 .detail-checklist-row .neon-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  position: relative;
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px;
-  min-height: 24px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  outline: none;
-  background-color: transparent;
-  flex-shrink: 0;
-  cursor: pointer;
-  --c-base: #555;
-  --c-on: var(--accent, #ff6f91);
-  --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
-  --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
-  background-image:
-    var(--base), var(--base), var(--base),
-    var(--base), var(--base), var(--base),
-    var(--base), var(--base), var(--base);
-  background-size: 4px 4px;
-  background-position:
-    3px 3px, 9.5px 3px, 16px 3px,
-    3px 9.5px, 9.5px 9.5px, 16px 9.5px,
-    3px 16px, 9.5px 16px, 16px 16px;
-  background-repeat: no-repeat;
-}
-
-.detail-checklist-row .neon-checkbox::before,
-.detail-checklist-row .neon-checkbox::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    var(--on), var(--on), var(--on),
-    var(--on), var(--on), var(--on),
-    var(--on), var(--on), var(--on);
-  background-size: inherit;
-  background-position: inherit;
-  background-repeat: no-repeat;
-  pointer-events: none;
-  opacity: 0;
-  filter: drop-shadow(0 0 2px var(--c-on));
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px;
+    min-height: 24px;
+    top: -1.5px; /* حفظ تراز */
+    background-size: 4px 4px;
+    background-position:
+        6px 6px,  12px 6px,
+        6px 12px, 12px 12px;
 }
 
 .detail-checklist-row .neon-checkbox::before {
-  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.detail-checklist-row .neon-checkbox:checked::before {
-  opacity: 1;
-}
-
-.detail-checklist-row .neon-checkbox:checked::after {
-  animation: pulseNeon 1.5s infinite ease-in-out;
-  opacity: 0.75;
-}
-
-.detail-checklist-row .neon-checkbox:hover:not(:checked)::after {
-  animation: pulseNeon 1.5s infinite ease-in-out;
+    background-size: 4px 4px;
+    background-position: inherit;
 }
 
 .detail-checklist-text {
@@ -3535,9 +3439,19 @@ body.sidebar-open .current-time-line {
     filter: blur(4px);
     opacity: 0.5;
 }
-#checklist-inline-editor .checklist-inline-row .checklist-text {
-    transform: translateY(1px);
+
+/*
+  اختیاری: تغییر رنگ متن لیبل هنگام تیک خوردن چک‌باکس
+  اگر از کلاس‌های زیر استفاده می‌کنید، کامنت را بردارید.
+*/
+/*
+.multi-checkbox-item:has(.neon-checkbox:checked),
+.ai-model-checkbox:has(.neon-checkbox:checked),
+.global-check-label:has(.neon-checkbox:checked) {
+    color: var(--accent);
 }
+*/
+
 /* =========================== MEDIA QUERIES ============================ */
 @media (max-width: 768px) {
   .header-inner {
