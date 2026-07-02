@@ -2137,276 +2137,212 @@ body.modal-open {
     flex-shrink: 0;
 }
 
-/* =========================== INLINE CHECKLIST EDITOR ============================ */
+/* =========================== INLINE CHECKLIST EDITOR (REPLACEMENT) =========================== */
+
 .checklist-inline-editor {
-  display: none;
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+    display: none;
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 #checklist-inline-items {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.checklist-inline-items {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 200px;
-  overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+    max-height: 220px;
+    overflow-y: auto;
 }
 
 .checklist-inline-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-  min-height: 28px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 6px;
-}
-
-.checklist-inline-row .checklist-text {
-  flex: 1 1 auto;
-  min-width: 50px;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  white-space: pre-wrap;
-  font-size: 14px;
-  color: #ccc;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: inherit;
-  line-height: 1.4;
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-
-.checklist-inline-row .checklist-text:focus {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.checklist-inline-row .add-subtask-btn,
-.checklist-inline-row .delete-item-btn {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  margin: 0;
-}
-
-.checklist-inline-row .neon-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  position: relative;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  min-height: 20px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  outline: none;
-  background-color: transparent;
-  flex-shrink: 0;
-  cursor: pointer;
-  --c-base: #555;
-  --c-on: var(--accent, #ff6f91);
-  --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
-  --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
-  background-image:
-    var(--base), var(--base), var(--base),
-    var(--base), var(--base), var(--base),
-    var(--base), var(--base), var(--base);
-  background-size: 3.5px 3.5px;
-  background-position:
-    2.5px 2.5px, 8px 2.5px, 13.5px 2.5px,
-    2.5px 8px, 8px 8px, 13.5px 8px,
-    2.5px 13.5px, 8px 13.5px, 13.5px 13.5px;
-  background-repeat: no-repeat;
-}
-
-.checklist-inline-row .neon-checkbox::before,
-.checklist-inline-row .neon-checkbox::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    var(--on), var(--on), var(--on),
-    var(--on), var(--on), var(--on),
-    var(--on), var(--on), var(--on);
-  background-size: inherit;
-  background-position: inherit;
-  background-repeat: no-repeat;
-  pointer-events: none;
-  opacity: 0;
-  filter: drop-shadow(0 0 2px var(--c-on));
-}
-
-.checklist-inline-row .neon-checkbox::before {
-  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.checklist-inline-row .neon-checkbox:checked::before {
-  opacity: 1;
-}
-
-.checklist-inline-row .neon-checkbox:checked::after {
-  animation: pulseNeon 1.5s infinite ease-in-out;
-  opacity: 0.75;
-}
-
-.checklist-inline-row .neon-checkbox:hover:not(:checked)::after {
-  animation: pulseNeon 1.5s infinite ease-in-out;
-}
-
-.checklist-inline-row .delete-item-btn {
-  background: none;
-  border: none;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: color 0.2s, background 0.2s;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.checklist-inline-row .delete-item-btn:hover {
-  color: #ff6b6b;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.add-subtask-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  color: #aaa;
-  font-size: 14px;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: 0.2s;
-  margin: 0 2px;
-  padding: 0;
-  line-height: 1;
-}
-
-.add-subtask-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-.checklist-inline-row .add-subtask-btn {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  padding: 0 4px;
-  font-size: 16px;
-  line-height: 1;
-  transition: color 0.2s;
-  width: auto;
-  height: auto;
-}
-
-.checklist-inline-row .add-subtask-btn:hover {
-  color: var(--accent);
-  background: none;
-  border: none;
-}
-
-.subtask-row {
-  margin-left: 28px;
-  border-left: 2px solid rgba(255, 255, 255, 0.06);
-  padding-left: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    min-height: 32px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    animation: fadeInRow 0.2s ease;
 }
 
 .checklist-inline-row.subtask-row {
-  padding-left: 20px;
+    padding-left: 28px;
+    border-left: 2px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
 }
 
-.checklist-inline-row.subtask-row .checklist-text {
-  font-size: 12px;
-  color: var(--text-secondary, #aaa);
+.checklist-text {
+    flex: 1 1 auto;
+    min-width: 50px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    font-size: 14px;
+    color: var(--text, #f5f5f5);
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.4;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.checklist-text:focus {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.delete-item-btn,
+.add-subtask-btn {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    background: none;
+    border: none;
+    color: #777;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: color 0.2s, background 0.2s;
+}
+
+.delete-item-btn:hover {
+    color: #ff6b6b;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.add-subtask-btn:hover {
+    color: var(--accent);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.checklist-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
 }
 
 .checklist-new-item-input {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: #ccc;
-  font-size: 13px;
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.checklist-new-item-input::placeholder {
-  color: #555;
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text, #f5f5f5);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
 }
 
 .checklist-new-item-input:focus {
-  border-color: var(--accent);
+    border-color: var(--accent);
 }
 
-.checklist-inline-add-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+.checklist-add-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.checklist-inline-add-input {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  padding: 4px 8px;
-  color: var(--text-primary, #ccc);
-  font-size: 13px;
-  outline: none;
+.checklist-add-btn:hover {
+    opacity: 0.9;
 }
 
-.checklist-inline-add-input:focus {
-  border-color: var(--accent);
+/* ─── NEON CHECKBOX (single class, uses --accent) ─── */
+.neon-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    flex-shrink: 0;
+    cursor: pointer;
+
+    --c-base: #555;
+    --c-on: var(--accent);
+
+    --base: radial-gradient(circle, var(--c-base) 40%, transparent 65%);
+    --on: radial-gradient(circle, var(--c-on) 40%, transparent 65%);
+
+    background-image:
+        var(--base), var(--base), var(--base),
+        var(--base), var(--base), var(--base),
+        var(--base), var(--base), var(--base);
+    background-size: 3.5px 3.5px;
+    background-position:
+        2.5px 2.5px, 8px 2.5px, 13.5px 2.5px,
+        2.5px 8px, 8px 8px, 13.5px 8px,
+        2.5px 13.5px, 8px 13.5px, 13.5px 13.5px;
+    background-repeat: no-repeat;
 }
 
-.checklist-inline-add-btn {
-  background: var(--accent);
-  border: none;
-  border-radius: 4px;
-  padding: 4px 12px;
-  color: #fff;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-  line-height: 1;
+.neon-checkbox::before,
+.neon-checkbox::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        var(--on), var(--on), var(--on),
+        var(--on), var(--on), var(--on),
+        var(--on), var(--on), var(--on);
+    background-size: inherit;
+    background-position: inherit;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    opacity: 0;
+    filter: drop-shadow(0 0 2px var(--c-on));
 }
 
-.checklist-inline-add-btn:hover {
-  transform: scale(1.05);
-  opacity: 0.9;
+.neon-checkbox::before {
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neon-checkbox::after {
+    animation: pulseNeon 1.5s infinite ease-in-out;
+}
+
+.neon-checkbox:checked::before {
+    opacity: 1;
+}
+
+.neon-checkbox:checked::after {
+    opacity: 0.75;
+}
+
+.neon-checkbox:hover:not(:checked)::after {
+    opacity: 0.75;
+}
+
+/* Animations */
+@keyframes pulseNeon {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.75; }
+}
+
+@keyframes fadeInRow {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* =========================== LOCATION SECTION ============================ */
