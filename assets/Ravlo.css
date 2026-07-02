@@ -2293,7 +2293,6 @@ body.modal-open {
     opacity: 1;
 }
 
-/* غیرفعال‌سازی after (در صورت وجود) – دیگر لازم نیست */
 .neon-checkbox::after {
     display: none;
 }
