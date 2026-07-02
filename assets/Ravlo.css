@@ -3440,17 +3440,17 @@ body.sidebar-open .current-time-line {
     opacity: 0.5;
 }
 
-/*
-  اختیاری: تغییر رنگ متن لیبل هنگام تیک خوردن چک‌باکس
-  اگر از کلاس‌های زیر استفاده می‌کنید، کامنت را بردارید.
-*/
-/*
-.multi-checkbox-item:has(.neon-checkbox:checked),
-.ai-model-checkbox:has(.neon-checkbox:checked),
-.global-check-label:has(.neon-checkbox:checked) {
-    color: var(--accent);
+/* کاهش فاصله بین چک‌باکس و متن All‑day */
+#all-day-greg-row {
+    gap: 6px;                     /* فاصلهٔ بین چک‌باکس و متن */
 }
-*/
+
+#all-day-greg-row .neon-checkbox-label {
+    display: inline-block;
+    line-height: 20px;            /* عمودی وسط‌چین شود */
+    font-size: 14px;
+    color: var(--text, #f5f5f5);
+}
 
 /* =========================== MEDIA QUERIES ============================ */
 @media (max-width: 768px) {
