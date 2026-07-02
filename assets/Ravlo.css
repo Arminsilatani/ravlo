@@ -2151,7 +2151,7 @@ body.modal-open {
 #checklist-inline-items {
     display: flex;
     flex-direction: column;
-    gap: 61px;
+    gap: 6px;
     margin-bottom: 10px;
     max-height: 220px;
     overflow-y: auto;
