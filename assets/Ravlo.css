@@ -2175,6 +2175,7 @@ body.modal-open {
 }
 
 .checklist-text {
+  display: inline-block; 
     flex: 1 1 auto;
     min-width: 50px;
     word-break: break-word;
