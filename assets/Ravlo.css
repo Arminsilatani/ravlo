@@ -2478,23 +2478,23 @@ body.modal-open {
 }
 
 .all-day-capsule {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: var(--accent);
-  border: 1px solid var(--accent);
-  white-space: nowrap;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;                                 /* رنگ متن ثابت */
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--capsule-color);      /* ← از متغیر می‌خواند */
+    border: 1px solid var(--capsule-color);      /* ← از متغیر می‌خواند */
+    white-space: nowrap;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .all-day-capsule:hover {
