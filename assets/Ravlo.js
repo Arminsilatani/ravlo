@@ -2327,17 +2327,27 @@ function renderDayView() {
             slots.appendChild(line);
         }
 
-                // ─── خط زمان فعلی ───
+        // ─── خط زمان فعلی (تست) ───
         var now = new Date();
-        if (now.getFullYear() === vy && now.getMonth() === vm && now.getDate() === vd) {
+        // شرط تاریخ را موقتاً برمی‌داریم و فقط تست می‌کنیم
+        if (true) {
             var nowMin = now.getHours() * 60 + now.getMinutes();
             var nowTopPx = getCumulativeHeightUntil(nowMin);
             var line = document.createElement('div');
             line.className = 'current-time-line';
             line.style.top = nowTopPx + 'px';
+            // نقطهٔ قرمز بزرگ برای تست
             var dot = document.createElement('span');
+            dot.style.width = '14px';
+            dot.style.height = '14px';
+            dot.style.background = 'red';
+            dot.style.borderRadius = '50%';
+            dot.style.position = 'absolute';
+            dot.style.left = '-7px';
+            dot.style.top = '-7px';
             line.appendChild(dot);
             slots.appendChild(line);
+            console.log('خط زمان اضافه شد', nowMin, nowTopPx);
         }
 
         // ─── کلیک روی فضای خالی ───
