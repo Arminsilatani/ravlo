@@ -2065,12 +2065,10 @@ function renderDayView() {
                 var endMin = item.endMin;
                 if (endMin <= startMin) endMin = startMin + 15;
 
-                // محاسبهٔ top دقیق با استفاده از تابع کمکی
                 var topPx = getCumulativeHeightUntil(startMin);
 
-                // محاسبهٔ ارتفاع دقیق
                 var heightPx = getHeightBetween(startMin, endMin);
-                if (heightPx < 20) heightPx = 28; // حداقل ارتفاع برای دیده شدن
+                if (heightPx < 20) heightPx = 28;
 
                 var gapPx = 15;
                 var totalGap = gapPx * (laneCount - 1);
