@@ -2235,10 +2235,24 @@ function renderDayView() {
                     endBtn.style.cssText = 'background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;line-height:1.2;';
 
                     if (item.ev.type === 'task' && item.ev.recurrence_type === 'smart') {
-                        endBtn.textContent = 'Done';
+                        const isSmartDone = (item.ev.status === 'done' || item.ev.status === 'completed');
+                        endBtn.textContent = isSmartDone ? 'Undo' : 'Done';
+                        
                         endBtn.addEventListener('click', function(e) {
                             e.stopPropagation();
-                            completeSmartTask(item.ev);
+                            if (isSmartDone) {
+                                // برگرداندن به حالت فعال (Undo)
+                                item.ev.status = 'pending';
+                                item.ev.completed_at = null;
+                                updateEventInDB(item.ev.id, { status: 'pending', completed_at: null })
+                                    .then(() => {
+                                        renderCalendar();
+                                        updateNotificationDot();
+                                    })
+                                    .catch(() => showToast('Error undoing.'));
+                            } else {
+                                completeSmartTask(item.ev);
+                            }
                         });
                     }
                     else if (item.ev.type === 'task') {
