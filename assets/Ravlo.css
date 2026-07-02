@@ -2106,8 +2106,7 @@ body.modal-open {
     flex-shrink: 0;
 }
 
-/* =========================== INLINE CHECKLIST EDITOR (REPLACEMENT) =========================== */
-
+/* =========================== INLINE CHECKLIST EDITOR =========================== */
 .checklist-inline-editor {
     display: none;
     margin-top: 8px;
@@ -2235,7 +2234,7 @@ body.modal-open {
     opacity: 0.9;
 }
 
-/* ─── NEON CHECKBOX (2×2 dots) ─── */
+/* =========================== NEON CHECKBOX (2×2) ============================ */
 .neon-checkbox {
     -webkit-appearance: none;
     appearance: none;
@@ -2250,12 +2249,11 @@ body.modal-open {
     outline: none;
     box-sizing: border-box;
     position: relative;
-    top: -1.5px;
+    top: -1.5px; /* text sits slightly lower */
 
     --c-base: #2a2a2a;
     --c-on: var(--accent);
 
-    /* ۴ نقطه در حالت unchecked */
     background-image:
         radial-gradient(circle, var(--c-base) 40%, transparent 65%),
         radial-gradient(circle, var(--c-base) 40%, transparent 65%),
@@ -2272,7 +2270,6 @@ body.modal-open {
     content: "";
     position: absolute;
     inset: 0;
-
     background-image:
         radial-gradient(circle, var(--c-on) 40%, transparent 65%),
         radial-gradient(circle, var(--c-on) 40%, transparent 65%),
@@ -2281,7 +2278,6 @@ body.modal-open {
     background-size: 4px 4px;
     background-position: inherit;
     background-repeat: no-repeat;
-
     opacity: 0;
     filter: drop-shadow(0 0 2px var(--c-on));
     transition: opacity 0.2s;
@@ -2293,7 +2289,7 @@ body.modal-open {
 }
 
 .neon-checkbox::after {
-    display: none;
+    display: none; /* pulse effect removed for cleaner look */
 }
 
 /* =========================== LOCATION SECTION ============================ */
@@ -2372,18 +2368,6 @@ body.modal-open {
   margin-bottom: 6px;
   color: #aaa;
   font-size: 13px;
-}
-
-.checklist-add-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.checklist-add-btn {
-  width: auto;
-  padding: 10px 16px;
-  white-space: nowrap;
 }
 
 /* =========================== VERTICAL DAY TIMELINE ============================ */
@@ -2873,9 +2857,8 @@ body.modal-open {
   transition: background 0.15s;
 }
 
-/* چک‌باکس‌های بزرگ‌تر در جزئیات – ۲۴px با الگوی ۲×۲ */
 .detail-checklist-row .neon-checkbox {
-    width: 24px !important;   /* این اندازه را می‌توانید نگه دارید یا به 20px تغییر دهید */
+    width: 24px !important;
     height: 24px !important;
     min-width: 24px;
     min-height: 24px;
@@ -2899,6 +2882,11 @@ body.modal-open {
   padding: 2px 4px;
   border-radius: 3px;
   line-height: 1.4;
+}
+
+.detail-checklist-text.done {
+  text-decoration: line-through;
+  opacity: 0.6;
 }
 
 .detail-checklist-text:focus {
@@ -3436,18 +3424,7 @@ body.sidebar-open .current-time-line {
     opacity: 0.5;
 }
 
-/* کاهش فاصله بین چک‌باکس و متن All‑day */
-#all-day-greg-row {
-    gap: 2px;                     /* فاصلهٔ بین چک‌باکس و متن */
-}
-
-#all-day-greg-row .neon-checkbox-label {
-    display: inline-block;
-    line-height: 20px;            /* عمودی وسط‌چین شود */
-    font-size: 14px;
-    color: var(--text, #f5f5f5);
-}
-
+/* =========================== GLOBAL LOADER OVERLAY ============================ */
 .ravlo-global-loader-overlay {
     position: fixed;
     inset: 0;
@@ -3459,26 +3436,19 @@ body.sidebar-open .current-time-line {
     backdrop-filter: blur(2px);
 }
 
+/* =========================== OVERDUE & GRID HELPERS ============================ */
 .overdue-row {
     background: rgba(255,100,100,0.05);
     border-bottom: 1px solid rgba(255,100,100,0.2);
 }
+
 .overdue-label {
     font-size: 10px;
     color: #ff6b6b;
     text-transform: uppercase;
     margin-right: 8px;
 }
-.all-day-capsule {
-    background-color: var(--capsule-color);
-    border: 1px solid var(--capsule-color);
-    color: #fff;
-}
-.overdue-capsule {
-    background-color: var(--capsule-color);
-    border: 1px solid var(--capsule-color);
-    color: #0d0d0d;
-}
+
 .time-slot-grid-line {
     position: absolute;
     left: 0;
@@ -3488,6 +3458,19 @@ body.sidebar-open .current-time-line {
     z-index: 0;
     pointer-events: none;
 }
+
+/* کاهش فاصله چک‌باکس All‑day */
+#all-day-greg-row {
+    gap: 2px;
+}
+
+#all-day-greg-row .neon-checkbox-label {
+    display: inline-block;
+    line-height: 20px;
+    font-size: 14px;
+    color: var(--text, #f5f5f5);
+}
+
 /* =========================== MEDIA QUERIES ============================ */
 @media (max-width: 768px) {
   .header-inner {
