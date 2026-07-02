@@ -1899,19 +1899,15 @@ function renderDayView() {
         if (overdueOccurrences.length > 0) {
             var overdueRow = document.createElement('div');
             overdueRow.className = 'all-day-events-row overdue-row';
-            overdueRow.style.background = 'rgba(255,100,100,0.05)';
-            overdueRow.style.borderBottom = '1px solid rgba(255,100,100,0.2)';
+            overdueLabel.className = 'overdue-label';
             var overdueLabel = document.createElement('span');
-            overdueLabel.style.cssText = 'font-size:10px; color:#ff6b6b; text-transform:uppercase; margin-right:8px;';
             overdueLabel.textContent = 'Overdue';
             overdueRow.appendChild(overdueLabel);
 
             overdueOccurrences.forEach(item => {
                 var capsule = document.createElement('span');
                 capsule.className = 'all-day-capsule overdue-capsule';
-                capsule.style.backgroundColor = item.ev.color || 'var(--accent)';
-                capsule.style.color = '#0d0d0d';
-                capsule.style.border = '1px solid ' + (item.ev.color || 'var(--accent)');
+                capsule.style.setProperty('--capsule-color', item.ev.color || 'var(--accent)');
 
                 if (item.ev.icon) {
                     var iconSpan = document.createElement('span');
