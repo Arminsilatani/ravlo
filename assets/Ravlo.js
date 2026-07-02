@@ -4061,125 +4061,6 @@ function hideDeleteConfirmation() {
     }
 }
 
-// =========================== HIDE INLINE CHECKLIST ============================
-function hideInlineChecklist() {
-    const editor = document.getElementById('checklist-inline-editor');
-    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
-    if (editor) editor.style.display = 'none';
-    if (toggleBtn) toggleBtn.classList.remove('active');
-}
-
-// =========================== SHOW INLINE CHECKLIST ============================
-function showInlineChecklist() {
-    const editor = document.getElementById('checklist-inline-editor');
-    const toggleBtn = document.getElementById('toggle-checklist-mode-btn');
-    if (editor) editor.style.display = 'block';
-    if (toggleBtn) toggleBtn.classList.add('active');
-    renderInlineChecklistItems(currentChecklistItems);
-}
-
-// =========================== RENDER INLINE CHECKLIST ITEMS ============================
-function renderInlineChecklistItems(items) {
-    const container = document.getElementById('checklist-inline-items');
-    if (!container) return;
-    container.innerHTML = '';
-
-    items.forEach((item, index) => {
-        const row = document.createElement('div');
-        row.className = 'checklist-inline-row';
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = 'neon-checkbox';
-        cb.checked = item.done;
-        cb.addEventListener('change', function() {
-            item.done = this.checked;
-        });
-
-        const textSpan = document.createElement('span');
-        textSpan.className = 'checklist-text';
-        textSpan.textContent = item.text;
-        textSpan.setAttribute('contenteditable', 'true');
-        textSpan.addEventListener('input', function() {
-            item.text = this.textContent.trim();
-        });
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'delete-item-btn';
-        delBtn.innerHTML = '✕';
-        delBtn.addEventListener('click', () => {
-            currentChecklistItems.splice(index, 1);
-            renderInlineChecklistItems(currentChecklistItems);
-        });
-
-        const addSubBtn = document.createElement('button');
-        addSubBtn.className = 'add-subtask-btn';
-        addSubBtn.innerHTML = '+';
-        addSubBtn.title = 'Add subtask';
-        addSubBtn.addEventListener('click', () => {
-            if (!item.subtasks) item.subtasks = [];
-            item.subtasks.push({
-                text: '',
-                done: false
-            });
-            renderInlineChecklistItems(currentChecklistItems);
-            const subRows = container.querySelectorAll('.subtask-row .checklist-text');
-            if (subRows.length > 0) {
-                const last = subRows[subRows.length - 1];
-                last.focus();
-                const range = document.createRange();
-                range.selectNodeContents(last);
-                range.collapse(false);
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(range);
-            }
-        });
-
-        row.appendChild(cb);
-        row.appendChild(textSpan);
-        row.appendChild(addSubBtn);
-        row.appendChild(delBtn);
-        container.appendChild(row);
-
-        if (item.subtasks && item.subtasks.length > 0) {
-            item.subtasks.forEach((sub, subIndex) => {
-                const subRow = document.createElement('div');
-                subRow.className = 'checklist-inline-row subtask-row';
-
-                const subCb = document.createElement('input');
-                subCb.type = 'checkbox';
-                subCb.className = 'neon-checkbox';
-                subCb.checked = sub.done;
-                subCb.addEventListener('change', function() {
-                    sub.done = this.checked;
-                });
-
-                const subText = document.createElement('span');
-                subText.className = 'checklist-text';
-                subText.textContent = sub.text;
-                subText.setAttribute('contenteditable', 'true');
-                subText.addEventListener('input', function() {
-                    sub.text = this.textContent.trim();
-                });
-
-                const subDelBtn = document.createElement('button');
-                subDelBtn.className = 'delete-item-btn';
-                subDelBtn.innerHTML = '✕';
-                subDelBtn.addEventListener('click', () => {
-                    item.subtasks.splice(subIndex, 1);
-                    renderInlineChecklistItems(currentChecklistItems);
-                });
-
-                subRow.appendChild(subCb);
-                subRow.appendChild(subText);
-                subRow.appendChild(subDelBtn);
-                container.appendChild(subRow);
-            });
-        }
-    });
-}
-
 // =========================== RENDER CHECKLIST IN DETAIL ============================
 function renderChecklistInDetail(ev) {
     const container = document.getElementById('detail-checklist-container');
@@ -5490,43 +5371,6 @@ document.getElementById('location-modal-close')?.addEventListener('click', () =>
     closeModal(document.getElementById('location-modal'));
 });
 
-/* --------- CHECKLIST MODAL HANDLERS --------- */
-document.getElementById('toggle-checklist-mode-btn')?.addEventListener('click', function() {
-    const btn = this;
-    if (btn.classList.contains('active')) {
-        hideInlineChecklist();
-    } else {
-        tempChecklistItems = JSON.parse(JSON.stringify(currentChecklistItems));
-        renderChecklistModalItems();
-        openModal(document.getElementById('checklist-modal'));
-    }
-});
-
-document.getElementById('checklist-modal-add-btn')?.addEventListener('click', () => {
-    const input = document.getElementById('checklist-modal-input');
-    const text = input.value.trim();
-    if (text) {
-        tempChecklistItems.push({
-            text,
-            done: false
-        });
-        renderChecklistModalItems();
-        input.value = '';
-    }
-});
-
-document.getElementById('checklist-done-btn')?.addEventListener('click', () => {
-    currentChecklistItems = tempChecklistItems;
-    // ❌ دیگر به توضیحات اضافه نمیشه
-    closeModal(document.getElementById('checklist-modal'));
-    document.getElementById('toggle-checklist-mode-btn')?.classList.add('active');
-    // نمایش چک‌لیست درون‌خطی
-    showInlineChecklist();
-});
-
-document.getElementById('checklist-modal-close')?.addEventListener('click', () => {
-    closeModal(document.getElementById('checklist-modal'));
-});
 
 // Copy invite code
 document.getElementById('copy-invite-code-btn')?.addEventListener('click', () => {
@@ -5556,6 +5400,127 @@ document.getElementById('location-coords-input')?.addEventListener('input', func
         currentLocationCoords = null;
     }
 });
+
+/* =========================== INLINE CHECKLIST EDITOR (REPLACEMENT) =========================== */
+
+function renderInlineChecklistItems(items) {
+    const container = document.getElementById('checklist-inline-items');
+    if (!container) return;
+    container.innerHTML = '';
+
+    items.forEach((item, index) => {
+        const row = createChecklistRow(item, index, false);
+        container.appendChild(row);
+
+        if (item.subtasks && item.subtasks.length > 0) {
+            item.subtasks.forEach((sub, subIdx) => {
+                const subRow = createChecklistRow(sub, subIdx, true);
+                container.appendChild(subRow);
+            });
+        }
+    });
+}
+
+function createChecklistRow(item, index, isSubtask) {
+    const row = document.createElement('div');
+    row.className = 'checklist-inline-row' + (isSubtask ? ' subtask-row' : '');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'neon-checkbox';
+    cb.checked = item.done;
+    cb.addEventListener('change', () => { item.done = cb.checked; });
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'checklist-text';
+    textSpan.textContent = item.text;
+    textSpan.setAttribute('contenteditable', 'true');
+    textSpan.addEventListener('input', () => { item.text = textSpan.textContent.trim(); });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-item-btn';
+    delBtn.innerHTML = '✕';
+    delBtn.addEventListener('click', () => {
+        if (isSubtask) {
+            removeSubtask(item);
+        } else {
+            const idx = currentChecklistItems.indexOf(item);
+            if (idx > -1) currentChecklistItems.splice(idx, 1);
+        }
+        renderInlineChecklistItems(currentChecklistItems);
+    });
+
+    const addSubBtn = document.createElement('button');
+    addSubBtn.className = 'add-subtask-btn';
+    addSubBtn.innerHTML = '+';
+    addSubBtn.title = 'Add subtask';
+    addSubBtn.addEventListener('click', () => {
+        if (!item.subtasks) item.subtasks = [];
+        const newSub = { text: '', done: false, subtasks: [] };
+        item.subtasks.push(newSub);
+        renderInlineChecklistItems(currentChecklistItems);
+        setTimeout(() => {
+            const lastSubText = document.querySelector('#checklist-inline-items .subtask-row:last-of-type .checklist-text');
+            if (lastSubText) lastSubText.focus();
+        }, 50);
+    });
+
+    row.appendChild(cb);
+    row.appendChild(textSpan);
+    row.appendChild(addSubBtn);
+    row.appendChild(delBtn);
+    return row;
+}
+
+function removeSubtask(targetItem) {
+    function searchAndRemove(arr) {
+        for (let i = 0; i < arr.length; i++) {
+            if (arr[i] === targetItem) {
+                arr.splice(i, 1);
+                return true;
+            }
+            if (arr[i].subtasks && searchAndRemove(arr[i].subtasks)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    for (const item of currentChecklistItems) {
+        if (item.subtasks && searchAndRemove(item.subtasks)) break;
+    }
+}
+
+function showInlineChecklist() {
+    const editor = document.getElementById('checklist-inline-editor');
+    if (editor) editor.style.display = 'block';
+    renderInlineChecklistItems(currentChecklistItems);
+}
+
+function hideInlineChecklist() {
+    const editor = document.getElementById('checklist-inline-editor');
+    if (editor) editor.style.display = 'none';
+}
+
+// اتصال input و دکمهٔ افزودن
+const newItemInput = document.getElementById('checklist-new-item-input');
+const addItemBtn = document.getElementById('checklist-add-btn');
+
+if (newItemInput && addItemBtn) {
+    addItemBtn.addEventListener('click', () => {
+        const text = newItemInput.value.trim();
+        if (text) {
+            currentChecklistItems.push({ text, done: false, subtasks: [] });
+            newItemInput.value = '';
+            renderInlineChecklistItems(currentChecklistItems);
+        }
+    });
+    newItemInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addItemBtn.click();
+        }
+    });
+}
 
 /* =========================== SIDEBAR OPEN/CLOSE =========================== */
 (function() {
