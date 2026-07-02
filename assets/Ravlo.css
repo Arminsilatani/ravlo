@@ -3452,6 +3452,17 @@ body.sidebar-open .current-time-line {
     color: var(--text, #f5f5f5);
 }
 
+.ravlo-global-loader-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
 /* =========================== MEDIA QUERIES ============================ */
 @media (max-width: 768px) {
   .header-inner {
