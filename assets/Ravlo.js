@@ -2327,6 +2327,19 @@ function renderDayView() {
             slots.appendChild(line);
         }
 
+                // ─── خط زمان فعلی ───
+        var now = new Date();
+        if (now.getFullYear() === vy && now.getMonth() === vm && now.getDate() === vd) {
+            var nowMin = now.getHours() * 60 + now.getMinutes();
+            var nowTopPx = getCumulativeHeightUntil(nowMin);
+            var line = document.createElement('div');
+            line.className = 'current-time-line';
+            line.style.top = nowTopPx + 'px';
+            var dot = document.createElement('span');
+            line.appendChild(dot);
+            slots.appendChild(line);
+        }
+
         // ─── کلیک روی فضای خالی ───
         slots.addEventListener('click', function(e) {
             if (e.target !== slots) return;
