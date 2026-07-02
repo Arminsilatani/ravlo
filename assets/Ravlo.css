@@ -2879,11 +2879,11 @@ body.modal-open {
 
 /* چک‌باکس‌های بزرگ‌تر در جزئیات – ۲۴px با الگوی ۲×۲ */
 .detail-checklist-row .neon-checkbox {
-    width: 24px !important;
+    width: 24px !important;   /* این اندازه را می‌توانید نگه دارید یا به 20px تغییر دهید */
     height: 24px !important;
     min-width: 24px;
     min-height: 24px;
-    top: -1.5px; /* حفظ تراز */
+    top: -1.5px;
     background-size: 4px 4px;
     background-position:
         6px 6px,  12px 6px,
