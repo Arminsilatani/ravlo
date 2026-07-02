@@ -1380,7 +1380,7 @@ body.modal-open {
 }
 
 .checklist-text {
-    transform: translateY(3px);
+    transform: translateY(1px);
 }
 /* =========================== NEON CHECKBOX (BASE 20px) ============================ */
 .neon-checkbox {
