@@ -2189,7 +2189,7 @@ body.modal-open {
     line-height: 1.4;
     padding: 2px 0px;
     border-radius: 4px;
-    transform: translateY(11px);
+    transform: translateY(1px);
 }
 
 .checklist-text:focus {
