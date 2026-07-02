@@ -1940,9 +1940,8 @@ function renderDayView() {
         allDayEvents.forEach(ev => {
             var capsule = document.createElement('span');
             capsule.className = 'all-day-capsule';
-            capsule.style.backgroundColor = ev.color || 'var(--accent)';
-            capsule.style.color = '#fff';
-            capsule.style.border = '1px solid ' + (ev.color || 'var(--accent)');
+            capsule.style.setProperty('--capsule-color', ev.color || 'var(--accent)');
+
 
             if (ev.icon) {
                 var iconSpan = document.createElement('span');
@@ -1992,14 +1991,6 @@ function renderDayView() {
     var cumulativeTop = 0;
     for (var h = 0; h < 24; h++) {
         var lineEl = document.createElement('div');
-        lineEl.style.position = 'absolute';
-        lineEl.style.left = '0';
-        lineEl.style.right = '0';
-        lineEl.style.height = '1px';
-        lineEl.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-        lineEl.style.top = cumulativeTop + 'px';
-        lineEl.style.zIndex = '0';
-        lineEl.style.pointerEvents = 'none';
         slots.appendChild(lineEl);
         cumulativeTop += hourHeights[h];
     }
@@ -2061,7 +2052,6 @@ function renderDayView() {
                 if (endMin <= startMin) endMin = startMin + 15;
 
                 var topPx = getCumulativeHeightUntil(startMin);
-
                 var heightPx = getHeightBetween(startMin, endMin);
                 if (heightPx < 20) heightPx = 28;
 
@@ -2071,6 +2061,7 @@ function renderDayView() {
                 var laneWidthPx = availableWidth / laneCount;
                 var leftPx = SLOT_PADDING + laneIndex * (laneWidthPx + gapPx);
 
+                // ایجاد المان رویداد
                 var evEl = document.createElement('div');
                 evEl.className = 'time-slot-event';
                 evEl.style.position = 'absolute';
@@ -2078,15 +2069,8 @@ function renderDayView() {
                 evEl.style.height = Math.max(heightPx, 28) + 'px';
                 evEl.style.left = leftPx + 'px';
                 evEl.style.width = laneWidthPx + 'px';
-                evEl.style.borderRadius = '6px';
-                evEl.style.fontSize = '12px';
-                evEl.style.color = '#f5f5f5';
-                evEl.style.overflow = 'hidden';
-                evEl.style.boxSizing = 'border-box';
-                evEl.style.cursor = 'pointer';
-                evEl.style.zIndex = '2';
-                evEl.style.transition = 'background 0.2s';
 
+                // نقشهٔ مینیاتوری (در صورت وجود)
                 if (item.ev.location && item.ev.location.lat != null && item.ev.location.lng != null && isLeafletReady()) {
                     var mapDiv = document.createElement('div');
                     mapDiv.className = 'event-map-bg';
@@ -2118,7 +2102,7 @@ function renderDayView() {
                     }, 150);
                 }
 
-                // استایل
+                // استایل شرطی (رنگ و border دینامیک)
                 if (item.ev.invitation_status === 'pending') {
                     evEl.classList.add('event-invited');
                     var borderColor = item.ev.color || 'var(--accent)';
@@ -2137,27 +2121,13 @@ function renderDayView() {
                     }
                 }
 
-                // ✨ افکت چشمک‌زن برای رویدادهای دارای درخواست ویرایش (فقط رویداد اصلی)
                 if (item.ev.edit_request_status === 'pending' && !item.ev.parent_event_id) {
                     evEl.classList.add('event-edit-requested');
                 }
 
-                // عنوان
+                // عنوان رویداد
                 var titleSpan = document.createElement('div');
                 titleSpan.className = 'event-title';
-                titleSpan.style.fontWeight = '400';
-                titleSpan.style.whiteSpace = 'nowrap';
-                titleSpan.style.overflow = 'hidden';
-                titleSpan.style.textOverflow = 'ellipsis';
-                titleSpan.style.color = '#1a1a1a';
-                titleSpan.style.background = 'rgba(255,255,255,0.85)';
-                titleSpan.style.display = 'inline-block';
-                titleSpan.style.padding = '2px 6px';
-                titleSpan.style.borderRadius = '4px';
-                titleSpan.style.lineHeight = '1.3';
-                titleSpan.style.position = 'relative';
-                titleSpan.style.zIndex = '3';
-
                 if (item.ev.icon) {
                     var iconWrapper = document.createElement('span');
                     iconWrapper.className = 'event-icon';
@@ -2173,36 +2143,18 @@ function renderDayView() {
                 if (item.ev.invitation_status === 'pending') {
                     var badge = document.createElement('span');
                     badge.className = 'invited-badge';
-                    badge.style.position = 'absolute';
-                    badge.style.top = '4px';
-                    badge.style.right = '8px';
-                    badge.style.background = '#666';
-                    badge.style.color = 'white';
-                    badge.style.fontSize = '10px';
-                    badge.style.padding = '2px 6px';
-                    badge.style.borderRadius = '8px';
-                    badge.style.zIndex = '2';
                     badge.textContent = 'Invited';
                     evEl.appendChild(badge);
                 }
 
-                // ─── دکمه‌های اکشن ───
+                // دکمه‌های اکشن
                 var actionsDiv = document.createElement('div');
                 actionsDiv.className = 'event-actions';
-                actionsDiv.style.position = 'absolute';
-                actionsDiv.style.bottom = '4px';
-                actionsDiv.style.right = '6px';
-                actionsDiv.style.display = 'flex';
-                actionsDiv.style.gap = '6px';
-                actionsDiv.style.zIndex = '3';
-                actionsDiv.style.opacity = '0.6';
-                actionsDiv.style.transition = 'opacity 0.2s';
 
                 if (item.ev.parent_event_id && item.ev.invitation_status === 'accepted') {
                     var leaveBtn = document.createElement('button');
                     leaveBtn.className = 'event-action-btn';
                     leaveBtn.textContent = 'Leave';
-                    leaveBtn.style.cssText = 'background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;line-height:1.2;';
                     leaveBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
                         showConfirmModal('Leave this event?', async function() {
@@ -2214,7 +2166,6 @@ function renderDayView() {
                     var cancelBtn = document.createElement('button');
                     cancelBtn.className = 'event-action-btn';
                     cancelBtn.textContent = 'Cancel';
-                    cancelBtn.style.cssText = 'background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;line-height:1.2;';
                     cancelBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
                         showConfirmModal('Delete this event?', function() {
@@ -2224,16 +2175,13 @@ function renderDayView() {
 
                     var endBtn = document.createElement('button');
                     endBtn.className = 'event-action-btn';
-                    endBtn.style.cssText = 'background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;line-height:1.2;';
 
                     if (item.ev.type === 'task' && item.ev.recurrence_type === 'smart') {
                         const isSmartDone = (item.ev.status === 'done' || item.ev.status === 'completed');
                         endBtn.textContent = isSmartDone ? 'Undo' : 'Done';
-                        
                         endBtn.addEventListener('click', function(e) {
                             e.stopPropagation();
                             if (isSmartDone) {
-                                // برگرداندن به حالت فعال (Undo)
                                 item.ev.status = 'pending';
                                 item.ev.completed_at = null;
                                 updateEventInDB(item.ev.id, { status: 'pending', completed_at: null })
@@ -2343,6 +2291,7 @@ function renderDayView() {
 
                 evEl.appendChild(actionsDiv);
 
+                // کلیک روی رویداد
                 evEl.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (item.ev.invitation_status === 'pending') {
@@ -2372,22 +2321,8 @@ function renderDayView() {
             var nowTopPx = getCumulativeHeightUntil(nowMin);
             var line = document.createElement('div');
             line.className = 'current-time-line';
-            line.style.position = 'absolute';
-            line.style.left = '0';
-            line.style.right = '-10px';
-            line.style.height = '1px';
-            line.style.background = 'var(--accent)';
-            line.style.zIndex = '3';
-            line.style.pointerEvents = 'none';
             line.style.top = nowTopPx + 'px';
             var dot = document.createElement('span');
-            dot.style.position = 'absolute';
-            dot.style.left = '-5px';
-            dot.style.top = '-4px';
-            dot.style.width = '9px';
-            dot.style.height = '9px';
-            dot.style.background = 'var(--accent)';
-            dot.style.borderRadius = '50%';
             line.appendChild(dot);
             slots.appendChild(line);
         }
