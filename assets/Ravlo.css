@@ -2251,7 +2251,7 @@ body.modal-open {
     outline: none;
     box-sizing: border-box;
     position: relative;
-    top: -1.5px;               /* checkbox 1.5px بالاتر میره → متن پایین‌تر دیده میشه */
+    top: -1.5px;
 
     --c-base: #2a2a2a;
     --c-on: var(--accent);
@@ -2269,7 +2269,6 @@ body.modal-open {
     background-repeat: no-repeat;
 }
 
-/* لایهٔ نقطه‌های رنگی (checked) */
 .neon-checkbox::before {
     content: "";
     position: absolute;
@@ -2485,11 +2484,11 @@ body.modal-open {
     border-radius: 20px;
     font-size: 12px;
     font-weight: 500;
-    color: #fff;                                 /* رنگ متن ثابت */
+    color: #fff;
     cursor: pointer;
     transition: all 0.2s ease;
-    background-color: var(--capsule-color);      /* ← از متغیر می‌خواند */
-    border: 1px solid var(--capsule-color);      /* ← از متغیر می‌خواند */
+    background-color: var(--capsule-color);
+    border: 1px solid var(--capsule-color);
     white-space: nowrap;
     max-width: 200px;
     overflow: hidden;
@@ -2654,15 +2653,14 @@ body.modal-open {
   pointer-events: none;
 }
 
-.current-time-line::before {
-  content: '';
-  position: absolute;
-  left: -5px;
-  top: -4px;
-  width: 9px;
-  height: 9px;
-  background: var(--accent);
-  border-radius: 50%;
+.current-time-line span {
+    position: absolute;
+    left: -5px;
+    top: -4px;
+    width: 9px;
+    height: 9px;
+    background: var(--accent);
+    border-radius: 50%;
 }
 
 /* ------------------------- EVENT ICON IN DAY VIEW ------------------------- */
