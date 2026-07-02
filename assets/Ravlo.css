@@ -3442,7 +3442,7 @@ body.sidebar-open .current-time-line {
 
 /* کاهش فاصله بین چک‌باکس و متن All‑day */
 #all-day-greg-row {
-    gap: 6px;                     /* فاصلهٔ بین چک‌باکس و متن */
+    gap: 2px;                     /* فاصلهٔ بین چک‌باکس و متن */
 }
 
 #all-day-greg-row .neon-checkbox-label {
