@@ -3356,12 +3356,556 @@ async function rejectEditRequest(eventId, reason) {
     }
 }
 
-    async function openEventDetail(ev, occurrenceDate) {
+async function openEventDetail(ev, occurrenceDate) {
     // اگر یک دعوت‌نامه در انتظار پاسخ است، پنجرهٔ مخصوص دعوت را باز کن
     if (ev.invitation_status === 'pending' && ev.parent_event_id) {
         openInvitationResponse(ev);
         return;
-    // ... بقیهٔ کد تابع (بدون تغییر)
+    }
+
+    console.log('openEventDetail started', ev?.id, occurrenceDate);
+    currentDetailEventId = ev.id;
+    ev.__occurrenceDate = occurrenceDate;
+
+    // ─── Color & title ───
+    document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
+    const colorDot = document.getElementById('detail-color-dot');
+    colorDot.style.backgroundColor = ev.color || '#f5f5f5';
+
+    const detailHeader = document.querySelector('#event-detail-modal .detail-header');
+    let iconSpan = document.getElementById('detail-icon');
+    if (!iconSpan) {
+        iconSpan = document.createElement('span');
+        iconSpan.id = 'detail-icon';
+        iconSpan.className = 'detail-icon';
+        colorDot.after(iconSpan);
+    }
+
+    if (ev.icon) {
+        iconSpan.innerHTML = ev.icon;
+        iconSpan.style.color = ev.color || 'var(--accent)';
+        iconSpan.style.display = 'inline-block';
+        colorDot.style.display = 'none';
+    } else {
+        iconSpan.innerHTML = '';
+        iconSpan.style.display = 'none';
+        colorDot.style.display = 'inline-block';
+    }
+
+    const descIcon = document.getElementById('detail-desc-icon');
+    if (descIcon) descIcon.style.color = ev.color || 'var(--accent)';
+    const calIcon = document.getElementById('detail-calendar-icon');
+    calIcon.style.color = ev.color || 'var(--accent)';
+
+    // ─── Date and time ───
+    const start = ev.start_date ? new Date(ev.start_date) : null;
+    const end = ev.end_date ? new Date(ev.end_date) : null;
+    let dateText = '', timeText = '', durationParen = '';
+
+    if (start) {
+        dateText = start.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (ev.all_day) {
+            timeText = 'All day';
+        } else {
+            const fmtTime = d => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+            timeText = fmtTime(start);
+            if (end) {
+                const diffMs = end.getTime() - start.getTime();
+                if (diffMs > 0) {
+                    const totalMinutes = Math.floor(diffMs / 60000);
+                    const days = Math.floor(totalMinutes / 1440);
+                    const hours = Math.floor((totalMinutes % 1440) / 60);
+                    const mins = totalMinutes % 60;
+                    let parts = [];
+                    if (days > 0) parts.push(days + 'd');
+                    if (hours > 0) parts.push(hours + 'h');
+                    if (mins > 0) parts.push(mins + 'm');
+                    if (parts.length > 0) durationParen = ' (' + parts.join(' ') + ')';
+                }
+            }
+        }
+    }
+
+    document.getElementById('detail-date-text').textContent = dateText;
+    document.getElementById('detail-time-text').textContent = timeText;
+    document.getElementById('detail-duration-paren').textContent = durationParen;
+
+    // ─── Hide horizontal dividers for tasks ───
+    const dividers = eventDetailModal.querySelectorAll('.detail-divider-h');
+    if (ev.type === 'task') {
+        dividers.forEach(hr => hr.style.display = 'none');
+    } else {
+        dividers.forEach(hr => hr.style.display = '');
+    }
+
+    // ─── Description ───
+    const descContainer = document.getElementById('detail-description-container');
+    const descText = document.getElementById('detail-description-text');
+    let cleanDescription = ev.description || '';
+    if (cleanDescription) {
+        const lines = cleanDescription.split('\n');
+        const filteredLines = lines.filter(line =>
+            !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
+            !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
+        );
+        cleanDescription = filteredLines.join('\n').trim();
+    }
+    if (cleanDescription) {
+        descContainer.style.display = 'block';
+        descText.textContent = cleanDescription;
+    } else {
+        descContainer.style.display = 'none';
+    }
+
+    // ─── CHECKLIST ───
+    let checklistContainer = document.getElementById('detail-checklist-container');
+    if (!checklistContainer) {
+        const descContainer2 = document.getElementById('detail-description-container');
+        if (descContainer2 && descContainer2.parentNode) {
+            checklistContainer = document.createElement('div');
+            checklistContainer.id = 'detail-checklist-container';
+            checklistContainer.className = 'detail-checklist-container';
+            checklistContainer.style.display = 'none';
+            const header = document.createElement('div');
+            header.className = 'detail-checklist-header';
+            header.innerHTML = `
+                <span id="detail-checklist-icon" class="detail-icon" style="color:var(--accent);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </span>
+                <span style="font-weight:600;font-size:14px;">Checklist</span>
+            `;
+            checklistContainer.appendChild(header);
+            const listItems = document.createElement('div');
+            listItems.id = 'detail-checklist-items';
+            listItems.className = 'detail-checklist-items';
+            checklistContainer.appendChild(listItems);
+            descContainer2.parentNode.insertBefore(checklistContainer, descContainer2.nextSibling);
+        }
+    }
+    if (checklistContainer) {
+        renderChecklistInDetail(ev);
+    }
+
+    // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
+    const inviteesSection = document.getElementById('detail-invitees-section');
+    if (inviteesSection) {
+        if (ev.type === 'event') {
+            inviteesSection.style.display = 'block';
+            const attendIcon = document.getElementById('detail-attendees-icon');
+            if (attendIcon) attendIcon.style.color = ev.color || 'var(--accent)';
+            const attendeesList = document.getElementById('detail-attendees-list');
+            attendeesList.innerHTML = '';
+            attendeesList.style.maxHeight = '200px';
+            attendeesList.style.overflowY = 'auto';
+
+            let ownerId = null;
+            let inviteeNames = [];
+            let inviteeIds = [];
+
+            if (ev.parent_event_id) {
+                const { data: parentData, error } = await sb.rpc('get_parent_event', {
+                    child_event_id: ev.id
+                });
+                if (error || !parentData) {
+                    console.error('Failed to get parent event:', error);
+                    attendeesList.innerHTML = '<div style="color:#ff6b6b;">Could not load attendees.</div>';
+                    return;
+                }
+                ownerId = parentData.user_id;
+                inviteeNames = parentData.invitees || [];
+                inviteeIds = parentData.invitee_ids || [];
+            } else {
+                ownerId = ev.user_id;
+                inviteeNames = ev.invitees || [];
+                inviteeIds = ev.invitee_ids || [];
+            }
+
+            // ۱. اطلاعات صاحب رویداد
+            let ownerName = 'Unknown';
+            let ownerPhoto = null;
+            try {
+                const { data: ownerProfile } = await sb
+                    .from('profiles')
+                    .select('first_name, last_name, photo_url')
+                    .eq('id', ownerId)
+                    .single();
+                if (ownerProfile) {
+                    ownerName = [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean).join(' ') || 'Someone';
+                    ownerPhoto = ownerProfile.photo_url;
+                }
+            } catch (e) { /* ignore */ }
+
+            // ۲. وضعیت دعوت مهمان‌ها (فقط برای صاحب اصلی)
+            let statusMap = {};
+            if (!ev.parent_event_id && ownerId === currentUser?.id && inviteeIds.length > 0) {
+                try {
+                    const { data: statuses } = await sb.rpc('get_event_invitee_statuses', {
+                        p_event_id: ev.id
+                    });
+                    if (statuses) statusMap = statuses;
+                } catch (e) { /* ignore */ }
+            }
+
+            // ۳. تصاویر پروفایل مهمان‌ها
+            let profilesMap = {};
+            if (inviteeIds.length > 0) {
+                try {
+                    const { data: profiles } = await sb
+                        .from('profiles')
+                        .select('id, photo_url')
+                        .in('id', inviteeIds);
+                    if (profiles) {
+                        profiles.forEach(p => { profilesMap[p.id] = p.photo_url; });
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            // ۴. ساخت آرایه نهایی
+            const allPeople = [];
+            allPeople.push({
+                name: ownerName,
+                photoUrl: ownerPhoto,
+                isOwner: true,
+                status: 'accepted'
+            });
+            inviteeNames.forEach((name, idx) => {
+                const uid = inviteeIds[idx];
+                const uidStr = uid ? uid.toString() : '';
+                const status = statusMap[uidStr] || 'unknown';
+                const photoUrl = uid ? profilesMap[uid] : null;
+                allPeople.push({ name, photoUrl, status, isOwner: false });
+            });
+
+            // ۵. رندر
+            const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
+            allPeople.forEach((person, i) => {
+                const initials = person.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || person.name[0].toUpperCase();
+                const avatarHtml = person.photoUrl
+                    ? `<img src="${person.photoUrl}" alt="${person.name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+                    : `<div class="attendee-avatar" style="background-color:${colors[i % colors.length]};flex-shrink:0;">${initials}</div>`;
+                const badge = person.isOwner
+                    ? ' <span style="background:#2ecc71;color:#fff;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Organizer</span>'
+                    : (person.status === 'pending'
+                        ? ' <span style="background:#ffc107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>'
+                        : '');
+                const row = document.createElement('div');
+                row.className = 'attendee-item';
+                row.style.display = 'flex';
+                row.style.alignItems = 'center';
+                row.style.marginBottom = '6px';
+                row.innerHTML = avatarHtml + `<span class="attendee-name" style="margin-left:8px;">${person.name}${badge}</span>`;
+                attendeesList.appendChild(row);
+            });
+
+        } else {
+            inviteesSection.style.display = 'none';
+        }
+    }
+
+    // ─── Location map ───
+    const mapContainer = document.getElementById('detail-location-container');
+    if (ev.location && (ev.location.lat || ev.location.lng)) {
+        const lat = ev.location.lat;
+        const lng = ev.location.lng;
+        if (lat != null && lng != null && isLeafletReady() && mapContainer) {
+            mapContainer.style.display = 'block';
+            const coordsText = document.getElementById('detail-location-coords-text');
+            if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            const overlay = document.getElementById('detail-map-address-overlay');
+            if (ev.location.address) {
+                const addr = ev.location.address;
+                const place = addr.name || addr.road || addr.amenity || addr.shop || addr.tourism || '';
+                const city = addr.city || addr.town || addr.village || addr.county || '';
+                const country = addr.country || '';
+                const parts = [place, city, country].filter(Boolean);
+                if (overlay) {
+                    overlay.textContent = parts.join(', ');
+                    overlay.style.display = 'block';
+                }
+            } else if (overlay) {
+                overlay.style.display = 'none';
+            }
+            setTimeout(() => {
+                const detailMapDiv = document.getElementById('detail-location-map');
+                if (detailMapDiv) {
+                    if (detailMapDiv._leaflet_id) {
+                        const oldMap = detailMapDiv._leaflet_map;
+                        if (oldMap) oldMap.remove();
+                        else delete detailMapDiv._leaflet_id;
+                    }
+                    const detailMap = L.map('detail-location-map', {
+                        center: [lat, lng],
+                        zoom: 15,
+                        attributionControl: false,
+                        zoomControl: false,
+                        dragging: false,
+                        scrollWheelZoom: false,
+                        doubleClickZoom: false,
+                        touchZoom: false,
+                        keyboard: false,
+                        interactive: false
+                    });
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                        maxZoom: 19
+                    }).addTo(detailMap);
+                    const icon = getAccentPinIcon();
+                    if (icon) L.marker([lat, lng], { icon }).addTo(detailMap);
+                    else L.marker([lat, lng]).addTo(detailMap);
+                    setTimeout(() => detailMap.invalidateSize(), 100);
+                    const mapDivForClick = document.getElementById('detail-location-map');
+                    if (mapDivForClick) {
+                        mapDivForClick.style.cursor = 'pointer';
+                        mapDivForClick.addEventListener('click', () => {
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+                        });
+                    }
+                }
+            }, 200);
+        }
+    } else if (mapContainer) {
+        mapContainer.style.display = 'none';
+    }
+
+    const oldConfirm = document.getElementById('event-detail-confirm');
+    if (oldConfirm) oldConfirm.classList.add('hidden');
+    const oldAddr = document.getElementById('detail-address-container');
+    if (oldAddr) oldAddr.style.display = 'none';
+
+    // ─── تشخیص مهمان ───
+    const isInvitee = !!ev.parent_event_id;
+
+    // ─── دکمه Edit ───
+    const editBtn = document.getElementById('detail-edit-btn-top');
+    if (editBtn) {
+        if (isInvitee) {
+            editBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/><path d="M15 5l4 4"/></svg>`;
+            editBtn.title = 'Request Edit';
+            editBtn.style.display = '';
+            editBtn.onclick = () => {
+                closeModal(eventDetailModal);
+                const evToEdit = events.find(e => e.id == currentDetailEventId);
+                if (evToEdit) openEditModalForInvitee(evToEdit);
+            };
+        } else {
+            editBtn.style.display = '';
+            editBtn.onclick = () => {
+                closeModal(eventDetailModal);
+                const evToEdit = events.find(e => e.id == currentDetailEventId);
+                if (evToEdit) openEditModal(evToEdit);
+            };
+        }
+    }
+
+    // ─── وضعیت تکمیل ───
+    var dateForCompletion = null;
+    if (occurrenceDate) {
+        dateForCompletion = toLocalDateString(occurrenceDate);
+    }
+    var isCompleted = false;
+    if (dateForCompletion && ev.recurrence_type && ev.recurrence_type !== 'none') {
+        isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                        ? ev.completed_occurrences.includes(dateForCompletion)
+                        : false;
+    } else {
+        isCompleted = (ev.status === 'completed' || ev.status === 'done');
+    }
+
+    // ─── دکمه Delete / Leave ───
+    const cancelBtn = document.getElementById('detail-cancel-btn');
+    if (cancelBtn) {
+        if (isInvitee) {
+            cancelBtn.textContent = 'Leave Event';
+            cancelBtn.onclick = () => {
+                showConfirmModal('Leave this event?', async () => {
+                    closeModal(eventDetailModal);
+                    await leaveInvitedEvent(ev);
+                });
+            };
+        } else {
+            cancelBtn.textContent = 'Delete';
+            cancelBtn.onclick = () => {
+                showConfirmModal('Are you sure you want to delete this event? This will remove it for all guests.', () => {
+                    closeModal(eventDetailModal);
+                    deleteEventCascade(ev.id);
+                });
+            };
+        }
+    }
+
+    const postponeBtn = document.getElementById('detail-postpone-btn');
+    if (postponeBtn) {
+        if (isInvitee) {
+            postponeBtn.style.display = 'none';
+        } else {
+            postponeBtn.style.display = '';
+            postponeBtn.onclick = () => openPostponeModal();
+        }
+    }
+
+    // ─── دکمه Complete / Undo (اصلاح‌شده: بیرون از markTaskDone) ───
+    const completeBtn = document.getElementById('detail-complete-btn');
+    if (completeBtn) {
+        completeBtn.style.display = isInvitee ? 'none' : '';
+        if (isCompleted) {
+            completeBtn.textContent = 'Undo';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    var idx = ev.completed_occurrences.indexOf(dateForCompletion);
+                    if (idx > -1) ev.completed_occurrences.splice(idx, 1);
+                    if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
+                        delete ev.completed_timestamps[dateForCompletion];
+                    }
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(async () => {
+                        if (currentUser) {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    'Event Today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#',
+                                    ev.id
+                                );
+                            }
+                        }
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error undoing.'));
+                } else {
+                    updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
+                        ev.status = 'pending';
+                        ev.completed_at = null;
+                        if (currentUser) {
+                            const today = new Date();
+                            const evDate = new Date(ev.start_date);
+                            if (evDate.getFullYear() === today.getFullYear() &&
+                                evDate.getMonth() === today.getMonth() &&
+                                evDate.getDate() === today.getDate()) {
+                                await addNotificationToUser(
+                                    currentUser.id,
+                                    'event',
+                                    '📅 Event Today',
+                                    `${ev.title || 'Untitled'} is today!`,
+                                    '#',
+                                    ev.id
+                                );
+                            }
+                        }
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error undoing.'));
+                }
+            };
+        } else {
+            completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
+            completeBtn.onclick = () => {
+                if (dateForCompletion && ev.recurrence_type !== 'none') {
+                    if (!ev.completed_occurrences) ev.completed_occurrences = [];
+                    ev.completed_occurrences.push(dateForCompletion);
+                    if (!ev.completed_timestamps) ev.completed_timestamps = {};
+                    ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
+                    updateEventInDB(ev.id, {
+                        completed_occurrences: ev.completed_occurrences,
+                        completed_timestamps: ev.completed_timestamps
+                    }).then(async () => {
+                        if (currentUser) {
+                            await removeNotificationsForEvent(ev.id, currentUser.id);
+                        }
+                        showToast('This occurrence will be auto-deleted after 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error completing.'));
+                } else {
+                    var newStatus = ev.type === 'task' ? 'done' : 'completed';
+                    var payload = { status: newStatus, completed_at: new Date().toISOString() };
+                    updateEventInDB(ev.id, payload).then(async () => {
+                        ev.status = newStatus;
+                        ev.completed_at = payload.completed_at;
+                        if (currentUser) {
+                            await removeNotificationsForEvent(ev.id, currentUser.id);
+                        }
+                        showToast('This item will be auto-deleted after 28 days.');
+                        closeModal(eventDetailModal);
+                        renderCalendar();
+                        updateNotificationDot();
+                    }).catch(() => showToast('Error completing.'));
+                }
+            };
+        }
+    }
+
+    // اگر درخواست ویرایش در حال بررسی است
+    if (ev.edit_request_status === 'pending' && !ev.parent_event_id) {
+        const editReqContainer = document.createElement('div');
+        editReqContainer.style.cssText = 'background:rgba(255,200,0,0.1); border:1px solid rgba(255,200,0,0.3); border-radius:8px; padding:12px; margin:12px 0;';
+        
+        const requesterId = ev.edit_request_by;
+        // گرفتن نام درخواست‌دهنده
+        const { data: requester } = await sb
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', requesterId)
+            .single();
+        const reqName = requester ? [requester.first_name, requester.last_name].filter(Boolean).join(' ') : 'A guest';
+        
+        editReqContainer.innerHTML = `
+            <p style="color:#ffc107; margin-bottom:8px;">✏️ <strong>${reqName}</strong> requested to edit this event.</p>
+            <div style="display:flex; gap:8px;">
+                <button id="approve-edit-btn" class="accent-btn" style="width:auto; padding:6px 14px; font-size:13px;">Approve</button>
+                <button id="reject-edit-btn" class="ghost-btn" style="width:auto; padding:6px 14px; font-size:13px;">Reject</button>
+            </div>
+            <div id="reject-reason-row" style="display:none; margin-top:8px;">
+                <textarea id="reject-reason-input" placeholder="Reason for rejection..." style="width:100%; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; font-family:inherit; font-size:12px;"></textarea>
+                <button id="confirm-reject-btn" class="accent-btn" style="width:auto; padding:6px 14px; font-size:13px; margin-top:6px;">Confirm Reject</button>
+            </div>
+        `;
+        
+        const detailContent = eventDetailModal.querySelector('.modal-content');
+        const existing = detailContent.querySelector('#edit-request-section');
+        if (existing) existing.remove();
+        editReqContainer.id = 'edit-request-section';
+        
+        const actionsRow = detailContent.querySelector('.detail-actions-row');
+        if (actionsRow) {
+            detailContent.insertBefore(editReqContainer, actionsRow);
+        } else {
+            detailContent.appendChild(editReqContainer);
+        }
+        
+        document.getElementById('approve-edit-btn').onclick = () => {
+            showConfirmModal('Approve these changes?', async () => {
+                await approveEditRequest(ev.id);
+                closeModal(eventDetailModal);
+            });
+        };
+        
+        document.getElementById('reject-edit-btn').onclick = () => {
+            document.getElementById('reject-reason-row').style.display = 'block';
+        };
+        
+        document.getElementById('confirm-reject-btn').onclick = () => {
+            const reason = document.getElementById('reject-reason-input').value.trim();
+            showConfirmModal('Reject this edit request?', async () => {
+                await rejectEditRequest(ev.id, reason);
+                closeModal(eventDetailModal);
+            });
+        };
+    }
+
+    openModal(eventDetailModal);
 }
     console.log('openEventDetail started', ev?.id, occurrenceDate);
     currentDetailEventId = ev.id;
@@ -4236,126 +4780,18 @@ function checkAllChecklistDone(ev) {
 // =========================== MARK TASK DONE ============================
 function markTaskDone(ev) {
     if (ev.status === 'done') return;
-
     ev.status = 'done';
     ev.completed_at = new Date().toISOString();
-    
-    updateEventInDB(ev.id, { 
-        status: 'done', 
-        completed_at: ev.completed_at 
-    }).then(async () => {
-        if (currentUser) {
-            await removeNotificationsForEvent(ev.id, currentUser.id);
-        }
-        
-        // ─── وضعیت تکمیل (Complete / Undo) ───
-const completeBtn = document.getElementById('detail-complete-btn');
-if (completeBtn) {
-    completeBtn.style.display = isInvitee ? 'none' : '';
-
-    if (isCompleted) {
-        completeBtn.textContent = 'Undo';
-        completeBtn.onclick = () => {
-            if (dateForCompletion && ev.recurrence_type !== 'none') {
-                var idx = ev.completed_occurrences.indexOf(dateForCompletion);
-                if (idx > -1) ev.completed_occurrences.splice(idx, 1);
-                if (ev.completed_timestamps && ev.completed_timestamps[dateForCompletion]) {
-                    delete ev.completed_timestamps[dateForCompletion];
-                }
-                updateEventInDB(ev.id, {
-                    completed_occurrences: ev.completed_occurrences,
-                    completed_timestamps: ev.completed_timestamps
-                }).then(async () => {
-                    // ✅ بازسازی نوتیفیکیشن اگر امروز است
-                    if (currentUser) {
-                        const today = new Date();
-                        const evDate = new Date(ev.start_date);
-                        if (evDate.getFullYear() === today.getFullYear() &&
-                            evDate.getMonth() === today.getMonth() &&
-                            evDate.getDate() === today.getDate()) {
-                            await addNotificationToUser(
-                                currentUser.id,
-                                'event',
-                                'Event Today',
-                                `${ev.title || 'Untitled'} is today!`,
-                                '#',
-                                ev.id
-                            );
-                        }
-                    }
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error undoing.'));
-            } else {
-                updateEventInDB(ev.id, { status: 'pending', completed_at: null }).then(async () => {
-                    ev.status = 'pending';
-                    ev.completed_at = null;
-                    if (currentUser) {
-                        const today = new Date();
-                        const evDate = new Date(ev.start_date);
-                        if (evDate.getFullYear() === today.getFullYear() &&
-                            evDate.getMonth() === today.getMonth() &&
-                            evDate.getDate() === today.getDate()) {
-                            await addNotificationToUser(
-                                currentUser.id,
-                                'event',
-                                '📅 Event Today',
-                                `${ev.title || 'Untitled'} is today!`,
-                                '#',
-                                ev.id
-                            );
-                        }
-                    }
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error undoing.'));
+    updateEventInDB(ev.id, { status: 'done', completed_at: ev.completed_at })
+        .then(async () => {
+            if (currentUser) {
+                await removeNotificationsForEvent(ev.id, currentUser.id);
             }
-        };
-    } else {
-        completeBtn.textContent = (ev.type === 'task') ? 'Done' : 'End';
-        completeBtn.onclick = () => {
-            if (dateForCompletion && ev.recurrence_type !== 'none') {
-                if (!ev.completed_occurrences) ev.completed_occurrences = [];
-                ev.completed_occurrences.push(dateForCompletion);
-                if (!ev.completed_timestamps) ev.completed_timestamps = {};
-                ev.completed_timestamps[dateForCompletion] = new Date().toISOString();
-                updateEventInDB(ev.id, {
-                    completed_occurrences: ev.completed_occurrences,
-                    completed_timestamps: ev.completed_timestamps
-                }).then(async () => {
-                    if (currentUser) {
-                        await removeNotificationsForEvent(ev.id, currentUser.id);
-                    }
-                    showToast('This occurrence will be auto-deleted after 28 days.');
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error completing.'));
-            } else {
-                var newStatus = ev.type === 'task' ? 'done' : 'completed';
-                var payload = { status: newStatus, completed_at: new Date().toISOString() };
-                updateEventInDB(ev.id, payload).then(async () => {
-                    ev.status = newStatus;
-                    ev.completed_at = payload.completed_at;
-                    if (currentUser) {
-                        await removeNotificationsForEvent(ev.id, currentUser.id);
-                    }
-                    showToast('This item will be auto-deleted after 28 days.');
-                    closeModal(eventDetailModal);
-                    renderCalendar();
-                    updateNotificationDot();
-                }).catch(() => showToast('Error completing.'));
-            }
-        };
-    }
-}
-        
-        showToast('Task marked as Done!');
-        renderCalendar();
-        updateNotificationDot();
-    }).catch(() => showToast('Error marking task as done.'));
+            showToast('Task marked as Done!');
+            renderCalendar();
+            updateNotificationDot();
+        })
+        .catch(() => showToast('Error marking task as done.'));
 }
 
 /* =========================== NAVIGATION ============================ */
