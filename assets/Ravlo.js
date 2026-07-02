@@ -682,8 +682,7 @@ function showLoader(container, type = 'spinner') {
     } else {
         target = document.body;
         const overlay = document.createElement('div');
-        overlay.id = 'ravlo-global-loader';
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
+        overlay.className = 'ravlo-global-loader-overlay';
         overlay.innerHTML = getLoaderHTML(type);
         target.appendChild(overlay);
         return;
