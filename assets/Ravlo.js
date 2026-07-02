@@ -1987,10 +1987,12 @@ function renderDayView() {
     timelineWrapper.appendChild(slots);
     calendarGrid.appendChild(timelineWrapper);
 
-    // ─── خطوط افقی (grid lines) ───
+        // ─── خطوط افقی (grid lines) ───
     var cumulativeTop = 0;
     for (var h = 0; h < 24; h++) {
         var lineEl = document.createElement('div');
+        lineEl.className = 'time-slot-grid-line';
+        lineEl.style.top = cumulativeTop + 'px';
         slots.appendChild(lineEl);
         cumulativeTop += hourHeights[h];
     }
