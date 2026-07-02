@@ -3535,7 +3535,9 @@ body.sidebar-open .current-time-line {
     filter: blur(4px);
     opacity: 0.5;
 }
-
+#checklist-inline-editor .checklist-inline-row .checklist-text {
+    transform: translateY(1px);
+}
 /* =========================== MEDIA QUERIES ============================ */
 @media (max-width: 768px) {
   .header-inner {
