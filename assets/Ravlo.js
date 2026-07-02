@@ -4103,15 +4103,6 @@ function renderChecklistInDetail(ev) {
             cb.checked = item.done || false;
             cb.dataset.parentIndex = index;
             cb.dataset.depth = depth;
-            cb.style.width = '18px';
-            cb.style.height = '18px';
-            cb.style.minWidth = '18px';
-            cb.style.minHeight = '18px';
-            cb.style.margin = '0';
-            cb.style.padding = '0';
-            cb.style.cursor = 'pointer';
-            cb.style.accentColor = 'var(--accent)';
-            cb.style.flexShrink = '0';
 
             // متن
             const textSpan = document.createElement('span');
