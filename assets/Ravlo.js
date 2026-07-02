@@ -2092,7 +2092,6 @@ function renderDayView() {
                 evEl.style.zIndex = '2';
                 evEl.style.transition = 'background 0.2s';
 
-                // ─── نقشهٔ پس‌زمینه در صورت وجود لوکیشن ───
                 if (item.ev.location && item.ev.location.lat != null && item.ev.location.lng != null && isLeafletReady()) {
                     var mapDiv = document.createElement('div');
                     mapDiv.className = 'event-map-bg';
