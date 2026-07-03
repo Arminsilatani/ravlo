@@ -157,30 +157,30 @@ async function checkAndCreateTodayNotifications() {
     if (!currentUser) return;
     
     const today = new Date();
-    const ty = today.getFullYear(),
-        tm = today.getMonth(),
-        td = today.getDate();
-    
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+    const todayStr = toLocalDateString(today);
+
     const todayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
         if (ev.status === 'done' || ev.status === 'completed') return false;
-        
-        const d = new Date(ev.start_date);
-        if (d.getFullYear() === ty && d.getMonth() === tm && d.getDate() === td) {
-            if (ev.recurrence_type !== 'none') {
-                const dateStr = toLocalDateString(today);
-                const isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                    ? ev.completed_occurrences.includes(dateStr)
-                    : false;
-                return !isCompleted;
-            }
-            return true;
+
+        // Non-recurring: check exact start_date date
+        if (!ev.recurrence_type || ev.recurrence_type === 'none') {
+            const d = new Date(ev.start_date);
+            return d >= todayStart && d <= todayEnd;
         }
-        return false;
+
+        // Recurring: check all occurrences today
+        const occurrences = getRecurrenceDates(ev, todayStart, todayEnd);
+        return occurrences.some(occ => {
+            const dateStr = toLocalDateString(occ);
+            const isCompleted = ev.completed_occurrences?.includes(dateStr);
+            return !isCompleted;
+        });
     });
     
     for (const ev of todayEvents) {
-        // Check if notification already exists
         const { data: existing } = await sb
             .from('notifications')
             .select('id')
@@ -2926,6 +2926,28 @@ async function saveEvent() {
                         );
                     });
                 }
+            }
+        }
+
+        const savedStart = new Date(payload.start_date);
+        if (savedStart.toDateString() === new Date().toDateString()) {
+            let shouldNotify = false;
+            if (!payload.recurrence_type || payload.recurrence_type === 'none') {
+                shouldNotify = true;
+            } else {
+                const todayStr = toLocalDateString(new Date());
+                const isCompleted = payload.completed_occurrences?.includes(todayStr);
+                shouldNotify = !isCompleted;
+            }
+            if (shouldNotify) {
+                await addNotificationToUser(
+                    currentUser.id,
+                    'event',
+                    'Event Today',
+                    `${payload.title || 'Untitled'} is today!`,
+                    '#',
+                    saved ? saved.id : editingEventId
+                );
             }
         }
 
