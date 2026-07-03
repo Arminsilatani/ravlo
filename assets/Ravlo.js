@@ -132,7 +132,7 @@ async function removeNotificationsForEvent(eventId, userId) {
             .delete()
             .eq('user_id', userId)
             .eq('event_id', eventId);
-        if (err1) console.warn('Remove by event_id failed:', err1);
+        if (err1) console.warn('remove by event_id:', err1);
 
         const ev = events.find(e => e.id == eventId);
         if (ev && ev.title) {
@@ -140,14 +140,15 @@ async function removeNotificationsForEvent(eventId, userId) {
                 .from('notifications')
                 .delete()
                 .eq('user_id', userId)
-                .eq('title', ev.title)
-                .eq('type', 'event');
-            if (err2) console.warn('Remove by title failed:', err2);
+                .eq('type', 'event')
+                .eq('title', 'Event Today')
+                .like('body', `%${ev.title}%`);
+            if (err2) console.warn('remove by body:', err2);
         }
 
         console.log('✅ All notifications removed for event:', eventId);
     } catch (e) {
-        console.warn('Remove notifications error:', e);
+        console.warn('removeNotificationsForEvent error:', e);
     }
 }
 
