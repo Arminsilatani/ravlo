@@ -2738,10 +2738,10 @@ async function openEditModalForInvitee(ev) {
     }
 }
 
-/* =========================== EVENT SAVE ============================ */
+/* ------------------------- EVENT SAVE & EDIT ------------------------- */
 async function saveEvent() {
     try {
-        // ── 1. Get form values ──────────────────────────────
+        // 1. Get form values
         var title = '';
         if (eventTitleInput) title = eventTitleInput.value.trim();
 
@@ -2765,7 +2765,7 @@ async function saveEvent() {
         var descEl = document.getElementById('event-description');
         if (descEl) desc = descEl.value.trim();
 
-        // ── 2. Build main payload ─────────────────────────
+        // 2. Build main payload
         var payload = {
             title: title,
             start_date: new Date(start).toISOString(),
@@ -2775,7 +2775,7 @@ async function saveEvent() {
             reminder_minutes: 0,
             color: selectedTagColor,
             icon: selectedIcon || null,
-            description: desc, 
+            description: desc,
             recurrence_type: recurrence.type,
             recurrence_interval: recurrence.interval,
             recurrence_days: (recurrence.type === 'weekly' || recurrence.type === 'custom') ? recurrence.days : [],
@@ -2784,7 +2784,7 @@ async function saveEvent() {
             checklist: eventType === 'task' ? currentChecklistItems : []
         };
 
-        // ── 3. Location (فقط برای event) ──────────────────
+        // 3. Location (event only)
         if (eventType === 'event' && (currentLocationCoords || currentLocationName)) {
             payload.location = {
                 lat: currentLocationCoords?.lat || null,
@@ -2796,16 +2796,16 @@ async function saveEvent() {
             payload.location = null;
         }
 
-        // ── 4. Completed occurrences ──────────────────────
+        // 4. Completed occurrences
         if (!editingEventId) {
             payload.completed_occurrences = [];
             payload.completed_timestamps = {};
         }
 
-        // ── 5. Invitee IDs ────────────────────────────────
+        // 5. Invitee IDs
         payload.invitee_ids = currentInvitees.map(inv => inv.id);
 
-        // ── 6. Save to database ───────────────────────────
+        // 6. Save to database
         showGlobalLoader();
 
         if (editingEventId) {
@@ -2815,7 +2815,7 @@ async function saveEvent() {
                 return ev.id == editingEventId;
             });
             if (idx !== -1) {
-                // حفظ کردن completed_occurrences و completed_timestamps موجود
+                // Keep existing completed_occurrences and completed_timestamps
                 if (events[idx].completed_occurrences) {
                     payload.completed_occurrences = events[idx].completed_occurrences;
                 }
@@ -2829,10 +2829,9 @@ async function saveEvent() {
             // Create new event
             var saved = await saveEventToDB(payload);
             if (saved) {
-                // Push to local events array
                 events.push(saved);
 
-                // ── 7. Create invitee rows (if any) ─────────
+                // 7. Create invitee rows (if any)
                 if (currentInvitees.length > 0) {
                     for (const invitee of currentInvitees) {
                         const invitePayload = {
@@ -2859,14 +2858,14 @@ async function saveEvent() {
                     }
                 }
 
-                // ── 8. Send notifications ─────────────────
+                // 8. Send notifications
                 const eventTitle = title || 'Untitled event';
                 currentInvitees.forEach(inv => {
                     addNotificationToUser(
-                        inv.id, 
+                        inv.id,
                         'invitation',
-                        '[Invitation] New Invitation',                      // عنوان با پیشوند
-                        `${currentProfile?.first_name || 'Someone'} invited you to "${eventTitle}"`,  // بدنه ساده
+                        '[Invitation] New Invitation',
+                        `${currentProfile?.first_name || 'Someone'} invited you to "${eventTitle}"`,
                         '#',
                         saved?.id || null
                     );
@@ -2874,11 +2873,11 @@ async function saveEvent() {
             }
         }
 
-        // ── به‌روزرسانی رویدادهای دعوت‌شده‌ها (اگر ویرایش است) ──
+        // Update invitee events (if editing)
         if (editingEventId || (saved && saved.id)) {
             const eventId = editingEventId || saved.id;
-            
-            // فقط فیلدهایی که دعوت‌شده باید ببیند را آپدیت کن
+
+            // Only fields an invitee should see
             const inviteeUpdatePayload = {
                 title: payload.title,
                 description: payload.description,
@@ -2894,28 +2893,28 @@ async function saveEvent() {
                 recurrence_smart_interval: payload.recurrence_smart_interval,
                 checklist: payload.checklist
             };
-            
+
             const { error: updateInviteesError } = await sb
                 .from('ravlo')
                 .update(inviteeUpdatePayload)
                 .eq('parent_event_id', eventId);
-            
+
             if (updateInviteesError) {
                 console.warn('Failed to update invitee events:', updateInviteesError);
             } else {
                 console.log('✅ Invitee events updated successfully');
-                
-                // ── ارسال نوتیفیکیشن به دعوت‌شده‌ها ──
+
+                // Notify invitees about update
                 const { data: inviteeRows } = await sb
                     .from('ravlo')
                     .select('user_id, id')
                     .eq('parent_event_id', eventId);
-                
+
                 if (inviteeRows) {
                     const eventTitle = payload.title || 'Untitled event';
                     const editorName = [currentProfile?.first_name, currentProfile?.last_name]
                         .filter(Boolean).join(' ') || 'Someone';
-                    
+
                     inviteeRows.forEach(invitee => {
                         addNotificationToUser(
                             invitee.user_id,
@@ -2930,11 +2929,10 @@ async function saveEvent() {
             }
         }
 
-        // ── 9. Clean up UI ────────────────────────────────
+        // 9. Clean up UI
         hideGlobalLoader();
         closeModal(eventModal);
 
-        // Reset form fields
         if (eventTitleInput) eventTitleInput.value = '';
         if (eventStartInput) eventStartInput.value = '';
         if (eventEndInput) eventEndInput.value = '';
@@ -2942,11 +2940,9 @@ async function saveEvent() {
         if (gregTriggerText) gregTriggerText.textContent = 'Select date';
         if (gregPickerTrigger) gregPickerTrigger.classList.remove('has-value');
 
-        // Reset checklist
         currentChecklistItems = [];
         hideInlineChecklist();
 
-        // Reset location
         currentLocationCoords = null;
         currentLocationName = '';
         currentLocationAddress = null;
@@ -2954,20 +2950,16 @@ async function saveEvent() {
         document.getElementById('location-section').style.display = 'none';
         document.getElementById('toggle-location-btn')?.classList.remove('active');
 
-        // Reset invitees
         currentInvitees = [];
         document.getElementById('toggle-invite-btn')?.classList.remove('active');
 
-        // Reset color
         selectedTagColor = '#f5f5f5';
         document.getElementById('toggle-color-btn')?.classList.remove('active');
 
-        // Reset icon
         selectedIcon = null;
         updateIconButton();
         document.getElementById('toggle-icon-btn')?.classList.remove('active');
 
-        // Reset recurrence
         recurrence = {
             type: 'none',
             interval: 1,
@@ -2976,15 +2968,12 @@ async function saveEvent() {
         };
         updateRecurrencePreview();
 
-        // Reset event type to default
         eventType = 'event';
         setEventType('event');
 
-        // Re-render calendar
         renderCalendar();
         updateNotificationDot();
 
-        // Show success message
         showToast(editingEventId ? 'Event updated successfully!' : 'Event created successfully!');
 
     } catch (err) {
@@ -2994,7 +2983,7 @@ async function saveEvent() {
     }
 }
 
-/* =========================== EVENT DETAIL MODAL ============================ */
+/* ------------------------- EDIT REQUEST FLOW ------------------------- */
 async function requestEditEvent(ev, newPayload) {
     if (!currentUser || !ev.parent_event_id) {
         showToast('Only invited guests can request edits.');
@@ -3010,7 +2999,6 @@ async function requestEditEvent(ev, newPayload) {
 
         if (error) throw error;
 
-        // ارسال نوتیفیکیشن به سازنده
         const { data: parent } = await sb
             .from('ravlo')
             .select('user_id, title')
@@ -3043,7 +3031,6 @@ async function requestEditEvent(ev, newPayload) {
     }
 }
 
-// ─── پذیرش درخواست ویرایش (توسط سازنده) ───
 async function approveEditRequest(eventId) {
     showGlobalLoader();
     try {
@@ -3055,7 +3042,7 @@ async function approveEditRequest(eventId) {
 
         if (!ev || !ev.edit_request) throw new Error('No edit request found.');
 
-        // ۱. اعمال تغییرات
+        // Apply changes
         const updatePayload = {
             ...ev.edit_request,
             edit_request: null,
@@ -3064,7 +3051,7 @@ async function approveEditRequest(eventId) {
         };
         await updateEventInDB(eventId, updatePayload);
 
-        // ۲. به‌روزرسانی ردیف‌های دعوت‌شده‌ها
+        // Update invitee rows
         const { data: invitees } = await sb
             .from('ravlo')
             .select('id')
@@ -3079,7 +3066,7 @@ async function approveEditRequest(eventId) {
             }
         }
 
-        // ۳. نوتیفیکیشن به همهٔ مهمان‌ها
+        // Notify all guests (except requester)
         const allIds = [ev.user_id, ...(ev.invitee_ids || [])].filter(id => id !== ev.edit_request_by);
         const editorName = [currentProfile?.first_name, currentProfile?.last_name]
             .filter(Boolean).join(' ') || 'Owner';
@@ -3106,7 +3093,6 @@ async function approveEditRequest(eventId) {
     }
 }
 
-// ─── رد درخواست ویرایش (توسط سازنده) ───
 async function rejectEditRequest(eventId, reason) {
     showGlobalLoader();
     try {
@@ -3125,7 +3111,6 @@ async function rejectEditRequest(eventId, reason) {
             edit_request_reason: reason || ''
         });
 
-        // نوتیفیکیشن فقط به درخواست‌دهنده
         if (ev.edit_request_by) {
             const rejecterName = [currentProfile?.first_name, currentProfile?.last_name]
                 .filter(Boolean).join(' ') || 'Owner';
@@ -3153,8 +3138,8 @@ async function rejectEditRequest(eventId, reason) {
     }
 }
 
+/* ------------------------- EVENT DETAIL MODAL ------------------------- */
 async function openEventDetail(ev, occurrenceDate) {
-    // اگر یک دعوت‌نامه در انتظار پاسخ است، پنجرهٔ مخصوص دعوت را باز کن
     if (ev.invitation_status === 'pending' && ev.parent_event_id) {
         openInvitationResponse(ev);
         return;
@@ -3164,7 +3149,7 @@ async function openEventDetail(ev, occurrenceDate) {
     currentDetailEventId = ev.id;
     ev.__occurrenceDate = occurrenceDate;
 
-    // ─── Color & title ───
+    // Color & title
     document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
     const colorDot = document.getElementById('detail-color-dot');
     colorDot.style.backgroundColor = ev.color || '#f5f5f5';
@@ -3194,7 +3179,7 @@ async function openEventDetail(ev, occurrenceDate) {
     const calIcon = document.getElementById('detail-calendar-icon');
     calIcon.style.color = ev.color || 'var(--accent)';
 
-    // ─── Date and time ───
+    // Date and time
     const start = ev.start_date ? new Date(ev.start_date) : null;
     const end = ev.end_date ? new Date(ev.end_date) : null;
     let dateText = '', timeText = '', durationParen = '';
@@ -3227,7 +3212,7 @@ async function openEventDetail(ev, occurrenceDate) {
     document.getElementById('detail-time-text').textContent = timeText;
     document.getElementById('detail-duration-paren').textContent = durationParen;
 
-    // ─── Hide horizontal dividers for tasks ───
+    // Hide horizontal dividers for tasks
     const dividers = eventDetailModal.querySelectorAll('.detail-divider-h');
     if (ev.type === 'task') {
         dividers.forEach(hr => hr.style.display = 'none');
@@ -3235,7 +3220,7 @@ async function openEventDetail(ev, occurrenceDate) {
         dividers.forEach(hr => hr.style.display = '');
     }
 
-    // ─── Description ───
+    // Description
     const descContainer = document.getElementById('detail-description-container');
     const descText = document.getElementById('detail-description-text');
     let cleanDescription = ev.description || '';
@@ -3254,7 +3239,7 @@ async function openEventDetail(ev, occurrenceDate) {
         descContainer.style.display = 'none';
     }
 
-    // ─── CHECKLIST ───
+    // Checklist
     let checklistContainer = document.getElementById('detail-checklist-container');
     if (!checklistContainer) {
         const descContainer2 = document.getElementById('detail-description-container');
@@ -3286,7 +3271,7 @@ async function openEventDetail(ev, occurrenceDate) {
         renderChecklistInDetail(ev);
     }
 
-    // ─── Attendees (وضعیت واقعی + تصویر پروفایل) ───
+    // Attendees
     const inviteesSection = document.getElementById('detail-invitees-section');
     if (inviteesSection) {
         if (ev.type === 'event') {
@@ -3320,7 +3305,7 @@ async function openEventDetail(ev, occurrenceDate) {
                 inviteeIds = ev.invitee_ids || [];
             }
 
-            // ۱. اطلاعات صاحب رویداد
+            // Owner info
             let ownerName = 'Unknown';
             let ownerPhoto = null;
             try {
@@ -3335,7 +3320,7 @@ async function openEventDetail(ev, occurrenceDate) {
                 }
             } catch (e) { /* ignore */ }
 
-            // ۲. وضعیت دعوت مهمان‌ها (فقط برای صاحب اصلی)
+            // Invitee statuses (only for owner)
             let statusMap = {};
             if (!ev.parent_event_id && ownerId === currentUser?.id && inviteeIds.length > 0) {
                 try {
@@ -3346,7 +3331,7 @@ async function openEventDetail(ev, occurrenceDate) {
                 } catch (e) { /* ignore */ }
             }
 
-            // ۳. تصاویر پروفایل مهمان‌ها
+            // Profile photos
             let profilesMap = {};
             if (inviteeIds.length > 0) {
                 try {
@@ -3360,7 +3345,6 @@ async function openEventDetail(ev, occurrenceDate) {
                 } catch (e) { /* ignore */ }
             }
 
-            // ۴. ساخت آرایه نهایی
             const allPeople = [];
             allPeople.push({
                 name: ownerName,
@@ -3376,7 +3360,6 @@ async function openEventDetail(ev, occurrenceDate) {
                 allPeople.push({ name, photoUrl, status, isOwner: false });
             });
 
-            // ۵. رندر
             const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
             allPeople.forEach((person, i) => {
                 const initials = person.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || person.name[0].toUpperCase();
@@ -3402,7 +3385,7 @@ async function openEventDetail(ev, occurrenceDate) {
         }
     }
 
-    // ─── Location map ───
+    // Location map
     const mapContainer = document.getElementById('detail-location-container');
     if (ev.location && (ev.location.lat || ev.location.lng)) {
         const lat = ev.location.lat;
@@ -3471,10 +3454,9 @@ async function openEventDetail(ev, occurrenceDate) {
     const oldAddr = document.getElementById('detail-address-container');
     if (oldAddr) oldAddr.style.display = 'none';
 
-    // ─── تشخیص مهمان ───
     const isInvitee = !!ev.parent_event_id;
 
-    // ─── دکمه Edit ───
+    // Edit button
     const editBtn = document.getElementById('detail-edit-btn-top');
     if (editBtn) {
         if (isInvitee) {
@@ -3496,7 +3478,7 @@ async function openEventDetail(ev, occurrenceDate) {
         }
     }
 
-    // ─── وضعیت تکمیل ───
+    // Completion state
     var dateForCompletion = null;
     if (occurrenceDate) {
         dateForCompletion = toLocalDateString(occurrenceDate);
@@ -3510,7 +3492,7 @@ async function openEventDetail(ev, occurrenceDate) {
         isCompleted = (ev.status === 'completed' || ev.status === 'done');
     }
 
-    // ─── دکمه Delete / Leave ───
+    // Delete / Leave button
     const cancelBtn = document.getElementById('detail-cancel-btn');
     if (cancelBtn) {
         if (isInvitee) {
@@ -3542,7 +3524,7 @@ async function openEventDetail(ev, occurrenceDate) {
         }
     }
 
-    // ─── دکمه Complete / Undo (اصلاح‌شده: بیرون از markTaskDone) ───
+    // Complete / Undo button
     const completeBtn = document.getElementById('detail-complete-btn');
     if (completeBtn) {
         completeBtn.style.display = isInvitee ? 'none' : '';
@@ -3644,13 +3626,12 @@ async function openEventDetail(ev, occurrenceDate) {
         }
     }
 
-    // اگر درخواست ویرایش در حال بررسی است
+    // Pending edit request UI
     if (ev.edit_request_status === 'pending' && !ev.parent_event_id) {
         const editReqContainer = document.createElement('div');
         editReqContainer.style.cssText = 'background:rgba(255,200,0,0.1); border:1px solid rgba(255,200,0,0.3); border-radius:8px; padding:12px; margin:12px 0;';
         
         const requesterId = ev.edit_request_by;
-        // گرفتن نام درخواست‌دهنده
         const { data: requester } = await sb
             .from('profiles')
             .select('first_name, last_name')
@@ -3705,18 +3686,17 @@ async function openEventDetail(ev, occurrenceDate) {
     openModal(eventDetailModal);
 }
 
-/* =========================== DELETE CONFIRMATION ============================ */
-
+/* ------------------------- DELETE & LEAVE HANDLERS ------------------------- */
 async function leaveInvitedEvent(ev) {
     if (!currentUser || !ev.parent_event_id) return;
     
     showGlobalLoader();
     
     try {
-        // ۱. حذف ردیف دعوت‌شده
+        // Delete invitee row
         await deleteEventFromDB(ev.id);
         
-        // ۲. حذف نام از لیست invitees رویداد اصلی
+        // Remove from parent invite list
         const { data: parentEvent } = await sb
             .from('ravlo')
             .select('invitees, invitee_ids, user_id, title')
@@ -3728,17 +3708,15 @@ async function leaveInvitedEvent(ev) {
                 .filter(Boolean).join(' ') || 'Someone';
             const myId = currentUser.id;
             
-            // حذف نام و آیدی از آرایه‌ها
             const updatedInvitees = (parentEvent.invitees || []).filter(name => name !== myName);
             const updatedInviteeIds = (parentEvent.invitee_ids || []).filter(id => id !== myId);
             
-            // آپدیت رویداد اصلی
             await updateEventInDB(ev.parent_event_id, {
                 invitees: updatedInvitees,
                 invitee_ids: updatedInviteeIds
             });
             
-            // ۳. ارسال نوتیفیکیشن به دعوت‌کننده
+            // Notify inviter
             if (parentEvent.user_id && parentEvent.user_id !== myId) {
                 await addNotificationToUser(
                     parentEvent.user_id,
@@ -3750,11 +3728,9 @@ async function leaveInvitedEvent(ev) {
                 );
             }
             
-            // ۴. پاک کردن نوتیفیکیشن‌های مربوط به این رویداد برای کاربر جاری
             await removeNotificationsForEvent(ev.id, myId);
         }
         
-        // ۵. حذف از آرایهٔ محلی
         events = events.filter(e => e.id !== ev.id);
         
         showToast('You left the event.');
@@ -3788,14 +3764,13 @@ async function deleteEventById(id) {
 async function deleteEventCascade(eventId) {
     showGlobalLoader();
     try {
-        // حذف آبشاری با RPC
+        // Cascade delete via RPC
         const { data, error } = await sb.rpc('delete_event_cascade', { p_event_id: eventId });
         if (error) throw error;
 
-        // حذف از آرایهٔ محلی (هم رویداد اصلی هم فرزندان)
         events = events.filter(e => e.id !== eventId && e.parent_event_id !== eventId);
 
-        // ارسال نوتیفیکیشن به همهٔ مهمان‌ها
+        // Notify all invitees
         if (data && data.invitee_ids && data.invitee_ids.length > 0) {
             const ownerName = [currentProfile?.first_name, currentProfile?.last_name]
                 .filter(Boolean).join(' ') || 'Someone';
@@ -3847,7 +3822,7 @@ function hideDeleteConfirmation() {
     }
 }
 
-// =========================== RENDER CHECKLIST IN DETAIL ============================
+/* ------------------------- CHECKLIST IN DETAIL ------------------------- */
 function renderChecklistInDetail(ev) {
     const container = document.getElementById('detail-checklist-container');
     if (!container) return;
@@ -3960,7 +3935,6 @@ function renderChecklistInDetail(ev) {
     });
 }
 
-// =========================== CHECK ALL CHECKLIST DONE ============================
 function checkAllChecklistDone(ev) {
     if (!ev.checklist || ev.checklist.length === 0) return;
 
@@ -3979,7 +3953,6 @@ function checkAllChecklistDone(ev) {
     }
 }
 
-// =========================== MARK TASK DONE ============================
 function markTaskDone(ev) {
     if (ev.status === 'done') return;
     ev.status = 'done';
@@ -3996,8 +3969,7 @@ function markTaskDone(ev) {
         .catch(() => showToast('Error marking task as done.'));
 }
 
-/* =========================== NAVIGATION ============================ */
-
+/* ------------------------- CALENDAR NAVIGATION ------------------------- */
 function navigatePrev() {
     if (viewMode === 'year') {
         currentDate.setFullYear(currentDate.getFullYear() - 1);
@@ -4029,8 +4001,7 @@ function handleTodayClick() {
     renderCalendar();
 }
 
-/* =========================== GSAP ANIMATIONS ============================ */
-
+/* ------------------------- GSAP ANIMATIONS ------------------------- */
 function animateTabIndicator() {
     const activeTab = viewTabsEl.querySelector('.view-tab.active');
     if (!activeTab || !tabIndicator) return;
@@ -4046,7 +4017,7 @@ function animateTabIndicator() {
 
 /* =========================== EVENT LISTENERS ============================ */
 
-/* --------- LOGOUT --------- */
+/* ------------------------- AUTH & SESSION ------------------------- */
 document.getElementById('sidebar-logout')?.addEventListener('click', () => {
     openModal(document.getElementById('logout-confirm-modal'));
 });
@@ -4063,15 +4034,12 @@ document.getElementById('logout-confirm-modal')?.addEventListener('click', (e) =
     }
 });
 
-/* --------- TODAY BUTTON --------- */
 document.getElementById('greg-today-btn')?.addEventListener('click', handleTodayClick);
 
-/* --------- AUTH OVERLAY CLICK --------- */
 authOverlay.addEventListener('click', (e) => {
     if (e.target === authOverlay) closeModal(authOverlay);
 });
 
-/* --------- STEP-BASED AUTH FLOW --------- */
 let authEmail = '';
 
 function showStep(stepId) {
@@ -4090,12 +4058,7 @@ document.getElementById('auth-continue-btn')?.addEventListener('click', async fu
 
     showGlobalLoader();
     try {
-        const {
-            data: exists,
-            error: rpcError
-        } = await sb.rpc('check_email_exists', {
-            email_to_check: email
-        });
+        const { data: exists, error: rpcError } = await sb.rpc('check_email_exists', { email_to_check: email });
         if (rpcError) throw rpcError;
         if (exists) {
             document.getElementById('auth-user-email').textContent = email;
@@ -4124,13 +4087,7 @@ document.getElementById('auth-signin-btn')?.addEventListener('click', async func
     }
 
     showGlobalLoader();
-    const {
-        data,
-        error
-    } = await sb.auth.signInWithPassword({
-        email,
-        password
-    });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
     hideGlobalLoader();
     if (error) {
         errorEl.textContent = error.message;
@@ -4157,9 +4114,7 @@ document.getElementById('auth-send-reset-btn')?.addEventListener('click', async 
     const email = document.getElementById('forgot-email').value.trim();
     if (!email) return;
     showGlobalLoader();
-    const {
-        error
-    } = await sb.auth.resetPasswordForEmail(email, {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + window.location.pathname
     });
     hideGlobalLoader();
@@ -4191,16 +4146,11 @@ document.getElementById('auth-register-btn')?.addEventListener('click', async fu
         return;
     }
     showGlobalLoader();
-    const {
-        error
-    } = await sb.auth.signUp({
+    const { error } = await sb.auth.signUp({
         email: authEmail,
         password,
         options: {
-            data: {
-                first_name: firstname,
-                last_name: lastname
-            },
+            data: { first_name: firstname, last_name: lastname },
             emailRedirectTo: window.location.origin + window.location.pathname
         }
     });
@@ -4256,7 +4206,7 @@ document.querySelectorAll('.toggle-password-btn').forEach(btn => {
     });
 });
 
-// Recurrence modal listeners
+/* ------------------------- RECURRENCE MODAL ------------------------- */
 document.getElementById('recurrence-select')?.addEventListener('change', function() {
     recurrence.type = this.value;
     if (recurrence.type === 'smart' && eventType !== 'task') {
@@ -4291,9 +4241,7 @@ document.addEventListener('click', function(e) {
             val = Math.max(min, val - 1);
         }
         input.value = val;
-        input.dispatchEvent(new Event('input', {
-            bubbles: true
-        }));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     const display = spinner.querySelector('.interval-display');
@@ -4331,7 +4279,7 @@ document.getElementById('recurrence-modal')?.addEventListener('click', function(
 });
 document.getElementById('open-recurrence-btn')?.addEventListener('click', openRecurrenceModal);
 
-// --------- TAG MODAL (only colors) ---------
+/* ------------------------- TAG (COLOR) MODAL ------------------------- */
 document.getElementById('tag-done-btn')?.addEventListener('click', () => {
     const colorBtn = document.getElementById('toggle-color-btn');
     if (colorBtn) {
@@ -4355,7 +4303,6 @@ document.querySelector('.tag-colors-grid')?.addEventListener('click', function(e
     item.classList.add('selected');
 });
 
-// --------- COLOR PICKER BUTTON ---------
 document.getElementById('toggle-color-btn')?.addEventListener('click', function() {
     const btn = this;
     if (btn.classList.contains('active')) {
@@ -4369,7 +4316,7 @@ document.getElementById('toggle-color-btn')?.addEventListener('click', function(
     }
 });
 
-// Gregorian picker listeners
+/* ------------------------- GREGORIAN PICKER ------------------------- */
 if (gregPrevBtn) gregPrevBtn.addEventListener('click', function() {
     gregState.gm--;
     if (gregState.gm < 0) {
@@ -4437,18 +4384,18 @@ if (gregPickerTrigger) gregPickerTrigger.addEventListener('click', function() {
     } else openGregPicker();
 });
 
-// Event type toggle
+/* ------------------------- EVENT TYPE TOGGLE ------------------------- */
 document.getElementById('event-type-toggle')?.addEventListener('click', e => {
     const label = e.target.closest('.event-type-label');
     if (label) setEventType(label.dataset.type);
 });
 
-// Navigation buttons
+/* ------------------------- NAVIGATION BUTTONS ------------------------- */
 prevMonthBtn?.addEventListener('click', navigatePrev);
 nextMonthBtn?.addEventListener('click', navigateNext);
 currentMonthYearBtn?.addEventListener('click', openTitlePicker);
 
-// Add event button
+/* ------------------------- ADD EVENT BUTTON ------------------------- */
 if (addEventBtn) addEventBtn.addEventListener('click', () => {
     if (!currentUser) {
         openModal(authOverlay);
@@ -4459,10 +4406,9 @@ if (addEventBtn) addEventBtn.addEventListener('click', () => {
     openModal(eventModal);
 });
 
-// Save event
 if (saveEventBtn) saveEventBtn.onclick = saveEvent;
 
-// Modal close buttons
+/* ------------------------- MODAL CLOSE BUTTONS ------------------------- */
 closeModalBtns.forEach(btn => btn.addEventListener('click', () => closeModal(eventModal)));
 eventDetailModal.addEventListener('click', e => {
     if (e.target === eventDetailModal) closeModal(eventDetailModal);
@@ -4471,7 +4417,7 @@ eventDetailModal.addEventListener('click', e => {
     if (e.target === m) closeModal(m);
 }));
 
-// View tabs
+/* ------------------------- VIEW TABS ------------------------- */
 viewTabsEl.querySelectorAll('.view-tab').forEach(btn => btn.addEventListener('click', () => {
     viewMode = btn.dataset.view;
     localStorage.setItem('ravlo-view-mode', viewMode);
@@ -4479,7 +4425,7 @@ viewTabsEl.querySelectorAll('.view-tab').forEach(btn => btn.addEventListener('cl
     animateTabIndicator();
 }));
 
-// Month/Year popup triggers
+/* ------------------------- MONTH/YEAR POPUP ------------------------- */
 if (gregMonthBtn) gregMonthBtn.addEventListener('click', e => {
     e.stopPropagation();
     openGregMonthPopup();
@@ -4489,6 +4435,7 @@ if (gregYearBtn) gregYearBtn.addEventListener('click', e => {
     openGregYearPopup();
 });
 
+/* ------------------------- DELETE CONFIRMATION ------------------------- */
 if (confirmYesBtn) confirmYesBtn.addEventListener('click', async () => {
     var id = eventDetailConfirm.dataset.eventId;
     if (id) await deleteEventById(id);
@@ -4497,7 +4444,7 @@ if (confirmYesBtn) confirmYesBtn.addEventListener('click', async () => {
 });
 if (confirmNoBtn) confirmNoBtn.addEventListener('click', hideDeleteConfirmation);
 
-// Time spinner
+/* ------------------------- TIME SPINNERS ------------------------- */
 document.addEventListener('click', function(e) {
     const arrow = e.target.closest('.time-arrow');
     if (!arrow) return;
@@ -4541,9 +4488,7 @@ document.addEventListener('click', function(e) {
 
     if (!isEnd) syncEndTimeOnStartChange(prefix);
 
-    const obj = {
-        value: val
-    };
+    const obj = { value: val };
     gsap.to(obj, {
         value: newVal,
         duration: 0.3,
@@ -4553,9 +4498,7 @@ document.addEventListener('click', function(e) {
         }
     });
 
-    gsap.fromTo(input, {
-        scale: 1
-    }, {
+    gsap.fromTo(input, { scale: 1 }, {
         scale: 1.1,
         duration: 0.15,
         yoyo: true,
@@ -4563,9 +4506,7 @@ document.addEventListener('click', function(e) {
         ease: 'power2.out'
     });
 
-    gsap.fromTo(arrow, {
-        scale: 1
-    }, {
+    gsap.fromTo(arrow, { scale: 1 }, {
         scale: 1.3,
         duration: 0.2,
         yoyo: true,
@@ -4576,7 +4517,6 @@ document.addEventListener('click', function(e) {
     validateTimeInput(prefix, isEnd);
 });
 
-// Time input validation listeners
 ['greg'].forEach(prefix => {
     const startHour = document.getElementById(prefix + '-hour');
     const startMin = document.getElementById(prefix + '-minute');
@@ -4613,13 +4553,13 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// All-day toggle
+/* ------------------------- ALL-DAY TOGGLE ------------------------- */
 document.getElementById('event-all-day-greg')?.addEventListener('change', function() {
     const timeRow = document.querySelector('#greg-picker-popup .picker-time-row');
     if (timeRow) timeRow.style.display = this.checked ? 'none' : '';
 });
 
-// --------- ICON PICKER BUTTON ---------
+/* ------------------------- ICON PICKER ------------------------- */
 function updateIconButton() {
     const btn = document.getElementById('toggle-icon-btn');
     if (!btn) return;
@@ -4650,15 +4590,10 @@ function openIconModal() {
             document.getElementById('toggle-icon-btn')?.classList.add('active');
             grid.querySelectorAll('.icon-item').forEach(el => el.classList.remove('selected'));
             item.classList.add('selected');
-            selectedIcon = iconObj.svg;
             const iconBtn = document.getElementById('toggle-icon-btn');
             if (iconBtn) {
                 iconBtn.classList.toggle('active', !!selectedIcon);
             }
-            selectedIcon = ev.icon || null;
-
-            selectedIcon = null;
-            updateIconButton();
         });
         grid.appendChild(item);
     });
@@ -4689,7 +4624,7 @@ document.getElementById('icon-modal')?.addEventListener('click', function(e) {
     if (e.target === this) closeModal(this);
 });
 
-/* --------- INVITE MODAL HANDLERS (Connected to Dashboard Ecosystem) --------- */
+/* ------------------------- INVITE MODAL ------------------------- */
 document.getElementById('toggle-invite-btn')?.addEventListener('click', () => {
     const btn = document.getElementById('toggle-invite-btn');
     if (!currentUser) {
@@ -4761,10 +4696,7 @@ async function searchInviteUsers(query) {
     resultsDiv.innerHTML = '<div style="color:#aaa;">Searching...</div>';
 
     try {
-        let {
-            data: users,
-            error
-        } = await sb
+        let { data: users, error } = await sb
             .from('profiles')
             .select('id, first_name, last_name, username, photo_url')
             .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%`)
@@ -4805,9 +4737,7 @@ async function searchInviteUsers(query) {
             return;
         }
 
-        const {
-            data: allConns
-        } = await sb
+        const { data: allConns } = await sb
             .from('dashboard_connectionrequests')
             .select('from_id, to_id, status')
             .or(
@@ -4880,20 +4810,14 @@ async function searchInviteUsers(query) {
 
 function inviteConnectedUser(userId, name) {
     if (currentInvitees.some(inv => inv.id === userId)) return;
-    currentInvitees.push({
-        id: userId,
-        name
-    });
+    currentInvitees.push({ id: userId, name });
     updateInviteSelectedUI();
     document.getElementById('invite-search-input').dispatchEvent(new Event('input'));
 }
 
 async function sendConnectionInvite(userId, name) {
     try {
-        // Check if there's already any request between these two users
-        const {
-            data: existing
-        } = await sb
+        const { data: existing } = await sb
             .from('dashboard_connectionrequests')
             .select('id, status')
             .or(
@@ -4912,17 +4836,9 @@ async function sendConnectionInvite(userId, name) {
             return;
         }
 
-        // Insert new request
-        const {
-            data: newReq,
-            error
-        } = await sb
+        const { data: newReq, error } = await sb
             .from('dashboard_connectionrequests')
-            .insert({
-                from_id: currentUser.id,
-                to_id: userId,
-                status: 'pending'
-            })
+            .insert({ from_id: currentUser.id, to_id: userId, status: 'pending' })
             .select()
             .single();
         if (error) throw error;
@@ -4965,7 +4881,7 @@ function escHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/* --------- /* --------- LOCATION MODAL HANDLERS (with place name search) --------- */
+/* ------------------------- LOCATION MODAL ------------------------- */
 let locationSearchTimer = null;
 
 document.getElementById('toggle-location-btn')?.addEventListener('click', function() {
@@ -5014,7 +4930,6 @@ document.getElementById('toggle-location-btn')?.addEventListener('click', functi
     }, 200);
 });
 
-// Place name search with debounce
 document.getElementById('location-search-input')?.addEventListener('input', function() {
     clearTimeout(locationSearchTimer);
     const query = this.value.trim();
@@ -5028,7 +4943,6 @@ document.getElementById('location-search-input')?.addEventListener('input', func
 
     locationSearchTimer = setTimeout(async () => {
         try {
-            // 1. Photon URL
             const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`;
             const response = await fetch(url);
 
@@ -5039,14 +4953,12 @@ document.getElementById('location-search-input')?.addEventListener('input', func
             const data = await response.json();
 
             suggestionsList.innerHTML = '';
-            // 2. Data in features key
             if (!data.features || data.features.length === 0) {
                 suggestionsList.innerHTML = '<li style="color:#888;">No results found</li>';
                 suggestionsList.style.display = 'block';
                 return;
             }
 
-            // 3. Iterate features
             data.features.forEach(place => {
                 const li = document.createElement('li');
                 const props = place.properties;
@@ -5058,7 +4970,6 @@ document.getElementById('location-search-input')?.addEventListener('input', func
                 li.innerHTML = `<span style="font-weight:600; color:#fff;">${mainName}</span>` +
                     (shortAddress ? `<br><span style="font-size:11px; color:#888;">${shortAddress}</span>` : '');
 
-                // 4. Coordinates: [lng, lat] order
                 const [lng, lat] = place.geometry.coordinates;
 
                 li.addEventListener('click', () => {
@@ -5071,15 +4982,9 @@ document.getElementById('location-search-input')?.addEventListener('input', func
 
                     updateMapFromCoords(lat, lng);
 
-                    currentLocationCoords = {
-                        lat,
-                        lng
-                    };
+                    currentLocationCoords = { lat, lng };
                     currentLocationName = mainName;
-                    currentLocationAddress = {
-                        city: city,
-                        country: country,
-                    };
+                    currentLocationAddress = { city: city, country: country };
                 });
 
                 suggestionsList.appendChild(li);
@@ -5100,7 +5005,6 @@ document.getElementById('location-search-input')?.addEventListener('input', func
     }, 300);
 });
 
-// Hide suggestions on outside click
 document.addEventListener('click', (e) => {
     const suggestions = document.getElementById('location-suggestions');
     const searchInput = document.getElementById('location-search-input');
@@ -5109,10 +5013,9 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Done button for location save
 document.getElementById('location-done-btn')?.addEventListener('click', () => {
     if (currentLocationAddress) {
-        // ... (existing address handling)
+        // address handling
     } else if (currentLocationName) {
         // fallback
     } else if (currentLocationCoords) {
@@ -5130,14 +5033,11 @@ document.getElementById('location-modal-close')?.addEventListener('click', () =>
     closeModal(document.getElementById('location-modal'));
 });
 
-
-// Copy invite code
 document.getElementById('copy-invite-code-btn')?.addEventListener('click', () => {
     const code = document.getElementById('invite-code-text').textContent;
     navigator.clipboard.writeText(code).then(() => showToast('Code copied!'));
 });
 
-// Clear location (old inline)
 document.getElementById('clear-location-btn')?.addEventListener('click', function() {
     document.getElementById('location-coords-input').value = '';
     currentLocationCoords = null;
@@ -5149,7 +5049,6 @@ document.getElementById('clear-location-btn')?.addEventListener('click', functio
     document.getElementById('toggle-location-btn')?.classList.remove('active');
 });
 
-// Coordinate input (old one)
 document.getElementById('location-coords-input')?.addEventListener('input', function() {
     const coords = parseCoordinates(this.value.trim());
     if (coords) {
@@ -5160,8 +5059,7 @@ document.getElementById('location-coords-input')?.addEventListener('input', func
     }
 });
 
-/* =========================== INLINE CHECKLIST EDITOR (REPLACEMENT) =========================== */
-
+/* ------------------------- INLINE CHECKLIST EDITOR ------------------------- */
 function renderInlineChecklistItems(items) {
     const container = document.getElementById('checklist-inline-items');
     if (!container) return;
@@ -5260,7 +5158,6 @@ function hideInlineChecklist() {
     if (editor) editor.style.display = 'none';
 }
 
-// اتصال input و دکمهٔ افزودن
 const newItemInput = document.getElementById('checklist-new-item-input');
 const addItemBtn = document.getElementById('checklist-add-btn');
 
@@ -5281,7 +5178,7 @@ if (newItemInput && addItemBtn) {
     });
 }
 
-/* =========================== SIDEBAR OPEN/CLOSE =========================== */
+/* ------------------------- SIDEBAR OPEN/CLOSE ------------------------- */
 (function() {
     const toggleBtn = document.getElementById('menu-toggle-btn');
     const sidebar = document.getElementById('sidebar');
@@ -5338,6 +5235,7 @@ if (newItemInput && addItemBtn) {
     });
 })();
 
+/* ------------------------- CLEANUP & MAINTENANCE ------------------------- */
 async function cleanupOldCompletions() {
     if (!currentUser) return;
     const now = new Date();
@@ -5347,7 +5245,6 @@ async function cleanupOldCompletions() {
     for (let i = events.length - 1; i >= 0; i--) {
         const ev = events[i];
 
-        // 1. رویدادهای تکرارشونده: فقط رکوردهای completion قدیمی را پاک کن
         if (ev.recurrence_type !== 'none') {
             if (ev.completed_timestamps && Object.keys(ev.completed_timestamps).length > 0) {
                 let changed = false;
@@ -5368,22 +5265,67 @@ async function cleanupOldCompletions() {
                     });
                 }
             }
-            continue; // به هیچ عنوان خود رویداد حذف نشود
+            continue;
         }
 
         if (ev.start_date) {
             const startDate = new Date(ev.start_date);
             if (startDate < twentyEightDaysAgo) {
                 await deleteEventFromDB(ev.id);
-                events.splice(i, 1); // از آرایه محلی هم حذف کن
+                events.splice(i, 1);
             }
         }
-        // پاکسازی دعوت‌های ردشده که ۱ روز از ردشان گذشته (دلخواه)
-await sb.from('ravlo')
-    .delete()
-    .eq('user_id', currentUser.id)
-    .eq('invitation_status', 'declined')
-    .lt('updated_at', new Date(Date.now() - 24*60*60*1000).toISOString()); // اگر ستون updated_at داری
+    }
+
+    await sb.from('ravlo')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('invitation_status', 'declined')
+        .lt('updated_at', new Date(Date.now() - 24*60*60*1000).toISOString());
+}
+
+async function cleanupChecklistFromDescriptions() {
+    if (!currentUser) return;
+    
+    try {
+        const { data: eventsData, error } = await sb
+            .from('ravlo')
+            .select('id, description, checklist')
+            .eq('user_id', currentUser.id)
+            .eq('type', 'task');
+        
+        if (error || !eventsData) return;
+        
+        let cleanedCount = 0;
+        
+        for (const ev of eventsData) {
+            if (!ev.description) continue;
+            
+            const lines = ev.description.split('\n');
+            const hasChecklist = lines.some(line => 
+                line.trim().startsWith('☑') || line.trim().startsWith('☐') ||
+                line.trim().startsWith('- [x]') || line.trim().startsWith('- [ ]')
+            );
+            
+            if (hasChecklist) {
+                const cleanLines = lines.filter(line => 
+                    !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
+                    !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
+                );
+                const cleanDesc = cleanLines.join('\n').trim();
+                
+                await updateEventInDB(ev.id, { description: cleanDesc });
+                cleanedCount++;
+            }
+        }
+        
+        if (cleanedCount > 0) {
+            const freshEvents = await fetchEvents();
+            events = freshEvents;
+            renderCalendar();
+        }
+    } catch (e) {
+        console.warn('Cleanup error:', e);
     }
 }
 
@@ -5419,14 +5361,13 @@ function fallbackCopy(text) {
     document.body.removeChild(textarea);
 }
 
-/* =========================== INVITATION RESPONSE =========================== */
+/* ------------------------- INVITATION RESPONSE ------------------------- */
 function openInvitationResponse(ev) {
     document.getElementById('invitation-response-title').textContent = 'Event Invitation';
     
     const container = document.getElementById('invitation-detail-container');
     container.innerHTML = '';
 
-    // ─── دریافت اطلاعات دعوت‌کننده (با اولویت inviter_user_id) ───
     const inviterId = ev.inviter_user_id;
     
     if (inviterId) {
@@ -5459,7 +5400,6 @@ function openInvitationResponse(ev) {
         document.getElementById('invitation-response-message').textContent = 'You are invited to this event.';
     }
 
-    // هدر جزئیات (رنگ + آیکون + عنوان)
     const headerDiv = document.createElement('div');
     headerDiv.className = 'invitation-detail-header';
 
@@ -5490,11 +5430,9 @@ function openInvitationResponse(ev) {
 
     container.appendChild(headerDiv);
 
-    // تاریخ و زمان
     const start = ev.start_date ? new Date(ev.start_date) : null;
     const end = ev.end_date ? new Date(ev.end_date) : null;
-    let dateText = '',
-        timeText = '';
+    let dateText = '', timeText = '';
     if (start) {
         dateText = start.toLocaleDateString('en-US', {
             year: 'numeric',
@@ -5520,21 +5458,18 @@ function openInvitationResponse(ev) {
     timeP.innerHTML = `<strong>Time:</strong> ${timeText}`;
     container.appendChild(timeP);
 
-    // توضیحات
     if (ev.description && ev.description.trim()) {
         const descP = document.createElement('p');
         descP.innerHTML = `<strong>Description:</strong> ${ev.description}`;
         container.appendChild(descP);
     }
 
-    // مهمان‌ها
     if (ev.invitees && ev.invitees.length > 0) {
         const inviteesP = document.createElement('p');
         inviteesP.innerHTML = `<strong>Invitees:</strong> ${ev.invitees.join(', ')}`;
         container.appendChild(inviteesP);
     }
 
-    // مکان
     if (ev.location && ev.location.lat && ev.location.lng) {
         const locP = document.createElement('p');
         locP.innerHTML = `<strong>Location:</strong> ${ev.location.lat.toFixed(5)}, ${ev.location.lng.toFixed(5)}`;
@@ -5543,12 +5478,9 @@ function openInvitationResponse(ev) {
 
     openModal(document.getElementById('invitation-response-modal'));
 
-    // دکمه Accept
     document.getElementById('invitation-accept-btn').onclick = async () => {
         showGlobalLoader();
-        await updateEventInDB(ev.id, {
-            invitation_status: 'accepted'
-        });
+        await updateEventInDB(ev.id, { invitation_status: 'accepted' });
         const localEv = events.find(e => e.id === ev.id);
         if (localEv) localEv.invitation_status = 'accepted';
         hideGlobalLoader();
@@ -5556,7 +5488,6 @@ function openInvitationResponse(ev) {
         renderCalendar();
     };
 
-    // دکمه Decline
     document.getElementById('invitation-decline-btn').onclick = async () => {
         showGlobalLoader();
         await deleteEventFromDB(ev.id);
@@ -5593,7 +5524,7 @@ function openInvitationResponse(ev) {
     };
 }
 
-/* =========================== POSTPONE =========================== */
+/* ------------------------- POSTPONE ------------------------- */
 function openPostponeModal() {
     if (!currentDetailEvent) return;
     document.getElementById('postpone-event-title').textContent =
@@ -5618,7 +5549,6 @@ function applyPostponeOffset(minutes) {
 
     updateEventInDB(ev.id, payload)
         .then(() => {
-            // به‌روزرسانی در آرایه محلی
             const localEv = events.find(e => e.id === ev.id);
             if (localEv) {
                 if (payload.start_date) localEv.start_date = payload.start_date;
@@ -5631,7 +5561,6 @@ function applyPostponeOffset(minutes) {
         .catch(err => showToast('Postpone failed: ' + err.message));
 }
 
-// گوش‌دهندگان دکمه‌ها
 document.getElementById('postpone-modal').addEventListener('click', function(e) {
     const optionBtn = e.target.closest('.postpone-option');
     if (!optionBtn) return;
@@ -5658,59 +5587,7 @@ document.getElementById('postpone-modal-close').addEventListener('click', () => 
     closeModal(document.getElementById('postpone-modal'));
 });
 
-// =========================== CLEANUP CHECKLIST FROM DESCRIPTIONS ============================
-async function cleanupChecklistFromDescriptions() {
-    if (!currentUser) return;
-    
-    try {
-        const { data: eventsData, error } = await sb
-            .from('ravlo')
-            .select('id, description, checklist')
-            .eq('user_id', currentUser.id)
-            .eq('type', 'task');
-        
-        if (error || !eventsData) return;
-        
-        let cleanedCount = 0;
-        
-        for (const ev of eventsData) {
-            if (!ev.description) continue;
-            
-            // چک کن که description شامل چک‌لیست هست یا نه
-            const lines = ev.description.split('\n');
-            const hasChecklist = lines.some(line => 
-                line.trim().startsWith('☑') || line.trim().startsWith('☐') ||
-                line.trim().startsWith('- [x]') || line.trim().startsWith('- [ ]')
-            );
-            
-            if (hasChecklist) {
-                // پاک کردن خطوطی که شبیه چک‌لیست هستند
-                const cleanLines = lines.filter(line => 
-                    !line.trim().startsWith('☑') && !line.trim().startsWith('☐') &&
-                    !line.trim().startsWith('- [x]') && !line.trim().startsWith('- [ ]')
-                );
-                const cleanDesc = cleanLines.join('\n').trim();
-                
-                // آپدیت کردن در دیتابیس
-                await updateEventInDB(ev.id, { description: cleanDesc });
-                cleanedCount++;
-                console.log('Cleaned checklist from event: ' + ev.id);
-            }
-        }
-        
-        if (cleanedCount > 0) {
-            console.log('Cleaned ' + cleanedCount + ' events');
-            // ریفرش رویدادها
-            const freshEvents = await fetchEvents();
-            events = freshEvents;
-            renderCalendar();
-        }
-    } catch (e) {
-        console.warn('Cleanup error:', e);
-    }
-}
-
-// ---- دسترسی از سایدبار و سایر بخش‌ها ----
+/* ------------------------- GLOBAL WINDOW EXPORTS ------------------------- */
 window.ravloOpenEvent = function(eventId, dateStr) {
     const ev = events.find(e => e.id == eventId);
     if (ev) {
@@ -5728,8 +5605,8 @@ window.ravloCloseSidebar = function() {
         }
     }
 };
-/* =========================== INITIALIZATION ============================ */
 
+/* ------------------------- INITIALIZATION ------------------------- */
 async function initCalendar() {
     if (currentUser) {
         events = await fetchEvents();
@@ -5741,6 +5618,7 @@ async function initCalendar() {
     animateTabIndicator();
 }
 
+// First session restore attempt
 (async function tryRestoreSession() {
     showApp();
 
@@ -5751,11 +5629,7 @@ async function initCalendar() {
     }
 
     try {
-        const {
-            data: {
-                session
-            }
-        } = await sb.auth.getSession();
+        const { data: { session } } = await sb.auth.getSession();
 
         if (session?.user) {
             await applySessionUser(session.user);
@@ -5778,9 +5652,7 @@ async function initCalendar() {
     const refreshToken = urlParams.get('refresh_token');
 
     if (accessToken && refreshToken) {
-        const {
-            error
-        } = await sb.auth.setSession({
+        const { error } = await sb.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken
         });
@@ -5788,11 +5660,7 @@ async function initCalendar() {
         if (!error) {
             window.history.replaceState({}, document.title, window.location.pathname);
 
-            const {
-                data: {
-                    user
-                }
-            } = await sb.auth.getUser();
+            const { data: { user } } = await sb.auth.getUser();
             if (user) {
                 await applySessionUser(user);
             }
@@ -5803,13 +5671,11 @@ async function initCalendar() {
             console.warn('URL session set failed:', error.message);
         }
     }
-
 })();
-// =========================== APP INITIALIZATION ============================
-// Start the app immediately (don't wait for sidebar component)
+
+// Second session/init block (kept for compatibility)
 showApp();
 
-// Restore session and sync sidebar later
 (async function restoreSessionAndSidebar() {
     try {
         const { data: { session } } = await sb.auth.getSession();
@@ -5819,7 +5685,6 @@ showApp();
             currentUserRole = currentProfile?.role || 'recruit';
             events = await fetchEvents();
             renderCalendar();
-            // sync after we have everything, safe even if component not ready
             syncSidebarComponent();
             await updateNotificationDot();
         }
@@ -5851,7 +5716,7 @@ showApp();
     }
 })();
 
-// When sidebar component finally becomes available, hook it up properly
+// Sidebar component final wiring
 customElements.whenDefined('sidebar-component').then(() => {
     getSidebarComponent();
     syncSidebarComponent();
@@ -5859,7 +5724,6 @@ customElements.whenDefined('sidebar-component').then(() => {
     const sidebar = document.querySelector('sidebar-component');
     if (!sidebar || !sidebar.shadowRoot) return;
 
-    // مدیریت blur خط زمان هنگام باز شدن سایدبار
     const overlay = sidebar.shadowRoot.getElementById('sidebar-overlay');
     if (overlay) {
         const observer = new MutationObserver((mutations) => {
@@ -5870,7 +5734,6 @@ customElements.whenDefined('sidebar-component').then(() => {
         observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // گوش دادن به کلیک روی آیتم‌های Today/Overdue
     sidebar.addEventListener('today-item-click', (e) => {
         const { eventId, date } = e.detail;
         if (window.ravloCloseSidebar) {
