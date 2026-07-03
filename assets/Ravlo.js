@@ -1,14 +1,4 @@
 /*
- ****************************************************
- *  Author: Armin Silatani
- *  Date: 2026-06-23
- *  Version: 0.0.0
- ****************************************************
- */
-
-/* =========================== RAVLO CALENDAR APP ============================ */
-
-/*
 Author: Armin Silatani
 Date: 2026-07-03
 Version: 0.0.0
@@ -137,16 +127,25 @@ function getAccentPinIcon() {
 /* ------------------------- REMOVE NOTIFICATIONS FOR EVENT ------------------------- */
 async function removeNotificationsForEvent(eventId, userId) {
     try {
-        const { error } = await sb
+        const { error: err1 } = await sb
             .from('notifications')
             .delete()
             .eq('user_id', userId)
             .eq('event_id', eventId);
-        if (error) {
-            console.warn('Remove notifications error:', error);
-        } else {
-            console.log('Notifications removed for event: ' + eventId);
+        if (err1) console.warn('Remove by event_id failed:', err1);
+
+        const ev = events.find(e => e.id == eventId);
+        if (ev && ev.title) {
+            const { error: err2 } = await sb
+                .from('notifications')
+                .delete()
+                .eq('user_id', userId)
+                .eq('title', ev.title)
+                .eq('type', 'event');
+            if (err2) console.warn('Remove by title failed:', err2);
         }
+
+        console.log('✅ All notifications removed for event:', eventId);
     } catch (e) {
         console.warn('Remove notifications error:', e);
     }
