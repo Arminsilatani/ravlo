@@ -2437,7 +2437,7 @@ body.modal-open {
     border-radius: 20px;
     font-size: 12px;
     font-weight: 500;
-    color: #fff;
+    color: #0d0d0d;
     cursor: pointer;
     transition: all 0.2s ease;
     background-color: var(--capsule-color);
