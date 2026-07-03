@@ -8,12 +8,18 @@
 
 /* =========================== RAVLO CALENDAR APP ============================ */
 
+/*
+Author: Armin Silatani
+Date: 2026-07-03
+Version: 0.0.0
+*/
+
+/* =========================== MAIN CALENDAR APPLICATION ============================ */
+
 /* :::::::::::::::::::::::::: SUPABASE CLIENT :::::::::::::::::::::::::: */
 const SUPABASE_URL = 'https://vzqicidepdmraygulrey.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_kqRWgOmLISOE2EuLL1s8fw_WN6FJRTI';
-const {
-    createClient
-} = supabase;
+const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* :::::::::::::::::::::::::: GLOBAL STATE :::::::::::::::::::::::::: */
@@ -107,6 +113,7 @@ var gregState = {
 };
 var GREG_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 var currentDetailEvent = null;
+
 /* :::::::::::::::::::::::::: LAZY PIN ICON :::::::::::::::::::::::::: */
 let accentPinIcon = null;
 
@@ -127,7 +134,7 @@ function getAccentPinIcon() {
     return accentPinIcon;
 }
 
-// =========================== REMOVE NOTIFICATIONS FOR EVENT ============================
+/* ------------------------- REMOVE NOTIFICATIONS FOR EVENT ------------------------- */
 async function removeNotificationsForEvent(eventId, userId) {
     try {
         const { error } = await sb
@@ -145,7 +152,7 @@ async function removeNotificationsForEvent(eventId, userId) {
     }
 }
 
-// =========================== CHECK AND CREATE TODAY NOTIFICATIONS ============================
+/* ------------------------- CHECK AND CREATE TODAY NOTIFICATIONS ------------------------- */
 async function checkAndCreateTodayNotifications() {
     if (!currentUser) return;
     
@@ -173,7 +180,7 @@ async function checkAndCreateTodayNotifications() {
     });
     
     for (const ev of todayEvents) {
-        // چک کن که نوتیفیکیشن قبلاً وجود دارد یا نه
+        // Check if notification already exists
         const { data: existing } = await sb
             .from('notifications')
             .select('id')
@@ -194,7 +201,7 @@ async function checkAndCreateTodayNotifications() {
     }
 }
 
-/* =========================== UTILITY FUNCTIONS ============================ */
+/* ------------------------- UTILITY FUNCTIONS ------------------------- */
 
 const DASHBOARD_URL = 'https://arminsilatani.github.io/dashboard/';
 
@@ -282,6 +289,60 @@ function generateInviteLinkForNewUser() {
     return `${DASHBOARD_URL}?ref=${currentUser.id}`;
 }
 
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'ravlo-toast';
+
+    const r = 10;
+    const circumference = 2 * Math.PI * r;
+
+    toast.innerHTML = `
+        <svg width="24" height="24" viewBox="0 0 24 24" class="toast-ring">
+            <circle cx="12" cy="12" r="${r}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+            <circle cx="12" cy="12" r="${r}" fill="none" stroke="#fff" stroke-width="2"
+                    stroke-dasharray="${circumference}" stroke-dashoffset="0"
+                    stroke-linecap="round"
+                    style="transition: stroke-dashoffset 4s linear;"/>
+        </svg>
+        <span>${message}</span>
+    `;
+
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => {
+        const ring = toast.querySelector('.toast-ring circle:last-child');
+        if (ring) ring.style.strokeDashoffset = circumference;
+    });
+
+    setTimeout(() => toast.remove(), 4000);
+}
+
+/* ------------------------- HOLIDAYS ------------------------- */
+const GREG_HOLIDAYS = {
+    '01-01': "New Year's Day",
+    '02-14': "Valentine's Day",
+    '03-08': "Int'l Women's Day",
+    '03-20': "Int'l Day of Happiness",
+    '03-21': "Nowruz (Spring Equinox)",
+    '04-01': "April Fools' Day",
+    '04-22': "Earth Day",
+    '05-01': "International Workers' Day",
+    '06-05': "World Environment Day",
+    '06-21': "World Music Day",
+    '07-04': "US Independence Day",
+    '08-12': "Int'l Youth Day",
+    '09-21': "Int'l Day of Peace",
+    '10-31': "Halloween",
+    '11-11': "Veterans Day",
+    '12-10': "Human Rights Day",
+    '12-25': "Christmas Day",
+    '12-31': "New Year's Eve"
+};
+
+function getGregHoliday(year, month, day) {
+    return GREG_HOLIDAYS[pad(month + 1) + '-' + pad(day)] || null;
+}
+
+/* ------------------------- ICON OPTIONS ------------------------- */
 const ICON_OPTIONS = [{
         svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>`
     },
@@ -370,78 +431,12 @@ function renderChecklistModalItems() {
     });
 }
 
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'ravlo-toast';
-
-    // SVG ring
-    const r = 10;
-    const circumference = 2 * Math.PI * r;
-
-    toast.innerHTML = `
-        <svg width="24" height="24" viewBox="0 0 24 24" class="toast-ring">
-            <circle cx="12" cy="12" r="${r}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-            <circle cx="12" cy="12" r="${r}" fill="none" stroke="#fff" stroke-width="2"
-                    stroke-dasharray="${circumference}" stroke-dashoffset="0"
-                    stroke-linecap="round"
-                    style="transition: stroke-dashoffset 4s linear;"/>
-        </svg>
-        <span>${message}</span>
-    `;
-
-    document.body.appendChild(toast);
-
-    // Start ring animation after a tiny delay to ensure transition triggers
-    requestAnimationFrame(() => {
-        const ring = toast.querySelector('.toast-ring circle:last-child');
-        if (ring) ring.style.strokeDashoffset = circumference;
-    });
-
-    // Remove after 4 seconds
-    setTimeout(() => toast.remove(), 4000);
-}
-
-/* =========================== HOLIDAYS ============================ */
-const GREG_HOLIDAYS = {
-    '01-01': "New Year's Day",
-    '02-14': "Valentine's Day",
-    '03-08': "Int'l Women's Day",
-    '03-20': "Int'l Day of Happiness",
-    '03-21': "Nowruz (Spring Equinox)",
-    '04-01': "April Fools' Day",
-    '04-22': "Earth Day",
-    '05-01': "International Workers' Day",
-    '06-05': "World Environment Day",
-    '06-21': "World Music Day",
-    '07-04': "US Independence Day",
-    '08-12': "Int'l Youth Day",
-    '09-21': "Int'l Day of Peace",
-    '10-31': "Halloween",
-    '11-11': "Veterans Day",
-    '12-10': "Human Rights Day",
-    '12-25': "Christmas Day",
-    '12-31': "New Year's Eve"
-};
-
-function getGregHoliday(year, month, day) {
-    return GREG_HOLIDAYS[pad(month + 1) + '-' + pad(day)] || null;
-}
-
-/* =========================== SVG ICONS ============================ */
-const ICON_CALENDAR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
-const ICON_SMILE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
-const ICON_EDIT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
-const ICON_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
-
-/* =========================== PROFILE & AUTH ============================ */
+/* ------------------------- PROFILE & AUTH ------------------------- */
 
 /* ------------------------- PROFILE BUILDER ------------------------- */
 async function buildCurrentProfile(user) {
     if (!user) return null;
-    const {
-        data: profileRow,
-        error
-    } = await sb
+    const { data: profileRow, error } = await sb
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -464,14 +459,13 @@ async function buildCurrentProfile(user) {
     };
 }
 
-/* =========================== SIDEBAR COMPONENT INTEGRATION ============================ */
+/* ------------------------- SIDEBAR COMPONENT INTEGRATION ------------------------- */
 let sidebarComponent = null;
 
 function getSidebarComponent() {
     if (!sidebarComponent) {
         sidebarComponent = document.querySelector('sidebar-component');
         if (sidebarComponent) {
-            // Listen to component's custom events
             sidebarComponent.addEventListener('login-request', () => {
                 openModal(authOverlay);
                 showStep('step-1');
@@ -483,7 +477,6 @@ function getSidebarComponent() {
                 openModal(document.getElementById('logout-confirm-modal'));
             });
             sidebarComponent.addEventListener('session-restore-request', async () => {
-                // Attempt to restore session when component asks (called in connectedCallback)
                 try {
                     const { data: { session } } = await sb.auth.getSession();
                     if (session?.user) {
@@ -523,9 +516,8 @@ async function updateNotificationDot() {
     const comp = getSidebarComponent();
     if (!comp) return;
 
-    let hasNotifications = false;   // ← اول تابع باشد
+    let hasNotifications = false;
 
-    // 1. Check unread notifications in DB
     if (currentUser) {
         try {
             const { data, error } = await sb
@@ -540,7 +532,6 @@ async function updateNotificationDot() {
             console.warn('Could not fetch notifications:', e);
         }
 
-        // 2. Check today's events (if no DB notifications)
         if (!hasNotifications) {
             const today = new Date();
             const ty = today.getFullYear(),
@@ -563,7 +554,6 @@ async function updateNotificationDot() {
         }
     }
 
-    // ست کردن نقطه
     if (comp && typeof comp.setNotificationDot === 'function') {
         comp.setNotificationDot(hasNotifications);
     }
@@ -582,7 +572,6 @@ function getTodayAndOverdueItems() {
         if (!ev.start_date) return;
         if (ev.status === 'done' || ev.status === 'completed') return;
 
-        // تابع کمکی برای افزودن برچسب "Invited" به عنوان آیتم
         function buildTitle(event) {
             const base = event.title || 'Untitled';
             if (event.invitation_status === 'pending' && event.parent_event_id) {
@@ -591,7 +580,6 @@ function getTodayAndOverdueItems() {
             return base;
         }
 
-        // 1. Overdue (only recurring tasks that are past due)
         if (ev.recurrence_type && ev.recurrence_type !== 'none' && ev.type === 'task') {
             const start = new Date(ev.start_date);
             const yesterday = new Date(today.getTime() - 1);
@@ -610,7 +598,6 @@ function getTodayAndOverdueItems() {
             });
         }
 
-        // 2. Today (all event types)
         const d = new Date(ev.start_date);
         if (ev.recurrence_type === 'none' || !ev.recurrence_type) {
             if (toLocalDateString(d) === todayStr) {
@@ -646,7 +633,7 @@ function getTodayAndOverdueItems() {
     return { todayItems, overdueItems };
 }
 
-/* =========================== MODAL HELPERS ============================ */
+/* ------------------------- MODAL HELPERS ------------------------- */
 
 function openModal(modal) {
     if (!modal) return;
@@ -754,7 +741,7 @@ function showConfirmModal(message, onConfirm) {
     });
 }
 
-/* =========================== DATABASE HELPERS ============================ */
+/* ------------------------- DATABASE HELPERS ------------------------- */
 
 async function fetchEvents() {
     if (!currentUser) return [];
@@ -797,7 +784,6 @@ async function fetchEvents() {
     return data || [];
 }
 
-
 async function updateEventInDB(id, payload) {
     if (!currentUser) {
         showToast('Not logged in');
@@ -817,9 +803,7 @@ async function deleteEventFromDB(id) {
         showToast('Not logged in');
         return;
     }
-    const {
-        error
-    } = await sb.from('ravlo').delete().eq('id', id).eq('user_id', currentUser.id);
+    const { error } = await sb.from('ravlo').delete().eq('id', id).eq('user_id', currentUser.id);
     if (error) showToast('Delete failed: ' + error.message);
     return !error;
 }
@@ -838,12 +822,12 @@ async function saveEventToDB(payload) {
     return data?.[0];
 }
 
-// =========================== SMART RECURRENCE HELPERS ============================
+/* ------------------------- SMART RECURRENCE HELPERS ------------------------- */
 
 /**
- * محاسبه تاریخ بعدی برای تسک هوشمند
- * @param {Object} ev - تسک فعلی
- * @returns {Date|null} تاریخ پیشنهادی برای تسک بعدی
+ * Calculate the next date for a smart task
+ * @param {Object} ev - the current task
+ * @returns {Date|null} suggested next date
  */
 function getNextSmartDate(ev) {
     const interval = ev.recurrence_smart_interval || 'weekly';
@@ -865,9 +849,6 @@ function getNextSmartDate(ev) {
     return newDate;
 }
 
-/**
- * ساخت تسک بعدی با مشخصات مشابه و تاریخ جدید
- */
 async function createNextSmartTask(ev, newDate) {
     if (!currentUser) return;
     const payload = {
@@ -906,9 +887,6 @@ async function createNextSmartTask(ev, newDate) {
     }
 }
 
-/**
- * تکمیل تسک هوشمند: اتمام تسک فعلی و ساخت تسک بعدی
- */
 async function completeSmartTask(ev) {
     if (ev.status === 'done') return;
     ev.status = 'done';
@@ -934,7 +912,7 @@ async function completeSmartTask(ev) {
     }
 }
 
-// =========================== MOVE OVERDUE TASKS TO TODAY ============================
+/* ------------------------- MOVE OVERDUE TASKS TO TODAY ------------------------- */
 async function moveOverdueTasksToToday() {
     if (!currentUser) return;
 
@@ -988,7 +966,7 @@ async function moveOverdueTasksToToday() {
     }
 }
 
-/* =========================== AUTH FLOW ============================ */
+/* ------------------------- AUTH FLOW ------------------------- */
 // ----- Sign In Button -----
 document.getElementById('auth-signin-btn')?.addEventListener('click', async function() {
     const email = authEmail;
@@ -1030,7 +1008,7 @@ async function showApp() {
         await cleanupOldCompletions();
         await cleanupChecklistFromDescriptions();
         await moveOverdueTasksToToday();
-        await checkAndCreateTodayNotifications(); // ✅ اضافه کن
+        await checkAndCreateTodayNotifications();
     }
     renderCalendar();
     animateTabIndicator();
@@ -1045,13 +1023,13 @@ async function logout() {
     currentProfile = null;
     events = [];
     renderCalendar();
-    syncSidebarComponent();  // clears user in sidebar
+    syncSidebarComponent();
     closeModal(eventModal);
     closeModal(eventDetailModal);
     hideGlobalLoader();
 }
 
-/* =========================== LEAFLET MAP HELPERS ============================ */
+/* ------------------------- LEAFLET MAP HELPERS ------------------------- */
 
 function isLeafletReady() {
     return typeof L !== 'undefined';
@@ -1078,9 +1056,7 @@ function initLocationMap(containerId = 'location-map') {
     locationMap.on('click', function(e) {
         if (locationMarker) locationMap.removeLayer(locationMarker);
         const icon = getAccentPinIcon();
-        locationMarker = icon ? L.marker(e.latlng, {
-            icon
-        }).addTo(locationMap) : L.marker(e.latlng).addTo(locationMap);
+        locationMarker = icon ? L.marker(e.latlng, { icon }).addTo(locationMap) : L.marker(e.latlng).addTo(locationMap);
         const lat = e.latlng.lat.toFixed(6);
         const lng = e.latlng.lng.toFixed(6);
         const coordsInput = document.getElementById('location-modal-coords-input') || document.getElementById('location-coords-input');
@@ -1089,10 +1065,7 @@ function initLocationMap(containerId = 'location-map') {
         const infoEl = document.getElementById('selected-location-info');
         if (searchInput) searchInput.value = '';
         if (infoEl) infoEl.textContent = `Selected location: ${lat}, ${lng}`;
-        currentLocationCoords = {
-            lat: parseFloat(lat),
-            lng: parseFloat(lng)
-        };
+        currentLocationCoords = { lat: parseFloat(lat), lng: parseFloat(lng) };
         currentLocationName = '';
     });
 }
@@ -1102,9 +1075,7 @@ function updateMapFromCoords(lat, lng) {
     if (!locationMap) initLocationMap();
     if (locationMarker) locationMap.removeLayer(locationMarker);
     const icon = getAccentPinIcon();
-    locationMarker = icon ? L.marker([lat, lng], {
-        icon
-    }).addTo(locationMap) : L.marker([lat, lng]).addTo(locationMap);
+    locationMarker = icon ? L.marker([lat, lng], { icon }).addTo(locationMap) : L.marker([lat, lng]).addTo(locationMap);
     locationMap.setView([lat, lng], 15);
 }
 
@@ -1112,15 +1083,12 @@ function parseCoordinates(str) {
     if (!str) return null;
     const parts = str.split(/[,\s]+/).map(Number);
     if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        return {
-            lat: parts[0],
-            lng: parts[1]
-        };
+        return { lat: parts[0], lng: parts[1] };
     }
     return null;
 }
 
-/* =========================== RECURRENCE LOGIC ============================ */
+/* ------------------------- RECURRENCE LOGIC ------------------------- */
 
 function updateRecurrencePreview() {
     const preview = document.getElementById('recurrence-preview');
@@ -1143,15 +1111,7 @@ function updateRecurrencePreview() {
     if (recurrence.interval > 1) text += ' (every ' + recurrence.interval + ')';
 
     if ((recurrence.type === 'weekly' || recurrence.type === 'custom') && recurrence.days.length > 0) {
-        const dayMap = {
-            0: 'Su',
-            1: 'Mo',
-            2: 'Tu',
-            3: 'We',
-            4: 'Th',
-            5: 'Fr',
-            6: 'Sa'
-        };
+        const dayMap = { 0: 'Su', 1: 'Mo', 2: 'Tu', 3: 'We', 4: 'Th', 5: 'Fr', 6: 'Sa' };
         const dayNames = recurrence.days.map(d => dayMap[d]);
         text += ' on ' + dayNames.join(', ');
     }
@@ -1213,29 +1173,14 @@ function renderRecurrenceDays() {
     const container = document.getElementById('rec-days-container');
     if (!container) return;
 
-    const daysOfWeek = [{
-            label: 'Su',
-            value: 0
-        }, {
-            label: 'Mo',
-            value: 1
-        }, {
-            label: 'Tu',
-            value: 2
-        },
-        {
-            label: 'We',
-            value: 3
-        }, {
-            label: 'Th',
-            value: 4
-        }, {
-            label: 'Fr',
-            value: 5
-        }, {
-            label: 'Sa',
-            value: 6
-        }
+    const daysOfWeek = [
+        { label: 'Su', value: 0 },
+        { label: 'Mo', value: 1 },
+        { label: 'Tu', value: 2 },
+        { label: 'We', value: 3 },
+        { label: 'Th', value: 4 },
+        { label: 'Fr', value: 5 },
+        { label: 'Sa', value: 6 }
     ];
 
     container.innerHTML = '';
@@ -1261,7 +1206,6 @@ function findBestSlot(periodStart, periodEnd, events) {
     const dayEventCount = {};
     const hourEventCount = {};
 
-    // مقداردهی اولیه
     for (let d = new Date(periodStart); d <= periodEnd; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
         dayEventCount[dateStr] = 0;
@@ -1270,11 +1214,8 @@ function findBestSlot(periodStart, periodEnd, events) {
         }
     }
 
-    // شمارش رویدادها (به جز رویدادهای smart)
     events.forEach(ev => {
         if (!ev.start_date) return;
-        
-        // رویدادهای smart را فقط یک بار در نظر می‌گیریم
         if (ev.recurrence_type === 'smart') {
             const start = new Date(ev.start_date);
             if (start >= periodStart && start <= periodEnd) {
@@ -1286,7 +1227,6 @@ function findBestSlot(periodStart, periodEnd, events) {
             return;
         }
 
-        // برای رویدادهای غیر smart
         if (ev.recurrence_type !== 'none') {
             const recDates = getRecurrenceDates(ev, periodStart, periodEnd);
             recDates.forEach(rd => {
@@ -1306,7 +1246,6 @@ function findBestSlot(periodStart, periodEnd, events) {
         }
     });
 
-    // انتخاب بهترین روز
     let minDayCount = Infinity;
     let bestDays = [];
     for (let dateStr in dayEventCount) {
@@ -1320,7 +1259,6 @@ function findBestSlot(periodStart, periodEnd, events) {
     }
     const chosenDay = bestDays[Math.floor(Math.random() * bestDays.length)];
 
-    // انتخاب بهترین ساعت
     let minHourCount = Infinity;
     let bestHours = [];
     for (let h = 10; h < 18; h++) {
@@ -1348,7 +1286,6 @@ function getRecurrenceDates(ev, fromDate, toDate) {
     const start = new Date(ev.start_date);
     const type = ev.recurrence_type;
 
-    // ── برای smart فقط تاریخ شروع را برگردان ──
     if (type === 'smart') {
         if (start >= fromDate && start <= toDate) {
             return [new Date(start)];
@@ -1356,7 +1293,6 @@ function getRecurrenceDates(ev, fromDate, toDate) {
         return [];
     }
 
-    // ── برای بقیه انواع ──
     const interval = ev.recurrence_interval || 1;
     const days = ev.recurrence_days || [];
     const occurrences = [];
@@ -1399,10 +1335,8 @@ function getRecurrenceDates(ev, fromDate, toDate) {
         return occurrences;
     }
 
-    // ── weekly / custom (با پشتیبانی از چند روز در هفته و interval) ──
     if (type === 'weekly' || type === 'custom') {
         if (days.length === 0) {
-            // بدون روز خاص: هر 7*interval روز یکبار
             let current = new Date(start);
             while (current <= end) {
                 if (current >= fromDate && current >= start) {
@@ -1413,36 +1347,31 @@ function getRecurrenceDates(ev, fromDate, toDate) {
             return occurrences;
         }
 
-        // با روزهای انتخاب‌شده: پیمایش بر اساس هفته (مبنای یکشنبه)
         const startSunday = new Date(start);
         startSunday.setDate(startSunday.getDate() - startSunday.getDay());
 
         let weekOffset = 0;
-        while (weekOffset < 500) { // محدودیت جلوگیری از حلقه بی‌نهایت
+        while (weekOffset < 500) {
             const targetSunday = new Date(startSunday);
             targetSunday.setDate(targetSunday.getDate() + weekOffset * 7);
-
-            // اگر یکشنبهٔ این هفته از پایان بازه رد شده، متوقف شو
             if (targetSunday > end) break;
 
-            // بررسی تمام روزهای انتخاب‌شده در این هفته
             for (let d of days) {
                 const eventDate = new Date(targetSunday);
                 eventDate.setDate(eventDate.getDate() + d);
-                // فقط تاریخ‌هایی که در بازه و بعد از start هستند
                 if (eventDate >= start && eventDate <= end && eventDate >= fromDate) {
                     occurrences.push(new Date(eventDate));
                 }
             }
-            weekOffset += interval;   // پرش به اندازهٔ interval هفته
+            weekOffset += interval;
         }
         return occurrences;
     }
 
-    // fallback (نباید به اینجا برسد)
     return occurrences;
 }
-/* =========================== GREGORIAN PICKER ============================ */
+
+/* ------------------------- GREGORIAN PICKER ------------------------- */
 
 function renderYearPanel(container, selectedYear, fromYear, toYear, persian, onSelect) {
     container.innerHTML = '';
@@ -1464,9 +1393,7 @@ function renderYearPanel(container, selectedYear, fromYear, toYear, persian, onS
     }
     setTimeout(() => {
         var s = container.querySelector('.selected');
-        if (s) s.scrollIntoView({
-            block: 'center'
-        });
+        if (s) s.scrollIntoView({ block: 'center' });
     }, 0);
 }
 
@@ -1642,7 +1569,6 @@ function openGregYearPopup() {
     });
 }
 
-
 /* ------------------------- RENDER DISPATCHER ------------------------- */
 function syncViewTabsUI() {
     viewTabsEl.querySelectorAll('.view-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.view === viewMode));
@@ -1680,7 +1606,7 @@ function renderView() {
     if (currentUser) {
         checkAndCreateTodayNotifications();
     }
-    syncSidebarComponent();  // keeps today list & dot in sync
+    syncSidebarComponent();
 }
 
 /* ------------------------- MONTH VIEW ------------------------- */
@@ -1688,9 +1614,7 @@ function renderGregorianMonth() {
     var year = currentDate.getFullYear(),
         month = currentDate.getMonth(),
         today = new Date();
-    currentMonthYearEl.textContent = currentDate.toLocaleString('en-US', {
-        month: 'long'
-    }) + ' ' + year;
+    currentMonthYearEl.textContent = currentDate.toLocaleString('en-US', { month: 'long' }) + ' ' + year;
     calendarGrid.setAttribute('dir', 'ltr');
     calendarGrid.innerHTML = '';
     ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => {
@@ -1731,21 +1655,16 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
         cell.appendChild(hl);
     }
 
-    // فیلتر رویدادها با در نظر گرفتن وضعیت انجام‌شده
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
-
-        // رویدادهای غیرتکراری که کل آنها انجام شده → حذف
         if ((ev.status === 'done' || ev.status === 'completed') &&
             (ev.recurrence_type === 'none' || !ev.recurrence_type)) {
             return false;
         }
 
-        // بررسی تاریخ شروع رویداد (غیرتکراری)
         var d = new Date(ev.start_date);
         if (d.getFullYear() === ny && d.getMonth() === nm && d.getDate() === nd) {
             if (ev.recurrence_type !== 'none') {
-                // تکراری: اگر این تاریخ خاص انجام شده باشد، رد شود
                 var dateStr = toLocalDateString(new Date(ny, nm, nd));
                 if (ev.completed_occurrences && Array.isArray(ev.completed_occurrences) &&
                     ev.completed_occurrences.includes(dateStr)) {
@@ -1755,7 +1674,6 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
             return true;
         }
 
-        // بررسی رخدادهای تکراری
         if (ev.recurrence_type !== 'none') {
             const monthStart = new Date(ny, nm, 1);
             const monthEnd = new Date(ny, nm + 1, 0, 23, 59, 59);
@@ -1765,7 +1683,7 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
                     var dateStr = toLocalDateString(rd);
                     if (ev.completed_occurrences && Array.isArray(ev.completed_occurrences) &&
                         ev.completed_occurrences.includes(dateStr)) {
-                        return false; // این رخداد انجام شده
+                        return false;
                     }
                     return true;
                 }
@@ -1775,7 +1693,6 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
         return false;
     });
 
-    // ردیف نقطه‌های افقی
     const dotsRow = document.createElement('div');
     dotsRow.className = 'event-dots-row';
 
@@ -1814,32 +1731,28 @@ function renderDayView() {
         vm = viewDate.getMonth(),
         vd = viewDate.getDate();
 
-    // ─── دریافت رویدادهای این روز (با تصحیح timezone برای تاریخ‌های UTC) ───
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
-        // تبدیل تاریخ UTC به محلی برای مقایسهٔ دقیق روز
         var d = new Date(ev.start_date + (ev.start_date.endsWith('Z') ? '' : ''));
         if (d.getFullYear() === vy && d.getMonth() === vm && d.getDate() === vd) return true;
         if (ev.recurrence_type !== 'none') {
             var dayStart = new Date(vy, vm, vd, 0, 0, 0);
-            var dayEnd   = new Date(vy, vm, vd, 23, 59, 59, 999);
+            var dayEnd = new Date(vy, vm, vd, 23, 59, 59, 999);
             var recDates = getRecurrenceDates(ev, dayStart, dayEnd);
             return recDates.some(rd => rd.getFullYear() === vy && rd.getMonth() === vm && rd.getDate() === vd);
         }
         return false;
     });
 
-    // ─── جدا کردن All‑Day ───
     var allDayEvents = dayEvents.filter(ev => ev.all_day === true);
     var timedEvents = dayEvents.filter(ev => ev.all_day !== true);
 
-    // ─── محاسبه ارتفاع ساعات (بر اساس وجود رویداد زمان‌دار) ───
     var occupiedHours = new Array(24).fill(false);
     timedEvents.forEach(ev => {
         var start = new Date(ev.start_date);
         var end = ev.end_date ? new Date(ev.end_date) : new Date(start.getTime() + 60 * 60 * 1000);
         var startMin = start.getHours() * 60 + start.getMinutes();
-        var endMin   = end.getHours() * 60 + end.getMinutes();
+        var endMin = end.getHours() * 60 + end.getMinutes();
         if (endMin <= startMin) endMin = startMin + 15;
         var sh = Math.floor(startMin / 60);
         var eh = Math.ceil(endMin / 60);
@@ -1851,7 +1764,6 @@ function renderDayView() {
     var hourHeights = occupiedHours.map(occ => occ ? 60 : 20);
     var totalHeight = hourHeights.reduce((sum, h) => sum + h, 0);
 
-    // ─── پاک‌سازی نقشه‌های مینیاتوری قبلی ───
     var oldMiniMaps = calendarGrid.querySelectorAll('.event-map-bg');
     oldMiniMaps.forEach(function(mapDiv) {
         if (mapDiv._leaflet_id && mapDiv._leaflet_map && mapDiv._leaflet_map.remove) {
@@ -1859,11 +1771,9 @@ function renderDayView() {
         }
     });
 
-    // ─── پاک کردن گرید ───
     calendarGrid.className = 'day-view-timeline';
     calendarGrid.innerHTML = '';
 
-    // ─── 1) ردیف Overdue (فقط اگر امروز باشد) ───
     const todayCheck = new Date();
     if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === todayCheck.getDate()) {
         var overdueOccurrences = [];
@@ -1899,8 +1809,8 @@ function renderDayView() {
         if (overdueOccurrences.length > 0) {
             var overdueRow = document.createElement('div');
             overdueRow.className = 'all-day-events-row overdue-row';
-            overdueLabel.className = 'overdue-label';
             var overdueLabel = document.createElement('span');
+            overdueLabel.className = 'overdue-label';
             overdueLabel.textContent = 'Overdue';
             overdueRow.appendChild(overdueLabel);
 
@@ -1933,7 +1843,6 @@ function renderDayView() {
         }
     }
 
-    // ─── 2) ردیف رویدادهای تمام روز ───
     if (allDayEvents.length > 0) {
         var allDayRow = document.createElement('div');
         allDayRow.className = 'all-day-events-row';
@@ -1941,7 +1850,6 @@ function renderDayView() {
             var capsule = document.createElement('span');
             capsule.className = 'all-day-capsule';
             capsule.style.setProperty('--capsule-color', ev.color || 'var(--accent)');
-
 
             if (ev.icon) {
                 var iconSpan = document.createElement('span');
@@ -1965,7 +1873,6 @@ function renderDayView() {
         calendarGrid.appendChild(allDayRow);
     }
 
-    // ─── 3) تایم‌لاین ───
     var timelineWrapper = document.createElement('div');
     timelineWrapper.className = 'day-timeline-wrapper';
 
@@ -1987,7 +1894,6 @@ function renderDayView() {
     timelineWrapper.appendChild(slots);
     calendarGrid.appendChild(timelineWrapper);
 
-        // ─── خطوط افقی (grid lines) ───
     var cumulativeTop = 0;
     for (var h = 0; h < 24; h++) {
         var lineEl = document.createElement('div');
@@ -1997,7 +1903,6 @@ function renderDayView() {
         cumulativeTop += hourHeights[h];
     }
 
-    // ─── رندر رویدادهای زمان‌دار (با تصحیح موقعیت ساعت) ───
     requestAnimationFrame(function() {
         var eventsWithMinutes = timedEvents.map(ev => {
             var start = new Date(ev.start_date);
@@ -2009,7 +1914,6 @@ function renderDayView() {
             };
         }).sort((a, b) => a.startMin - b.startMin);
 
-        // محاسبهٔ مجموع ارتفاع تا یک ساعت مشخص (برای استفاده در محاسبهٔ top)
         function getCumulativeHeightUntil(minuteOfDay) {
             var h = Math.floor(minuteOfDay / 60);
             var m = minuteOfDay % 60;
@@ -2021,7 +1925,6 @@ function renderDayView() {
             return acc;
         }
 
-        // محاسبهٔ ارتفاع بین دو دقیقه از روز
         function getHeightBetween(startMin, endMin) {
             return getCumulativeHeightUntil(endMin) - getCumulativeHeightUntil(startMin);
         }
@@ -2063,7 +1966,6 @@ function renderDayView() {
                 var laneWidthPx = availableWidth / laneCount;
                 var leftPx = SLOT_PADDING + laneIndex * (laneWidthPx + gapPx);
 
-                // ایجاد المان رویداد
                 var evEl = document.createElement('div');
                 evEl.className = 'time-slot-event';
                 evEl.style.position = 'absolute';
@@ -2072,7 +1974,6 @@ function renderDayView() {
                 evEl.style.left = leftPx + 'px';
                 evEl.style.width = laneWidthPx + 'px';
 
-                // نقشهٔ مینیاتوری (در صورت وجود)
                 if (item.ev.location && item.ev.location.lat != null && item.ev.location.lng != null && isLeafletReady()) {
                     var mapDiv = document.createElement('div');
                     mapDiv.className = 'event-map-bg';
@@ -2104,7 +2005,6 @@ function renderDayView() {
                     }, 150);
                 }
 
-                // استایل شرطی (رنگ و border دینامیک)
                 if (item.ev.invitation_status === 'pending') {
                     evEl.classList.add('event-invited');
                     var borderColor = item.ev.color || 'var(--accent)';
@@ -2127,7 +2027,6 @@ function renderDayView() {
                     evEl.classList.add('event-edit-requested');
                 }
 
-                // عنوان رویداد
                 var titleSpan = document.createElement('div');
                 titleSpan.className = 'event-title';
                 if (item.ev.icon) {
@@ -2141,7 +2040,6 @@ function renderDayView() {
                 }
                 evEl.appendChild(titleSpan);
 
-                // نشان دعوت
                 if (item.ev.invitation_status === 'pending') {
                     var badge = document.createElement('span');
                     badge.className = 'invited-badge';
@@ -2149,7 +2047,6 @@ function renderDayView() {
                     evEl.appendChild(badge);
                 }
 
-                // دکمه‌های اکشن
                 var actionsDiv = document.createElement('div');
                 actionsDiv.className = 'event-actions';
 
@@ -2293,7 +2190,6 @@ function renderDayView() {
 
                 evEl.appendChild(actionsDiv);
 
-                // کلیک روی رویداد
                 evEl.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (item.ev.invitation_status === 'pending') {
@@ -2316,7 +2212,6 @@ function renderDayView() {
             });
         });
 
-        // ─── خط زمان فعلی ───
         var now = new Date();
         if (now.getFullYear() === vy && now.getMonth() === vm && now.getDate() === vd) {
             var nowMin = now.getHours() * 60 + now.getMinutes();
@@ -2329,20 +2224,6 @@ function renderDayView() {
             slots.appendChild(line);
         }
 
-                // ─── خط زمان فعلی ───
-        var now = new Date();
-        if (now.getFullYear() === vy && now.getMonth() === vm && now.getDate() === vd) {
-            var nowMin = now.getHours() * 60 + now.getMinutes();
-            var nowTopPx = getCumulativeHeightUntil(nowMin);
-            var line = document.createElement('div');
-            line.className = 'current-time-line';
-            line.style.top = nowTopPx + 'px';
-            var dot = document.createElement('span');
-            line.appendChild(dot);
-            slots.appendChild(line);
-        }
-
-        // ─── کلیک روی فضای خالی ───
         slots.addEventListener('click', function(e) {
             if (e.target !== slots) return;
             var rect = slots.getBoundingClientRect();
@@ -2365,7 +2246,6 @@ function renderDayView() {
         });
     });
 
-    // ─── عنوان ───
     currentMonthYearEl.textContent = viewDate.toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
@@ -2386,9 +2266,7 @@ function makeYearMonthCard_Greg(year, month, today) {
     card.className = 'year-month-card';
     var nameEl = document.createElement('div');
     nameEl.className = 'ym-name';
-    nameEl.textContent = new Date(year, month).toLocaleString('en-US', {
-        month: 'short'
-    });
+    nameEl.textContent = new Date(year, month).toLocaleString('en-US', { month: 'short' });
     card.appendChild(nameEl);
     var daysInMonth = new Date(year, month + 1, 0).getDate(),
         firstDay = new Date(year, month, 1).getDay();
@@ -2412,7 +2290,7 @@ function makeYearMonthCard_Greg(year, month, today) {
     return card;
 }
 
-/* =========================== EVENT TYPE & TIME ============================ */
+/* ------------------------- EVENT TYPE & TIME ------------------------- */
 
 function setEventType(type) {
     eventType = type;
@@ -2439,15 +2317,12 @@ function setEventType(type) {
         titleInput.placeholder = type === 'task' ? 'Task title' : 'Event title';
     }
 
-    // ---- مدیریت دکمه‌های پایین textarea ----
-    // دکمه‌های آیکون و رنگ همیشه نمایش داده می‌شن
     const iconBtn = document.getElementById('toggle-icon-btn');
     if (iconBtn) iconBtn.style.display = 'flex';
     
     const colorBtn = document.getElementById('toggle-color-btn');
     if (colorBtn) colorBtn.style.display = 'flex';
 
-    // دکمه‌های شرطی
     const checklistBtn = document.getElementById('toggle-checklist-mode-btn');
     if (checklistBtn) {
         checklistBtn.style.display = (type === 'task') ? 'flex' : 'none';
@@ -2463,7 +2338,6 @@ function setEventType(type) {
         inviteBtn.style.display = (type === 'event') ? 'flex' : 'none';
     }
 
-    // اگر نوع تسک نیست، چک‌لیست رو مخفی کن
     if (type !== 'task') {
         hideInlineChecklist();
         currentChecklistItems = [];
@@ -2564,17 +2438,15 @@ function syncEndTimeOnStartChange(prefix) {
 
 /* ------------------------- OPEN NEW EVENT AT TIME ------------------------- */
 function resetEventForm() {
-    // فیلدهای متنی
     if (eventTitleInput) eventTitleInput.value = '';
     const descField = document.getElementById('event-description');
     if (descField) descField.value = '';
 
-if (saveEventBtn && typeof saveEvent === 'function') {
-    saveEventBtn.textContent = 'Save';
-    saveEventBtn.onclick = saveEvent;
-}
+    if (saveEventBtn && typeof saveEvent === 'function') {
+        saveEventBtn.textContent = 'Save';
+        saveEventBtn.onclick = saveEvent;
+    }
 
-    // تاریخ و زمان
     if (eventStartInput) eventStartInput.value = '';
     if (eventEndInput) eventEndInput.value = '';
     if (eventStartGreg) eventStartGreg.value = '';
@@ -2583,30 +2455,24 @@ if (saveEventBtn && typeof saveEvent === 'function') {
     const gregCheck = document.getElementById('event-all-day-greg');
     if (gregCheck) gregCheck.checked = false;
 
-    // وضعیت ویرایش
     editingEventId = null;
 
-    // تکرار
     recurrence = { type: 'none', interval: 1, days: [], smartInterval: 'weekly' };
     updateRecurrencePreview();
 
-    // رنگ
     selectedTagColor = '#f5f5f5';
     const colorBtn = document.getElementById('toggle-color-btn');
     if (colorBtn) colorBtn.classList.remove('active');
 
-    // آیکون
     selectedIcon = null;
     updateIconButton();
     const iconBtn = document.getElementById('toggle-icon-btn');
     if (iconBtn) iconBtn.classList.remove('active');
 
-    // دعوت‌شده‌ها
     currentInvitees = [];
     const inviteBtn = document.getElementById('toggle-invite-btn');
     if (inviteBtn) inviteBtn.classList.remove('active');
 
-    // مکان
     currentLocationCoords = null;
     currentLocationName = '';
     currentLocationAddress = null;
@@ -2617,7 +2483,6 @@ if (saveEventBtn && typeof saveEvent === 'function') {
     const locBtn = document.getElementById('toggle-location-btn');
     if (locBtn) locBtn.classList.remove('active');
 
-    // چک‌لیست
     currentChecklistItems = [];
     hideInlineChecklist();
     const checklistToggleBtn = document.getElementById('toggle-checklist-mode-btn');
@@ -2626,13 +2491,11 @@ if (saveEventBtn && typeof saveEvent === 'function') {
         checklistToggleBtn.classList.remove('active');
     }
 
-    // نوع رویداد (پیش‌فرض event)
     eventType = 'event';
     const toggle = document.getElementById('event-type-toggle');
     if (toggle) toggle.style.display = '';
     setEventType('event');
 
-    // ردیف‌های All‑day و زمان
     updateAllDayAndTimeRows();
 }
 
@@ -2661,16 +2524,13 @@ function openNewEventAtTime(date) {
     eventStartGreg.value = dateStr;
     eventStartInput.value = dateStr + 'T' + pad(hours) + ':' + pad(mins);
     gregDateRow.style.display = 'block';
-    // به‌روزرسانی وضعیت داخلی پیکر
     gregState.gy = year;
     gregState.gm = month;
     gregState.selectedGd = day;
 
-    // مقداردهی ورودی‌های ساعت در پیکر
     if (gregHourInput) gregHourInput.value = pad(hours);
     if (gregMinuteInput) gregMinuteInput.value = pad(mins);
 
-    // تنظیم زمان پایان (۱ ساعت بعد)
     const endH = (hours + 1) % 24;
     const endM = mins;
     document.getElementById('greg-end-hour').value = pad(endH);
@@ -2681,11 +2541,7 @@ function openNewEventAtTime(date) {
 
     eventEndInput.value = '';
     selectedTagColor = '#f5f5f5';
-    recurrence = {
-        type: 'none',
-        interval: 1,
-        days: []
-    };
+    recurrence = { type: 'none', interval: 1, days: [] };
     updateRecurrencePreview();
     hideInlineChecklist();
     currentChecklistItems = [];
@@ -2786,12 +2642,8 @@ async function openEditModal(ev) {
         if (toggleBtn) toggleBtn.style.display = 'none';
     }
 
-    // Load location
     if (ev.location && (ev.location.lat || ev.location.name)) {
-        currentLocationCoords = ev.location.lat && ev.location.lng ? {
-            lat: ev.location.lat,
-            lng: ev.location.lng
-        } : null;
+        currentLocationCoords = ev.location.lat && ev.location.lng ? { lat: ev.location.lat, lng: ev.location.lng } : null;
         currentLocationName = ev.location.name || '';
         currentLocationAddress = ev.location?.address || null;
         document.getElementById('location-section').style.display = 'none';
@@ -2807,13 +2659,10 @@ async function openEditModal(ev) {
         if (locBtn) locBtn.classList.remove('active');
     }
 
-    // Load invitees from invitee_ids (ecosystem)
     currentInvitees = [];
     if (ev.invitee_ids && Array.isArray(ev.invitee_ids) && ev.invitee_ids.length > 0) {
         try {
-            const {
-                data: profiles
-            } = await sb.from('profiles')
+            const { data: profiles } = await sb.from('profiles')
                 .select('id, first_name, last_name')
                 .in('id', ev.invitee_ids);
             if (profiles) {
@@ -2823,10 +2672,7 @@ async function openEditModal(ev) {
                 }));
             }
         } catch (e) {
-            currentInvitees = ev.invitee_ids.map(id => ({
-                id,
-                name: 'Unknown'
-            }));
+            currentInvitees = ev.invitee_ids.map(id => ({ id, name: 'Unknown' }));
         }
     }
     if (currentInvitees.length > 0) {
@@ -2836,26 +2682,27 @@ async function openEditModal(ev) {
 
     if (gregDateRow) gregDateRow.style.display = 'block';
     updateAllDayAndTimeRows();
-if (ev.start_date) {
-    const startDate = new Date(ev.start_date);
-    gregState.gy = startDate.getFullYear();
-    gregState.gm = startDate.getMonth();
-    gregState.selectedGd = startDate.getDate();
-    
-    if (gregHourInput) gregHourInput.value = pad(startDate.getHours());
-    if (gregMinuteInput) gregMinuteInput.value = pad(startDate.getMinutes());
-    
-    if (ev.end_date) {
-        const endDate = new Date(ev.end_date);
-        document.getElementById('greg-end-hour').value = pad(endDate.getHours());
-        document.getElementById('greg-end-minute').value = pad(endDate.getMinutes());
-    } else {
-        const endH = (startDate.getHours() + 1) % 24;
-        const endM = startDate.getMinutes();
-        document.getElementById('greg-end-hour').value = pad(endH);
-        document.getElementById('greg-end-minute').value = pad(endM);
+
+    if (ev.start_date) {
+        const startDate = new Date(ev.start_date);
+        gregState.gy = startDate.getFullYear();
+        gregState.gm = startDate.getMonth();
+        gregState.selectedGd = startDate.getDate();
+        
+        if (gregHourInput) gregHourInput.value = pad(startDate.getHours());
+        if (gregMinuteInput) gregMinuteInput.value = pad(startDate.getMinutes());
+        
+        if (ev.end_date) {
+            const endDate = new Date(ev.end_date);
+            document.getElementById('greg-end-hour').value = pad(endDate.getHours());
+            document.getElementById('greg-end-minute').value = pad(endDate.getMinutes());
+        } else {
+            const endH = (startDate.getHours() + 1) % 24;
+            const endM = startDate.getMinutes();
+            document.getElementById('greg-end-hour').value = pad(endH);
+            document.getElementById('greg-end-minute').value = pad(endM);
+        }
     }
-}
     openModal(eventModal);
 }
 
