@@ -161,35 +161,25 @@ async function checkAndCreateTodayNotifications() {
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
     const todayStr = toLocalDateString(today);
 
-    console.log('🔍 [DEBUG] checkAndCreateTodayNotifications: todayStr =', todayStr, 'total events =', events.length);
-
     const todayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
         if (ev.status === 'done' || ev.status === 'completed') return false;
 
-        // Non-recurring
+        // Non-recurring: check exact start_date date
         if (!ev.recurrence_type || ev.recurrence_type === 'none') {
             const d = new Date(ev.start_date);
-            const match = d >= todayStart && d <= todayEnd;
-            if (match) console.log('✅ Non-recurring event matched:', ev.title, 'start:', ev.start_date);
-            return match;
+            return d >= todayStart && d <= todayEnd;
         }
 
-        // Recurring
+        // Recurring: check all occurrences today
         const occurrences = getRecurrenceDates(ev, todayStart, todayEnd);
-        const validOccurrences = occurrences.filter(occ => {
+        return occurrences.some(occ => {
             const dateStr = toLocalDateString(occ);
             const isCompleted = ev.completed_occurrences?.includes(dateStr);
             return !isCompleted;
         });
-        if (validOccurrences.length > 0) {
-            console.log('✅ Recurring event matched:', ev.title, 'occurrences:', validOccurrences.map(o => toLocalDateString(o)));
-        }
-        return validOccurrences.length > 0;
     });
-
-    console.log('🔍 [DEBUG] todayEvents count:', todayEvents.length, 'events:', todayEvents.map(e => e.title));
-
+    
     for (const ev of todayEvents) {
         const { data: existing } = await sb
             .from('notifications')
@@ -197,9 +187,8 @@ async function checkAndCreateTodayNotifications() {
             .eq('user_id', currentUser.id)
             .eq('event_id', ev.id)
             .limit(1);
-        
+            
         if (!existing || existing.length === 0) {
-            console.log('➕ Adding notification for event:', ev.title, 'id:', ev.id);
             await addNotificationToUser(
                 currentUser.id,
                 'event',
@@ -208,8 +197,6 @@ async function checkAndCreateTodayNotifications() {
                 '#',
                 ev.id
             );
-        } else {
-            console.log('⏭️ Notification already exists for event:', ev.title);
         }
     }
 }
