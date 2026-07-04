@@ -2090,6 +2090,7 @@ function renderDayView() {
                     cancelBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
                         showConfirmModal('Delete this event?', function() {
+                            deleteEventCascade(item.ev.id);
                         });
                     });
 
@@ -3557,6 +3558,7 @@ async function openEventDetail(ev, occurrenceDate) {
             cancelBtn.onclick = () => {
                 showConfirmModal('Are you sure you want to delete this event? This will remove it for all guests.', () => {
                     closeModal(eventDetailModal);
+                    deleteEventCascade(ev.id);
                 });
             };
         }
