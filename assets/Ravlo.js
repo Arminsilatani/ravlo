@@ -153,7 +153,7 @@ async function removeNotificationsForEvent(eventId, userId) {
 }
 
 /* ------------------------- CHECK AND CREATE TODAY NOTIFICATIONS ------------------------- */
-async function checkAndCreateTodayNotifications() {
+async function checkAndCreateTodayNotifications() {async function checkAndCreateTodayNotifications() {
     if (!currentUser) return;
 
     const today = new Date();
@@ -161,42 +161,78 @@ async function checkAndCreateTodayNotifications() {
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
     const todayStr = toLocalDateString(today);
 
+    const { data: allNotifs } = await sb
+        .from('notifications')
+        .select('id, event_id')
+        .eq('user_id', currentUser.id)
+        .eq('type', 'event');
+
+    if (allNotifs) {
+        for (const n of allNotifs) {
+            if (!n.event_id) {
+                await sb.from('notifications').delete().eq('id', n.id);
+                continue;
+            }
+            const ev = events.find(e => e.id === n.event_id);
+            if (!ev) {
+                await sb.from('notifications').delete().eq('id', n.id);
+                continue;
+            }
+            const isToday = (() => {
+                if (ev.status === 'done' || ev.status === 'completed') return false;
+                if (!ev.recurrence_type || ev.recurrence_type === 'none') {
+                    const d = new Date(ev.start_date);
+                    return d >= todayStart && d <= todayEnd;
+                }
+                const occs = getRecurrenceDates(ev, todayStart, todayEnd);
+                return occs.some(occ => !ev.completed_occurrences?.includes(toLocalDateString(occ)));
+            })();
+            if (!isToday) {
+                await sb.from('notifications').delete().eq('id', n.id);
+            }
+        }
+    }
+
     const { data: existingNotifs } = await sb
         .from('notifications')
         .select('event_id')
         .eq('user_id', currentUser.id)
         .eq('type', 'event')
         .gte('created_at', todayStart.toISOString());
-
     const existingEventIds = new Set((existingNotifs || []).map(n => n.event_id).filter(Boolean));
 
-    const todayEvents = events.filter(ev => {
-        if (!ev.start_date) return false;
-        if (ev.status === 'done' || ev.status === 'completed') return false;
-        if (existingEventIds.has(ev.id)) return false; // قبلاً هست
+    const todayEvents = [];
+    for (const ev of events) {
+        if (!ev.start_date) continue;
+        if (ev.status === 'done' || ev.status === 'completed') continue;
+        if (existingEventIds.has(ev.id)) continue;
+
+        if (ev.type === 'task' && ev.recurrence_type && ev.recurrence_type !== 'none') {
+            let occurrences = getRecurrenceDates(ev, todayStart, todayEnd);
+            if (occurrences.length === 0 && new Date(ev.start_date) < todayStart) {
+                const newStart = new Date(today);
+                const oldDate = new Date(ev.start_date);
+                newStart.setHours(oldDate.getHours(), oldDate.getMinutes(), 0, 0);
+                await updateEventInDB(ev.id, { start_date: newStart.toISOString() });
+                ev.start_date = newStart.toISOString();
+                occurrences = getRecurrenceDates(ev, todayStart, todayEnd);
+            }
+        }
 
         if (!ev.recurrence_type || ev.recurrence_type === 'none') {
             const d = new Date(ev.start_date);
-            return d >= todayStart && d <= todayEnd;
+            if (d >= todayStart && d <= todayEnd) todayEvents.push(ev);
+        } else {
+            const occurrences = getRecurrenceDates(ev, todayStart, todayEnd);
+            if (occurrences.some(occ => !ev.completed_occurrences?.includes(toLocalDateString(occ)))) {
+                todayEvents.push(ev);
+            }
         }
-
-        const occurrences = getRecurrenceDates(ev, todayStart, todayEnd);
-        return occurrences.some(occ => {
-            const dateStr = toLocalDateString(occ);
-            return !ev.completed_occurrences?.includes(dateStr);
-        });
-    });
+    }
 
     for (const ev of todayEvents) {
-        await addNotificationToUser(
-            currentUser.id,
-            'event',
-            'Event Today',
-            `${ev.title || 'Untitled'} is today!`,
-            '#',
-            ev.id
-        );
-        existingEventIds.add(ev.id);
+        await addNotificationToUser(currentUser.id, 'event', 'Event Today',
+            `${ev.title || 'Untitled'} is today!`, '#', ev.id);
     }
 }
 
