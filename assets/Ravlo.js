@@ -112,63 +112,25 @@ function isEventActiveOnDate(event, date) {
   const isCompleted = event.status === 'done' || event.status === 'completed';
   const hasRecurrence = event.recurrence_type && event.recurrence_type !== 'none';
 
-  const debugId = 123;
-  const debug = (event.id === debugId);
-
-  if (debug) console.log('🔍 isEventActiveOnDate called', { eventTitle: event.title, checkDate: date.toDateString(), eventStart: event.start_date, recType: event.recurrence_type, interval: event.recurrence_interval, days: event.recurrence_days });
-
-  if (isCompleted && !hasRecurrence) {
-    if (debug) console.log('→ false: completed & no recurrence');
-    return false;
-  }
+  if (isCompleted && !hasRecurrence) return false;
 
   const start = new Date(event.start_date);
-  if (debug) console.log('→ start date obj:', start.toString(), 'day:', start.getDay());
 
   if (!hasRecurrence) {
-    const result = start.getFullYear() === date.getFullYear() && start.getMonth() === date.getMonth() && start.getDate() === date.getDate();
-    if (debug) console.log('→ non-recurring result:', result);
-    return result;
+    return start.getFullYear() === date.getFullYear() &&
+           start.getMonth() === date.getMonth() &&
+           start.getDate() === date.getDate();
   }
 
-  const normalizedStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  if (date < normalizedStart) {
-    if (debug) console.log('→ false: date before normalizedStart');
-    return false;
-  }
+  if (date < start) return false;
 
   const recType = event.recurrence_type.toLowerCase();
-  const interval = event.recurrence_interval || 1;
-  const days = event.recurrence_days || [];
-  const diffTime = date.getTime() - normalizedStart.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  if (debug) console.log('→ diffDays:', diffDays, 'recType:', recType, 'interval:', interval, 'days:', days);
+  if (recType === 'daily') return true;
+  if (recType === 'weekly') return start.getDay() === date.getDay();
+  if (recType === 'monthly') return start.getDate() === date.getDate();
+  if (recType === 'yearly') return start.getMonth() === date.getMonth() && start.getDate() === date.getDate();
 
-  let matchesRule = false;
-  if (recType === 'daily') {
-    matchesRule = (diffDays % interval === 0);
-  } else if (recType === 'weekly' || recType === 'custom') {
-    const activeDays = days.length > 0 ? days : [start.getDay()];
-    const dayOfWeek = date.getDay();
-    if (debug) console.log('→ activeDays:', activeDays, 'dayOfWeek:', dayOfWeek);
-    if (activeDays.includes(dayOfWeek)) {
-      const diffWeeks = Math.floor(diffDays / 7);
-      matchesRule = (diffWeeks % interval === 0);
-      if (debug) console.log('→ diffWeeks:', diffWeeks, 'mod interval:', diffWeeks % interval);
-    }
-  } else if (recType === 'monthly') { /*...*/ }
-  else if (recType === 'yearly') { /*...*/ }
-
-  if (!matchesRule) {
-    if (debug) console.log('→ false: no rule match');
-    return false;
-  }
-
-  const completed = event.completed_occurrences || [];
-  const dateStr = toLocalDateString(date);
-  const isOccurrenceCompleted = completed.includes(dateStr);
-  if (debug) console.log('→ dateStr:', dateStr, 'isCompleted:', isOccurrenceCompleted);
-  return !isOccurrenceCompleted;
+  return false;
 }
 
 /* :::::::::::::::::::::::::: LAZY PIN ICON :::::::::::::::::::::::::: */
