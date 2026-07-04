@@ -650,21 +650,14 @@ function getTodayAndOverdueItems() {
                 }
             }
         } else {
-            const todayStart = new Date(today);
-            const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1);
-            const recDates = getRecurrenceDates(ev, todayStart, todayEnd);
-            recDates.forEach(rd => {
-                const dateStr = toLocalDateString(rd);
-                const isCompleted = ev.completed_occurrences?.includes?.(dateStr);
-                if (!isCompleted && dateStr === todayStr) {
-                    todayItems.push({
-                        id: ev.id,
-                        title: buildTitle(ev),
-                        color: ev.color || 'var(--accent)',
-                        date: todayStr
-                    });
-                }
-            });
+            if (isEventActiveOnDate(ev, today)) {
+                todayItems.push({
+                    id: ev.id,
+                    title: buildTitle(ev),
+                    color: ev.color || 'var(--accent)',
+                    date: todayStr
+                });
+            }
         }
     });
 
@@ -1695,40 +1688,8 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
 
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
-        if ((ev.status === 'done' || ev.status === 'completed') &&
-            (ev.recurrence_type === 'none' || !ev.recurrence_type)) {
-            return false;
-        }
-
-        var d = new Date(ev.start_date);
-        if (d.getFullYear() === ny && d.getMonth() === nm && d.getDate() === nd) {
-            if (ev.recurrence_type !== 'none') {
-                var dateStr = toLocalDateString(new Date(ny, nm, nd));
-                if (ev.completed_occurrences && Array.isArray(ev.completed_occurrences) &&
-                    ev.completed_occurrences.includes(dateStr)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        if (ev.recurrence_type !== 'none') {
-            const monthStart = new Date(ny, nm, 1);
-            const monthEnd = new Date(ny, nm + 1, 0, 23, 59, 59);
-            const recDates = getRecurrenceDates(ev, monthStart, monthEnd);
-            return recDates.some(rd => {
-                if (rd.getFullYear() === ny && rd.getMonth() === nm && rd.getDate() === nd) {
-                    var dateStr = toLocalDateString(rd);
-                    if (ev.completed_occurrences && Array.isArray(ev.completed_occurrences) &&
-                        ev.completed_occurrences.includes(dateStr)) {
-                        return false;
-                    }
-                    return true;
-                }
-                return false;
-            });
-        }
-        return false;
+        const checkDate = new Date(ny, nm, nd);
+        return isEventActiveOnDate(ev, checkDate);
     });
 
     const dotsRow = document.createElement('div');
@@ -1771,15 +1732,8 @@ function renderDayView() {
 
     var dayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
-        var d = new Date(ev.start_date + (ev.start_date.endsWith('Z') ? '' : ''));
-        if (d.getFullYear() === vy && d.getMonth() === vm && d.getDate() === vd) return true;
-        if (ev.recurrence_type !== 'none') {
-            var dayStart = new Date(vy, vm, vd, 0, 0, 0);
-            var dayEnd = new Date(vy, vm, vd, 23, 59, 59, 999);
-            var recDates = getRecurrenceDates(ev, dayStart, dayEnd);
-            return recDates.some(rd => rd.getFullYear() === vy && rd.getMonth() === vm && rd.getDate() === vd);
-        }
-        return false;
+        const checkDate = new Date(vy, vm, vd);
+        return isEventActiveOnDate(ev, checkDate);
     });
 
     var allDayEvents = dayEvents.filter(ev => ev.all_day === true);
