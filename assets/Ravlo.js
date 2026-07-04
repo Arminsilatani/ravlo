@@ -173,7 +173,7 @@ async function checkAndCreateTodayNotifications() {
     const todayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
         if (ev.status === 'done' || ev.status === 'completed') return false;
-        if (existingEventIds.has(ev.id)) return false;
+        if (existingEventIds.has(ev.id)) return false; // قبلاً هست
 
         if (!ev.recurrence_type || ev.recurrence_type === 'none') {
             const d = new Date(ev.start_date);
