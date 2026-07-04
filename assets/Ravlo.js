@@ -236,7 +236,6 @@ async function checkAndCreateTodayNotifications() {async function checkAndCreate
     }
 }
 
-
 /* ------------------------- UTILITY FUNCTIONS ------------------------- */
 
 const DASHBOARD_URL = 'https://arminsilatani.github.io/dashboard/';
