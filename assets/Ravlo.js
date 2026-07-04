@@ -153,7 +153,7 @@ async function removeNotificationsForEvent(eventId, userId) {
 }
 
 /* ------------------------- CHECK AND CREATE TODAY NOTIFICATIONS ------------------------- */
-{async function checkAndCreateTodayNotifications() {
+async function checkAndCreateTodayNotifications() {
     if (!currentUser) return;
 
     const today = new Date();
