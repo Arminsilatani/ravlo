@@ -155,49 +155,48 @@ async function removeNotificationsForEvent(eventId, userId) {
 /* ------------------------- CHECK AND CREATE TODAY NOTIFICATIONS ------------------------- */
 async function checkAndCreateTodayNotifications() {
     if (!currentUser) return;
-    
+
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
     const todayStr = toLocalDateString(today);
 
+    const { data: existingNotifs } = await sb
+        .from('notifications')
+        .select('event_id')
+        .eq('user_id', currentUser.id)
+        .eq('type', 'event')
+        .gte('created_at', todayStart.toISOString());
+
+    const existingEventIds = new Set((existingNotifs || []).map(n => n.event_id).filter(Boolean));
+
     const todayEvents = events.filter(ev => {
         if (!ev.start_date) return false;
         if (ev.status === 'done' || ev.status === 'completed') return false;
+        if (existingEventIds.has(ev.id)) return false;
 
-        // Non-recurring: check exact start_date date
         if (!ev.recurrence_type || ev.recurrence_type === 'none') {
             const d = new Date(ev.start_date);
             return d >= todayStart && d <= todayEnd;
         }
 
-        // Recurring: check all occurrences today
         const occurrences = getRecurrenceDates(ev, todayStart, todayEnd);
         return occurrences.some(occ => {
             const dateStr = toLocalDateString(occ);
-            const isCompleted = ev.completed_occurrences?.includes(dateStr);
-            return !isCompleted;
+            return !ev.completed_occurrences?.includes(dateStr);
         });
     });
-    
+
     for (const ev of todayEvents) {
-        const { data: existing } = await sb
-            .from('notifications')
-            .select('id')
-            .eq('user_id', currentUser.id)
-            .eq('event_id', ev.id)
-            .limit(1);
-            
-        if (!existing || existing.length === 0) {
-            await addNotificationToUser(
-                currentUser.id,
-                'event',
-                'Event Today',
-                `${ev.title || 'Untitled'} is today!`,
-                '#',
-                ev.id
-            );
-        }
+        await addNotificationToUser(
+            currentUser.id,
+            'event',
+            'Event Today',
+            `${ev.title || 'Untitled'} is today!`,
+            '#',
+            ev.id
+        );
+        existingEventIds.add(ev.id);
     }
 }
 
@@ -217,9 +216,8 @@ async function addNotificationToUser(userId, type, title, body, link, eventId = 
             created_at: new Date().toISOString()
         };
         if (eventId) payload.event_id = eventId;
-        
+
         await sb.from('notifications').insert(payload);
-        console.log('Notification added for event: ' + eventId);
     } catch (e) {
         console.warn('Notification failed:', e);
     }
