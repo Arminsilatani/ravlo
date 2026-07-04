@@ -42,6 +42,7 @@ let currentChecklistItems = [];
 let selectedIcon = null;
 let titlePickerActive = false;
 let editingEventId = null;
+let isSaving = false;
 window.__lastMonthYearText = '';
 
 /* :::::::::::::::::::::::::: DOM REFERENCES :::::::::::::::::::::::::: */
@@ -116,7 +117,6 @@ function isEventActiveOnDate(event, date) {
 
   const start = new Date(event.start_date);
 
-  // حالت بدون تکرار (یا smart): فقط خودِ تاریخِ شروع
   if (!hasRecurrence || event.recurrence_type === 'smart') {
     return start.getFullYear() === date.getFullYear() &&
            start.getMonth() === date.getMonth() &&
@@ -158,7 +158,6 @@ function isEventActiveOnDate(event, date) {
 
   if (!matchesRule) return false;
 
-  // بررسی completion برای این تاریخ
   const completed = event.completed_occurrences || [];
   const dateStr = toLocalDateString(date);
   return !completed.includes(dateStr);
@@ -2763,6 +2762,9 @@ async function openEditModalForInvitee(ev) {
 
 /* ------------------------- EVENT SAVE & EDIT ------------------------- */
 async function saveEvent() {
+    if (isSaving) return;
+    isSaving = true;
+    if (saveEventBtn) saveEventBtn.disabled = true;
     try {
         // 1. Get form values
         var title = '';
@@ -3024,6 +3026,9 @@ async function saveEvent() {
     } catch (err) {
         console.error('Save event error:', err);
         showToast('Error saving event: ' + err.message);
+    } finally {
+        isSaving = false;
+        if (saveEventBtn) saveEventBtn.disabled = false;
         hideGlobalLoader();
     }
 }
