@@ -2090,7 +2090,6 @@ function renderDayView() {
                     cancelBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
                         showConfirmModal('Delete this event?', function() {
-                            deleteEventCascade(item.ev.id);
                         });
                     });
 
@@ -3558,7 +3557,6 @@ async function openEventDetail(ev, occurrenceDate) {
             cancelBtn.onclick = () => {
                 showConfirmModal('Are you sure you want to delete this event? This will remove it for all guests.', () => {
                     closeModal(eventDetailModal);
-                    deleteEventCascade(ev.id);
                 });
             };
         }
@@ -3812,40 +3810,47 @@ async function deleteEventById(id) {
 }
 
 async function deleteEventCascade(eventId) {
-    showGlobalLoader();
-    try {
-        // Cascade delete via RPC
-        const { data, error } = await sb.rpc('delete_event_cascade', { p_event_id: eventId });
-        if (error) throw error;
+  showGlobalLoader();
+  try {
+    const { data: mainEvent, error: fetchError } = await sb
+      .from('ravlo')
+      .select('invitee_ids, title, invitees')
+      .eq('id', eventId)
+      .single();
 
-        events = events.filter(e => e.id !== eventId && e.parent_event_id !== eventId);
+    if (fetchError) throw fetchError;
 
-        // Notify all invitees
-        if (data && data.invitee_ids && data.invitee_ids.length > 0) {
-            const ownerName = [currentProfile?.first_name, currentProfile?.last_name]
-                .filter(Boolean).join(' ') || 'Someone';
-            const title = data.title || 'Untitled';
-            for (const uid of data.invitee_ids) {
-                await addNotificationToUser(
-                    uid,
-                    'event',
-                    'Event Deleted',
-                    `${ownerName} deleted the event "${title}"`,
-                    '#',
-                    null
-                );
-            }
-        }
+    await sb.from('ravlo').delete().eq('parent_event_id', eventId);
 
-        showToast('Event deleted successfully.');
-    } catch (err) {
-        console.error('Delete cascade error:', err);
-        showToast('Error deleting event: ' + err.message);
-    } finally {
-        hideGlobalLoader();
-        renderCalendar();
-        updateNotificationDot();
+    await sb.from('ravlo').delete().eq('id', eventId);
+
+    events = events.filter(e => e.id !== eventId && e.parent_event_id !== eventId);
+
+    if (mainEvent.invitee_ids && mainEvent.invitee_ids.length > 0) {
+      const ownerName = [currentProfile?.first_name, currentProfile?.last_name]
+        .filter(Boolean).join(' ') || 'Someone';
+      const title = mainEvent.title || 'Untitled';
+      for (const uid of mainEvent.invitee_ids) {
+        await addNotificationToUser(
+          uid,
+          'event',
+          'Event Deleted',
+          `${ownerName} deleted the event "${title}"`,
+          '#',
+          null
+        );
+      }
     }
+
+    showToast('Event deleted successfully.');
+  } catch (err) {
+    console.error('Delete cascade error:', err);
+    showToast('Error deleting event: ' + err.message);
+  } finally {
+    hideGlobalLoader();
+    renderCalendar();
+    updateNotificationDot();
+  }
 }
 
 function showDeleteConfirmation(eventId) {
