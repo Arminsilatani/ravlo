@@ -182,88 +182,62 @@ async function removeNotificationsForEvent(eventId, userId) {
 }
 
 /* ------------------------- CHECK AND CREATE TODAY NOTIFICATIONS ------------------------- */
-async function checkAndCreateTodayNotifications() {
-    if (!currentUser) return;
+async function syncTodayNotifications() {
+  if (!currentUser) return;
 
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-    const todayStr = toLocalDateString(today);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    const { data: allNotifs } = await sb
-        .from('notifications')
-        .select('id, event_id')
-        .eq('user_id', currentUser.id)
-        .eq('type', 'event');
+  const { data: existingNotifs } = await sb
+    .from('notifications')
+    .select('id, event_id')
+    .eq('user_id', currentUser.id)
+    .eq('type', 'event');
 
-    const seenEventIds = new Set();
-    if (allNotifs) {
-        for (const n of allNotifs) {
-            if (!n.event_id) {
-                await sb.from('notifications').delete().eq('id', n.id);
-                continue;
-            }
-            if (seenEventIds.has(n.event_id)) {
-                await sb.from('notifications').delete().eq('id', n.id);
-                continue;
-            }
-            seenEventIds.add(n.event_id);
+  const activeMap = new Map();
 
-            const ev = events.find(e => e.id === n.event_id);
-            if (!ev) {
-                await sb.from('notifications').delete().eq('id', n.id);
-                continue;
-            }
-
-            const isTodayActive = (() => {
-                if (ev.status === 'done' || ev.status === 'completed') {
-                    if (!ev.recurrence_type || ev.recurrence_type === 'none') return false;
-                }
-                if (!ev.recurrence_type || ev.recurrence_type === 'none') {
-                    const d = new Date(ev.start_date);
-                    return d >= todayStart && d <= todayEnd;
-                }
-                const occs = getRecurrenceDates(ev, todayStart, todayEnd);
-                return occs.some(occ => !ev.completed_occurrences?.includes(toLocalDateString(occ)));
-            })();
-
-            if (!isTodayActive) {
-                await sb.from('notifications').delete().eq('id', n.id);
-                seenEventIds.delete(n.event_id);
-            }
-        }
+  for (const n of (existingNotifs || [])) {
+    if (!n.event_id) {
+      await sb.from('notifications').delete().eq('id', n.id);
+      continue;
     }
 
-    const existingEventIds = new Set(seenEventIds);
-
-    for (const ev of events) {
-        if (!ev.start_date) continue;
-        if (existingEventIds.has(ev.id)) continue;
-        if (ev.status === 'done' || ev.status === 'completed') {
-            if (!ev.recurrence_type || ev.recurrence_type === 'none') continue;
-        }
-
-        let isToday = false;
-        if (!ev.recurrence_type || ev.recurrence_type === 'none') {
-            const d = new Date(ev.start_date);
-            isToday = d >= todayStart && d <= todayEnd;
-        } else {
-            const occs = getRecurrenceDates(ev, todayStart, todayEnd);
-            isToday = occs.some(occ => !ev.completed_occurrences?.includes(toLocalDateString(occ)));
-        }
-
-        if (isToday) {
-            await addNotificationToUser(
-                currentUser.id,
-                'event',
-                'Event Today',
-                `${ev.title || 'Untitled'} is today!`,
-                '#',
-                ev.id
-            );
-            existingEventIds.add(ev.id);
-        }
+    const ev = events.find(e => e.id === n.event_id);
+    if (!ev) {
+      await sb.from('notifications').delete().eq('id', n.id);
+      continue;
     }
+
+    if (isEventActiveOnDate(ev, today)) {
+      if (!activeMap.has(n.event_id)) {
+        activeMap.set(n.event_id, n.id);
+      } else {
+        await sb.from('notifications').delete().eq('id', n.id);
+      }
+    } else {
+      await sb.from('notifications').delete().eq('id', n.id);
+    }
+  }
+
+  for (const ev of events) {
+    if (!ev.start_date) continue;
+    if (ev.type && ev.type !== 'event') continue;
+    if (activeMap.has(ev.id)) continue;
+
+    if (isEventActiveOnDate(ev, today)) {
+      await sb.from('notifications').insert({
+        user_id: currentUser.id,
+        type: 'event',
+        title: 'Event Today',
+        body: `${ev.title || 'Untitled'} is today!`,
+        link: '#',
+        event_id: ev.id,
+        is_read: false,
+        created_at: new Date().toISOString()
+      });
+      activeMap.set(ev.id, true);
+    }
+  }
 }
 
 /* ------------------------- UTILITY FUNCTIONS ------------------------- */
@@ -1072,7 +1046,7 @@ async function showApp() {
         await cleanupOldCompletions();
         await cleanupChecklistFromDescriptions();
         await moveOverdueTasksToToday();
-        await checkAndCreateTodayNotifications();
+        await syncTodayNotifications();
     }
     renderCalendar();
     animateTabIndicator();
@@ -1668,7 +1642,7 @@ function renderView() {
         window.__lastMonthYearText = currentMonthYearEl.textContent;
     }
     if (currentUser) {
-        checkAndCreateTodayNotifications();
+        syncTodayNotifications();
     }
     syncSidebarComponent();
 }
