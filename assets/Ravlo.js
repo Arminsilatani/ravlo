@@ -112,7 +112,8 @@ function isEventActiveOnDate(event, date) {
   const isCompleted = event.status === 'done' || event.status === 'completed';
   const hasRecurrence = event.recurrence_type && event.recurrence_type !== 'none';
 
-  const debugId = 123;
+  // 👇 فقط برای این رویداد لاگ بگیر (شناسه‌ی یکی از رویدادهای مشکل‌دار رو وارد کن)
+  const debugId = 64; // ← شناسه‌ی یک رویداد هفتگی که الان نشون داده نمی‌شه
   const debug = (event.id === debugId);
 
   if (debug) console.log('🔍 isEventActiveOnDate called', { eventTitle: event.title, checkDate: date.toDateString(), eventStart: event.start_date, recType: event.recurrence_type, interval: event.recurrence_interval, days: event.recurrence_days });
