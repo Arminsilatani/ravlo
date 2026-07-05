@@ -247,6 +247,7 @@ async function syncTodayNotifications() {
     } else {
       await sb.from('notifications').delete().eq('id', n.id);
     }
+    updateNotificationDot();
   }
 
   for (const ev of events) {
