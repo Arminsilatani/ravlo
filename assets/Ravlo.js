@@ -30,6 +30,68 @@ let recurrence = {
     smartInterval: 'weekly'
 };
 
+const ROLE_HIERARCHY = ['recruit', 'sergeant', 'commander', 'general'];
+const APP_MIN_ROLE = 'commander';
+function hasMinRole(userRole) {
+    const normalized = String(userRole || '').trim().toLowerCase();
+    const userIndex = ROLE_HIERARCHY.indexOf(normalized);
+    const minIndex = ROLE_HIERARCHY.indexOf(APP_MIN_ROLE);
+    return userIndex >= minIndex;
+}
+
+function showAccessDenied(message = 'Access denied.') {
+  const overlay = document.createElement('div');
+  overlay.id = 'access-denied-overlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: center;
+    animation: fadeIn 0.3s ease;
+  `;
+
+  const box = document.createElement('div');
+  box.style.cssText = `
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 32px 40px;
+    text-align: center;
+    color: #fff;
+    font-family: inherit;
+    font-size: 16px;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    transform: scale(0.9);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  `;
+  box.innerHTML = `
+    <p style="margin:0 0 12px; font-size:40px;">🔒</p>
+    <p style="margin:0; line-height:1.5;">${message}</p>
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  setTimeout(() => {
+    if (overlay.parentNode) overlay.remove();
+  }, 5000);
+
+  if (!document.getElementById('access-denied-styles')) {
+    const style = document.createElement('style');
+    style.id = 'access-denied-styles';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+      @keyframes popIn { 0% { transform: scale(0.8); opacity:0; } 100% { transform: scale(1); opacity:1; } }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
 let viewMode = localStorage.getItem('ravlo-view-mode') || 'month';
 if (viewMode === 'week') {
     localStorage.setItem('ravlo-view-mode', 'day');
@@ -1051,10 +1113,19 @@ document.getElementById('auth-signin-btn')?.addEventListener('click', async func
     currentUser = data.user;
     currentProfile = await buildCurrentProfile(currentUser);
     currentUserRole = currentProfile?.role || 'recruit';
+
+    if (!hasMinRole(currentUserRole)) {
+        await sb.auth.signOut();
+        currentUser = null;
+        currentProfile = null;
+        currentUserRole = 'public';
+        closeModal(authOverlay);
+        showAccessDenied('Access denied. You need at least Commander role to use Ravlo.');
+        return;
+    }
+
     closeModal(authOverlay);
-
     syncSidebarComponent();
-
     events = await fetchEvents();
     renderCalendar();
     await updateNotificationDot();
@@ -4135,33 +4206,6 @@ document.getElementById('auth-continue-btn')?.addEventListener('click', async fu
     }
 });
 
-document.getElementById('auth-signin-btn')?.addEventListener('click', async function() {
-    const email = authEmail;
-    const password = document.getElementById('auth-password').value;
-    const errorEl = document.getElementById('auth-error-login');
-    if (!email || !password) {
-        errorEl.textContent = 'Please enter your password.';
-        return;
-    }
-
-    showGlobalLoader();
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    hideGlobalLoader();
-    if (error) {
-        errorEl.textContent = error.message;
-        return;
-    }
-
-    currentUser = data.user;
-    currentProfile = await buildCurrentProfile(currentUser);
-    currentUserRole = currentProfile?.role || 'recruit';
-    closeModal(authOverlay);
-    syncSidebarComponent();
-    events = await fetchEvents();
-    renderCalendar();
-    updateNotificationDot()
-});
-
 document.getElementById('auth-forgot-link')?.addEventListener('click', function(e) {
     e.preventDefault();
     document.getElementById('forgot-email').value = authEmail;
@@ -5684,6 +5728,16 @@ async function initCalendar() {
         currentUser = user;
         currentProfile = await buildCurrentProfile(user);
         currentUserRole = currentProfile?.role || 'user';
+        
+        if (!hasMinRole(currentUserRole)) {
+            await sb.auth.signOut();
+            currentUser = null;
+            currentProfile = null;
+            currentUserRole = 'public';
+            closeModal(authOverlay);
+            showAccessDenied('Access denied. You need at least Commander role to use Ravlo.');
+            return;
+        }
     }
 
     try {
@@ -5741,6 +5795,15 @@ showApp();
             currentUser = session.user;
             currentProfile = await buildCurrentProfile(currentUser);
             currentUserRole = currentProfile?.role || 'recruit';
+            if (!hasMinRole(currentUserRole)) {
+                await sb.auth.signOut();
+                currentUser = null;
+                currentProfile = null;
+                currentUserRole = 'public';
+                closeModal(authOverlay);
+                showAccessDenied('Access denied. You need at least Commander role to use Ravlo.');
+                return;
+            }
             events = await fetchEvents();
             renderCalendar();
             syncSidebarComponent();
@@ -5753,25 +5816,6 @@ showApp();
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get('access_token');
     const refreshToken = urlParams.get('refresh_token');
-    if (accessToken && refreshToken) {
-        const { error } = await sb.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-        });
-        if (!error) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-            const { data: { user } } = await sb.auth.getUser();
-            if (user) {
-                currentUser = user;
-                currentProfile = await buildCurrentProfile(currentUser);
-                currentUserRole = currentProfile?.role || 'recruit';
-                events = await fetchEvents();
-                renderCalendar();
-                syncSidebarComponent();
-                await updateNotificationDot();
-            }
-        }
-    }
 })();
 
 // Sidebar component final wiring
