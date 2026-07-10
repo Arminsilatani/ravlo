@@ -3433,6 +3433,7 @@ body.sidebar-open .current-time-line {
 /* Reduce gap for all-day checkbox */
 #all-day-greg-row {
     gap: 2px;
+    margin-bottom: 20px;
 }
 
 #all-day-greg-row .neon-checkbox-label {

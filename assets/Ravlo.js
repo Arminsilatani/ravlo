@@ -2488,19 +2488,62 @@ function validateTimeInput(prefix, isEnd = false) {
         }
     }
 
-    const startHourEl = document.getElementById(prefix + '-hour');
-    const startMinEl = document.getElementById(prefix + '-minute');
-    if (startHourEl && startMinEl) {
-        const startH = parseInt(startHourEl.value, 10);
-        const startM = parseInt(startMinEl.value, 10);
-        if (!isNaN(startH) && !isNaN(startM)) {
-            const startTotal = startH * 60 + startM;
-            const endTotal = hour * 60 + minute;
-            if (endTotal <= startTotal) {
-                hour = (startH + 1) % 24;
-                minute = startM;
+    function validateTimeInput(prefix, isEnd = false) {
+        const hourEl = document.getElementById(prefix + (isEnd ? '-end-hour' : '-hour'));
+        const minEl = document.getElementById(prefix + (isEnd ? '-end-minute' : '-minute'));
+        if (!hourEl || !minEl) return;
+
+        const g = getSelectedGregFor(prefix);
+        if (!g) return;
+
+        let hour = parseInt(hourEl.value, 10);
+        let minute = parseInt(minEl.value, 10);
+        if (isNaN(hour) || isNaN(minute)) return;
+
+        minute = Math.round(minute / 15) * 15;
+        if (minute === 60) {
+            minute = 0;
+            hour++;
+        }
+
+        if (!isEnd && isToday(g.gy, g.gm, g.gd)) {
+            const now = new Date();
+            const curHour = now.getHours();
+            const curMinute = now.getMinutes();
+            const nowTotal = curHour * 60 + curMinute;
+            const selTotal = hour * 60 + minute;
+            if (selTotal <= nowTotal) {
+                let newMin = Math.ceil((curMinute + 1) / 15) * 15;
+                let newHour = curHour + 1;
+                if (newMin >= 60) {
+                    newMin = 0;
+                    newHour++;
+                }
+                newHour = newHour % 24;
+                hour = newHour;
+                minute = newMin;
             }
         }
+
+        if (isEnd) {
+            const startHourEl = document.getElementById(prefix + '-hour');
+            const startMinEl = document.getElementById(prefix + '-minute');
+            if (startHourEl && startMinEl) {
+                const startH = parseInt(startHourEl.value, 10);
+                const startM = parseInt(startMinEl.value, 10);
+                if (!isNaN(startH) && !isNaN(startM)) {
+                    const startTotal = startH * 60 + startM;
+                    const endTotal = hour * 60 + minute;
+                    if (endTotal <= startTotal) {
+                        hour = (startH + 1) % 24;
+                        minute = startM;
+                    }
+                }
+            }
+        }
+
+        hourEl.value = String(hour).padStart(2, '0');
+        minEl.value = String(minute).padStart(2, '0');
     }
 
     hourEl.value = String(hour).padStart(2, '0');
@@ -4437,35 +4480,29 @@ if (gregConfirmBtn) gregConfirmBtn.addEventListener('click', function() {
         gregDaysEl.style.outline = '1px solid var(--accent)';
         return;
     }
-    if (titlePickerActive) {
-        titlePickerActive = false;
-        var gy = gregState.gy,
-            gm = gregState.gm,
-            gd = gregState.selectedGd;
-        var newDate = new Date(gy, gm, gd);
-        if (viewMode === 'month') {
-            newDate = new Date(newDate.getFullYear(), newDate.getMonth(), 1);
-        } else if (viewMode === 'year') {
-            newDate = new Date(newDate.getFullYear(), 0, 1);
-        }
-        currentDate = newDate;
-        gregPickerPopup.classList.remove('open');
-        document.getElementById('greg-today-btn').style.display = 'none';
-        renderCalendar();
-        return;
-    }
+
     var h = gregHourInput.value || '09';
     var m = gregMinuteInput.value || '00';
     var gy = gregState.gy,
         gm = gregState.gm + 1,
         gd = gregState.selectedGd;
+
     if (eventStartGreg) eventStartGreg.value = gy + '-' + pad(gm) + '-' + pad(gd);
     if (eventStartInput) eventStartInput.value = gy + '-' + pad(gm) + '-' + pad(gd) + 'T' + pad(h) + ':' + pad(m);
+
     var endH = document.getElementById('greg-end-hour')?.value || '10';
     var endM = document.getElementById('greg-end-minute')?.value || '00';
     var endDateStr = gy + '-' + pad(gm) + '-' + pad(gd) + 'T' + pad(endH) + ':' + pad(endM);
     if (eventEndInput) eventEndInput.value = endDateStr;
-    gregTriggerText.textContent = GREG_MONTH_NAMES[gregState.gm] + ' ' + gd + ', ' + gy + '  ' + pad(h) + ':' + pad(m);
+
+    // بررسی وضعیت All day
+    var allDayChecked = document.getElementById('event-all-day-greg')?.checked || false;
+    if (allDayChecked) {
+        gregTriggerText.textContent = GREG_MONTH_NAMES[gregState.gm] + ' ' + gd + ', ' + gy;
+    } else {
+        gregTriggerText.textContent = GREG_MONTH_NAMES[gregState.gm] + ' ' + gd + ', ' + gy + '  ' + pad(h) + ':' + pad(m);
+    }
+
     gregPickerTrigger.classList.add('has-value');
     gregPickerPopup.classList.remove('open');
 });
