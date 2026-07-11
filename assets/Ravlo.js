@@ -168,10 +168,9 @@ function isEventActiveOnDate(event, date) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
 
-  const isCompleted = event.status === 'done' || event.status === 'completed';
   const hasRecurrence = event.recurrence_type && event.recurrence_type !== 'none';
 
-  if (isCompleted && !hasRecurrence) return false;
+  if (!event.start_date) return false;
 
   const start = new Date(event.start_date);
 
@@ -214,11 +213,7 @@ function isEventActiveOnDate(event, date) {
     }
   }
 
-  if (!matchesRule) return false;
-
-  const completed = event.completed_occurrences || [];
-  const dateStr = toLocalDateString(date);
-  return !completed.includes(dateStr);
+  return matchesRule;
 }
 
 /* :::::::::::::::::::::::::: LAZY PIN ICON :::::::::::::::::::::::::: */
@@ -443,6 +438,22 @@ function showToast(message) {
     setTimeout(() => toast.remove(), 4000);
 }
 
+function sanitizeHTML(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const badTags = ['script', 'iframe', 'object', 'embed', 'link', 'style', 'meta'];
+    badTags.forEach(tag => {
+        doc.querySelectorAll(tag).forEach(el => el.remove());
+    });
+    doc.querySelectorAll('*').forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+            const name = attr.name.toLowerCase();
+            if (name.startsWith('on') || name === 'href' && attr.value.toLowerCase().startsWith('javascript:')) {
+                el.removeAttribute(name);
+            }
+        });
+    });
+    return doc.body.innerHTML;
+}
 /* ------------------------- HOLIDAYS ------------------------- */
 const GREG_HOLIDAYS = {
     '01-01': "New Year's Day",
@@ -1795,17 +1806,25 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
     dotsRow.className = 'event-dots-row';
 
     dayEvents.forEach(ev => {
+        var isCompleted = false;
+        if (ev.recurrence_type && ev.recurrence_type !== 'none' && ev.recurrence_type !== 'smart') {
+            var dateStr = toLocalDateString(new Date(ny, nm, nd));
+            isCompleted = ev.completed_occurrences && ev.completed_occurrences.includes(dateStr);
+        } else {
+            isCompleted = (ev.status === 'completed' || ev.status === 'done');
+        }
+
+        if (isCompleted) return;
+
         var dot = document.createElement('div');
         dot.className = 'event-dot';
-        if (ev.status === 'completed' || ev.status === 'done') {
-            dot.classList.add('completed');
-        } else {
-            dot.style.backgroundColor = ev.color || 'var(--accent)';
-        }
+        dot.style.backgroundColor = ev.color || 'var(--accent)';
+
         if (ev.invitation_status === 'pending') {
             dot.classList.add('invited');
             dot.style.backgroundColor = ev.color || 'var(--accent)';
         }
+
         dotsRow.appendChild(dot);
     });
 
@@ -1908,6 +1927,9 @@ function renderDayView() {
             overdueOccurrences.forEach(item => {
                 var capsule = document.createElement('span');
                 capsule.className = 'all-day-capsule overdue-capsule';
+                if (item.ev.status === 'completed' || item.ev.status === 'done') {
+                    capsule.classList.add('completed');
+                }
                 capsule.style.setProperty('--capsule-color', item.ev.color || 'var(--accent)');
 
                 if (item.ev.icon) {
@@ -1940,6 +1962,9 @@ function renderDayView() {
         allDayEvents.forEach(ev => {
             var capsule = document.createElement('span');
             capsule.className = 'all-day-capsule';
+            if (ev.status === 'completed' || ev.status === 'done') {
+                capsule.classList.add('completed');
+            }
             capsule.style.setProperty('--capsule-color', ev.color || 'var(--accent)');
 
             if (ev.icon) {
@@ -1960,6 +1985,34 @@ function renderDayView() {
             });
 
             allDayRow.appendChild(capsule);
+        });
+
+        overdueOccurrences.forEach(item => {
+            var capsule = document.createElement('span');
+            capsule.className = 'all-day-capsule overdue-capsule';
+            if (item.ev.status === 'completed' || item.ev.status === 'done') {
+                capsule.classList.add('completed');
+            }
+            capsule.style.setProperty('--capsule-color', item.ev.color || 'var(--accent)');
+
+            if (item.ev.icon) {
+                var iconSpan = document.createElement('span');
+                iconSpan.className = 'all-day-capsule-icon';
+                iconSpan.innerHTML = item.ev.icon;
+                capsule.appendChild(iconSpan);
+            }
+
+            var titleSpan = document.createElement('span');
+            titleSpan.className = 'all-day-capsule-title';
+            titleSpan.textContent = (item.ev.title || 'Untitled') + ' (' + item.date + ')';
+            capsule.appendChild(titleSpan);
+
+            capsule.addEventListener('click', function(e) {
+                e.stopPropagation();
+                openEventDetail(item.ev, new Date(item.date + 'T00:00:00'));
+            });
+
+            overdueRow.appendChild(capsule);
         });
         calendarGrid.appendChild(allDayRow);
     }
@@ -2020,29 +2073,71 @@ function renderDayView() {
             return getCumulativeHeightUntil(endMin) - getCumulativeHeightUntil(startMin);
         }
 
-        var lanes = [];
-        eventsWithMinutes.forEach(item => {
-            var laneIndex = -1;
-            for (var i = 0; i < lanes.length; i++) {
-                var lastEventInLane = lanes[i][lanes[i].length - 1];
-                if (lastEventInLane.endMin <= item.startMin) {
-                    laneIndex = i;
-                    break;
+        // ============================================================
+        // (connected components)
+        // ============================================================
+        const n = eventsWithMinutes.length;
+        const adj = Array.from({ length: n }, () => []);
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                const a = eventsWithMinutes[i];
+                const b = eventsWithMinutes[j];
+                if (a.startMin < b.endMin && b.startMin < a.endMin) {
+                    adj[i].push(j);
+                    adj[j].push(i);
                 }
             }
-            if (laneIndex === -1) {
-                lanes.push([item]);
-            } else {
-                lanes[laneIndex].push(item);
+        }
+
+        const visited = new Array(n).fill(false);
+        const components = [];
+        for (let i = 0; i < n; i++) {
+            if (visited[i]) continue;
+            const comp = [];
+            const stack = [i];
+            visited[i] = true;
+            while (stack.length) {
+                const idx = stack.pop();
+                comp.push(idx);
+                for (const neighbor of adj[idx]) {
+                    if (!visited[neighbor]) {
+                        visited[neighbor] = true;
+                        stack.push(neighbor);
+                    }
+                }
             }
-        });
+            components.push(comp);
+        }
 
-        var laneCount = lanes.length;
         const SLOT_PADDING = 10;
-        var slotsWidth = slots.clientWidth || 600;
+        const slotsWidth = slots.clientWidth || 600;
 
-        lanes.forEach((laneEvents, laneIndex) => {
-            laneEvents.forEach(item => {
+        components.forEach(comp => {
+            const compItems = comp.map(i => eventsWithMinutes[i]);
+            compItems.sort((a, b) => a.startMin - b.startMin);
+
+            const columns = [];
+            const colOfEvent = new Map();
+            compItems.forEach(item => {
+                let colIdx = columns.findIndex(col => col.endMin <= item.startMin);
+                if (colIdx === -1) {
+                    colIdx = columns.length;
+                    columns.push({ endMin: 0 });
+                }
+                columns[colIdx].endMin = item.endMin;
+                const origIdx = eventsWithMinutes.indexOf(item);
+                colOfEvent.set(origIdx, colIdx);
+            });
+
+            const laneCount = columns.length;
+            const gapPx = 15;
+            const totalGap = gapPx * (laneCount - 1);
+            const availableWidth = slotsWidth - 2 * SLOT_PADDING - totalGap;
+            const laneWidth = availableWidth / laneCount;
+
+            compItems.forEach(item => {
+                const origIdx = eventsWithMinutes.indexOf(item);
+                const colIdx = colOfEvent.get(origIdx);
                 var startMin = item.startMin;
                 var endMin = item.endMin;
                 if (endMin <= startMin) endMin = startMin + 15;
@@ -2051,11 +2146,7 @@ function renderDayView() {
                 var heightPx = getHeightBetween(startMin, endMin);
                 if (heightPx < 20) heightPx = 28;
 
-                var gapPx = 15;
-                var totalGap = gapPx * (laneCount - 1);
-                var availableWidth = slotsWidth - 2 * SLOT_PADDING - totalGap;
-                var laneWidthPx = availableWidth / laneCount;
-                var leftPx = SLOT_PADDING + laneIndex * (laneWidthPx + gapPx);
+                var leftPx = SLOT_PADDING + colIdx * (laneWidth + gapPx);
 
                 var evEl = document.createElement('div');
                 evEl.className = 'time-slot-event';
@@ -2063,7 +2154,7 @@ function renderDayView() {
                 evEl.style.top = topPx + 'px';
                 evEl.style.height = Math.max(heightPx, 28) + 'px';
                 evEl.style.left = leftPx + 'px';
-                evEl.style.width = laneWidthPx + 'px';
+                evEl.style.width = laneWidth + 'px';
 
                 if (item.ev.location && item.ev.location.lat != null && item.ev.location.lng != null && isLeafletReady()) {
                     var mapDiv = document.createElement('div');
@@ -2814,6 +2905,13 @@ async function openEditModal(ev) {
         if (inviteBtn) inviteBtn.classList.add('active');
     }
 
+    selectedIcon = ev.icon || null;
+    updateIconButton();
+    const iconBtn = document.getElementById('toggle-icon-btn');
+    if (iconBtn) {
+        iconBtn.classList.toggle('active', !!selectedIcon);
+    }
+
     if (gregDateRow) gregDateRow.style.display = 'block';
     updateAllDayAndTimeRows();
 
@@ -3396,7 +3494,7 @@ async function openEventDetail(ev, occurrenceDate) {
     }
     if (cleanDescription) {
         descContainer.style.display = 'block';
-        descText.textContent = cleanDescription;
+        descText.innerHTML = sanitizeHTML(cleanDescription);
     } else {
         descContainer.style.display = 'none';
     }
@@ -4481,6 +4579,15 @@ if (gregConfirmBtn) gregConfirmBtn.addEventListener('click', function() {
         return;
     }
 
+    if (titlePickerActive) {
+        currentDate = new Date(gregState.gy, gregState.gm, gregState.selectedGd);
+        titlePickerActive = false;
+        gregPickerPopup.classList.remove('open');
+        document.getElementById('greg-today-btn').style.display = 'none';
+        renderCalendar();
+        return;
+    }
+
     var h = gregHourInput.value || '09';
     var m = gregMinuteInput.value || '00';
     var gy = gregState.gy,
@@ -4495,7 +4602,6 @@ if (gregConfirmBtn) gregConfirmBtn.addEventListener('click', function() {
     var endDateStr = gy + '-' + pad(gm) + '-' + pad(gd) + 'T' + pad(endH) + ':' + pad(endM);
     if (eventEndInput) eventEndInput.value = endDateStr;
 
-    // بررسی وضعیت All day
     var allDayChecked = document.getElementById('event-all-day-greg')?.checked || false;
     if (allDayChecked) {
         gregTriggerText.textContent = GREG_MONTH_NAMES[gregState.gm] + ' ' + gd + ', ' + gy;

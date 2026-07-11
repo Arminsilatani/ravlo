@@ -563,8 +563,13 @@ body.modal-open {
 }
 
 .event-dot.completed {
-  background-color: #555 !important;
-  opacity: 0.5;
+    background-color: #888 !important;
+    opacity: 0.7;
+}
+
+.all-day-capsule.completed {
+    filter: grayscale(1);
+    opacity: 0.6;
 }
 
 .event-dot.invited {
@@ -2600,8 +2605,8 @@ body.modal-open {
 }
 
 .time-slot-event.event-completed {
-  filter: grayscale(100%);
-  opacity: 0.6;
+    filter: grayscale(100%);
+    opacity: 0.5;
 }
 
 .time-slot-event.event-invited {
@@ -2768,10 +2773,6 @@ body.modal-open {
 #detail-time-text,
 #detail-duration-paren {
   transform: translate(1px, 1px);
-}
-
-#detail-description-text {
-  text-align: left;
 }
 
 /* ------------------------- DETAIL ACTIONS ROW ------------------------- */
