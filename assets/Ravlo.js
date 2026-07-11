@@ -1856,6 +1856,7 @@ function renderDayView() {
 
     var allDayEvents = dayEvents.filter(ev => ev.all_day === true);
     var timedEvents = dayEvents.filter(ev => ev.all_day !== true);
+    var overdueOccurrences = [];
 
     var occupiedHours = new Array(24).fill(false);
     timedEvents.forEach(ev => {
@@ -1886,7 +1887,6 @@ function renderDayView() {
 
     const todayCheck = new Date();
     if (vy === todayCheck.getFullYear() && vm === todayCheck.getMonth() && vd === todayCheck.getDate()) {
-        var overdueOccurrences = [];
         if (currentUser) {
             var todayStart = new Date(vy, vm, vd, 0, 0, 0);
             var yesterdayEnd = new Date(todayStart.getTime() - 1000);
