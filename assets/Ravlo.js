@@ -1895,24 +1895,34 @@ function renderDayView() {
                 if (ev.type !== 'task') return;
                 if (!ev.start_date) return;
                 if (ev.status === 'done' || ev.status === 'completed') return;
-                if (!ev.recurrence_type || ev.recurrence_type === 'none') return;
-                if (ev.recurrence_type === 'smart') return;
 
                 var start = new Date(ev.start_date);
-                var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
-                recDates.forEach(rd => {
-                    var dateStr = toLocalDateString(rd);
-                    var isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
-                        ? ev.completed_occurrences.includes(dateStr)
-                        : false;
-                    if (!isCompleted) {
-                        overdueOccurrences.push({
-                            ev: ev,
-                            date: dateStr,
-                            time: rd
-                        });
-                    }
-                });
+                var startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                var todayDay = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate());
+
+                if (ev.recurrence_type && ev.recurrence_type !== 'none' && ev.recurrence_type !== 'smart') {
+                    var recDates = getRecurrenceDates(ev, start, yesterdayEnd);
+                    recDates.forEach(rd => {
+                        var dateStr = toLocalDateString(rd);
+                        var isCompleted = ev.completed_occurrences && Array.isArray(ev.completed_occurrences)
+                            ? ev.completed_occurrences.includes(dateStr)
+                            : false;
+                        if (!isCompleted) {
+                            overdueOccurrences.push({
+                                ev: ev,
+                                date: dateStr,
+                                time: rd
+                            });
+                        }
+                    });
+                }
+                else if (startDay < todayDay) {
+                    overdueOccurrences.push({
+                        ev: ev,
+                        date: toLocalDateString(start),
+                        time: start
+                    });
+                }
             });
         }
 
