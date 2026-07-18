@@ -1,10 +1,3 @@
-<!--
-/*
-Author: Armin Silatani
-Date: 2026-07-03
-Version: 0.0.0
-*/
--->
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
@@ -101,12 +94,12 @@ Version: 0.0.0
     }
   ]
 }
-</script>
+    </script>
 
 </head>
 <body>
 
-<!-- =========================== AUTH OVERLAY ============================ -->
+<!-- :::::::::::::::::::::::::: AUTH OVERLAY :::::::::::::::::::::::::: -->
 <div id="auth-overlay">
     <div class="auth-box">
         <img src="assets/Ra.svg" alt="Ravlo" onerror="this.style.display='none'">
@@ -132,6 +125,9 @@ Version: 0.0.0
         <!-- Step 2: Register (new user) -->
         <div id="step-2-register" class="auth-step hidden">
             <div id="reg-form-fields">
+                <!-- Displayed email -->
+                <input type="email" class="auth-field" id="register-email-display" readonly placeholder="Email address">
+
                 <input type="text" id="reg-firstname" class="auth-field" placeholder="First Name" required>
                 <input type="text" id="reg-lastname" class="auth-field" placeholder="Last Name" required>
 
@@ -155,16 +151,23 @@ Version: 0.0.0
                     </button>
                 </div>
 
-                <button id="auth-register-btn" class="accent-btn">Create Account</button>
+                <!-- Button row -->
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                    <button type="button" id="auth-back-to-email-2" class="accent-btn" style="width: auto; background: transparent; border: 1px solid var(--border); color: var(--text); padding: 10px 18px;">
+                        Back
+                    </button>
+                    <button id="auth-register-btn" class="accent-btn" style="flex: 1;">Create Account</button>
+                </div>
+
+                <!-- Error message -->
+                <div class="auth-error" id="auth-error-register"></div>
             </div>
 
-            <!-- Success message (hidden) -->
+            <!-- Success section -->
             <div id="reg-success" style="display:none; text-align:center;">
                 <p class="reg-success-text">We've sent a confirmation link to your email.<br>Check your inbox and click the link to activate your account.</p>
                 <button id="reg-to-login-btn" class="accent-btn" style="width:auto; margin-top:16px;">Go to Sign In</button>
             </div>
-
-            <div class="auth-error" id="auth-error-register"></div>
         </div>
 
         <!-- Forgot password form (swapped in step 2) -->
@@ -178,10 +181,10 @@ Version: 0.0.0
     </div>
 </div>
 
-<!-- =========================== APP CONTAINER ============================ -->
+<!-- :::::::::::::::::::::::::: APP CONTAINER :::::::::::::::::::::::::: -->
 <div id="app-container" class="app-hidden">
 
-    <!-- ------------------------- HEADER ------------------------- -->
+    <!-- :::::::::::::::::::::::::: HEADER :::::::::::::::::::::::::: -->
     <div class="glass-header">
         <div class="header-inner">
             <img src="assets/Ra.svg" alt="Ravlo Logo" class="header-logo" onerror="this.style.display='none'">
@@ -195,10 +198,10 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- MAIN CONTENT ------------------------- -->
+    <!-- :::::::::::::::::::::::::: MAIN CONTENT :::::::::::::::::::::::::: -->
     <main class="container">
 
-        <!-- ------------------------- CALENDAR CONTROLS ------------------------- -->
+        <!-- :::::::::::::::::::::::::: CALENDAR CONTROLS :::::::::::::::::::::::::: -->
         <div class="calendar-controls">
             <div class="nav-bar">
                 <button class="nav-arrow" id="prev-month" aria-label="Previous month">
@@ -225,14 +228,14 @@ Version: 0.0.0
             </div>
         </div>
 
-        <!-- ------------------------- CALENDAR GRID ------------------------- -->
+        <!-- :::::::::::::::::::::::::: CALENDAR GRID :::::::::::::::::::::::::: -->
         <div class="calendar-grid" id="calendar-grid"></div>
 
     </main>
 
-    <!-- ------------------------- MODALS ------------------------- -->
+    <!-- :::::::::::::::::::::::::: MODALS :::::::::::::::::::::::::: -->
 
-    <!-- ------------------------- EVENT MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: EVENT MODAL :::::::::::::::::::::::::: -->
     <div id="event-modal" class="modal">
         <div class="modal-content">
             <!-- Event type toggle -->
@@ -272,61 +275,59 @@ Version: 0.0.0
             <!-- Description + inline checklist + location -->
             <div id="description-container" class="desc-container">
                 <div id="textarea-wrapper" class="textarea-wrapper">
-    <textarea id="event-description" class="auth-field" placeholder="Add description..." rows="3"></textarea>
-    <div class="textarea-actions">
-        <!-- Icon button (always displayed) -->
-        <button id="toggle-icon-btn" class="action-btn" title="Choose Icon" type="button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z"/>
-            </svg>
-        </button>
+                    <textarea id="event-description" class="auth-field" placeholder="Add description..." rows="3"></textarea>
+                    <div class="textarea-actions">
+                        <!-- Icon button (always displayed) -->
+                        <button id="toggle-icon-btn" class="action-btn" title="Choose Icon" type="button">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z"/>
+                            </svg>
+                        </button>
 
-        <!-- Color button (always displayed) -->
-        <button id="toggle-color-btn" class="action-btn" title="Change Color" type="button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/>
-            </svg>
-        </button>
+                        <!-- Color button (always displayed) -->
+                        <button id="toggle-color-btn" class="action-btn" title="Change Color" type="button">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"/>
+                            </svg>
+                        </button>
 
-        <!-- Location button (only shown in Event tab) -->
-        <button id="toggle-location-btn" class="action-btn" title="Add Location" type="button" style="display:none;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
-            </svg>
-        </button>
+                        <!-- Location button (only shown in Event tab) -->
+                        <button id="toggle-location-btn" class="action-btn" title="Add Location" type="button" style="display:none;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                            </svg>
+                        </button>
 
-        <!-- Invite button (only shown in Event tab) -->
-        <button id="toggle-invite-btn" class="action-btn" title="Invite People" type="button" style="display:none;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"/>
-            </svg>
-        </button>
+                        <!-- Invite button (only shown in Event tab) -->
+                        <button id="toggle-invite-btn" class="action-btn" title="Invite People" type="button" style="display:none;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"/>
+                            </svg>
+                        </button>
 
-        <!-- Checklist button (only shown in Task tab) -->
-        <button id="toggle-checklist-mode-btn" class="action-btn" title="Checklist" type="button" style="display:none;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-            </svg>
-        </button>
-    </div>
-</div>
+                        <!-- Checklist button (only shown in Task tab) -->
+                        <button id="toggle-checklist-mode-btn" class="action-btn" title="Checklist" type="button" style="display:none;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
 
-<div id="checklist-inline-editor" class="checklist-inline-editor" style="display:none;">
-    <div id="checklist-inline-items"></div>
-    <div class="checklist-add-row">
-        <input type="text" id="checklist-new-item-input" class="checklist-new-item-input" placeholder="Add item...">
-        <button id="checklist-add-btn" class="checklist-add-btn">+</button>
-    </div>
-</div>
+                <div id="checklist-inline-editor" class="checklist-inline-editor" style="display:none;">
+                    <div id="checklist-inline-items"></div>
+                    <div class="checklist-add-row">
+                        <input type="text" id="checklist-new-item-input" class="checklist-new-item-input" placeholder="Add item...">
+                        <button id="checklist-add-btn" class="checklist-add-btn">+</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Legacy hidden sections (kept for compatibility) -->
             <div id="location-section" class="location-section-hidden">
                 <div class="location-input-row">
-                    <input type="text" id="location-coords-input" class="auth-field"
-                           placeholder="48.845385, 2.352205"
-                           style="margin-bottom:0; padding-right:32px;">
+                    <input type="text" id="location-coords-input" class="auth-field" placeholder="48.845385, 2.352205" style="margin-bottom:0; padding-right:32px;">
                     <button id="clear-location-btn" class="location-close-btn" title="Remove location" type="button">✕</button>
                 </div>
                 <div id="location-map" class="location-map"></div>
@@ -346,7 +347,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- TAG PICKER MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: TAG PICKER MODAL :::::::::::::::::::::::::: -->
     <div id="tag-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="tag-modal-close">&times;</span>
@@ -355,7 +356,7 @@ Version: 0.0.0
                 <div class="tag-panel-section">
                     <div class="tag-panel-label">Color</div>
                     <div class="tag-grid tag-colors-grid">
-                        <span class="tag-color-item selected" data-color="#f5f5f5" style="background:#f5f5f5"></span>
+                        <span class="tag-color-item selected" data-color="#F5F5F5" style="background:#F5F5F5"></span>
                         <span class="tag-color-item" data-color="#FFB3BA" style="background:#FFB3BA"></span>
                         <span class="tag-color-item" data-color="#FFD9B3" style="background:#FFD9B3"></span>
                         <span class="tag-color-item" data-color="#FFFFBA" style="background:#FFFFBA"></span>
@@ -370,7 +371,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- DAY DETAIL MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: DAY DETAIL MODAL :::::::::::::::::::::::::: -->
     <div id="day-detail-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -380,7 +381,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- EVENT DETAIL MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: EVENT DETAIL MODAL :::::::::::::::::::::::::: -->
     <div id="event-detail-modal" class="modal">
         <div class="modal-content event-detail-content">
             <div class="detail-top-actions">
@@ -399,9 +400,7 @@ Version: 0.0.0
 
             <!-- Row 2: Date and Time -->
             <div class="detail-datetime-row" id="detail-datetime-row">
-                <svg class="detail-calendar-icon" id="detail-calendar-icon"
-                     width="16" height="16" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="detail-calendar-icon" id="detail-calendar-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                     <line x1="16" y1="2" x2="16" y2="6"/>
                     <line x1="8" y1="2" x2="8" y2="6"/>
@@ -416,10 +415,7 @@ Version: 0.0.0
             <!-- Row 3: Description -->
             <div class="detail-description" id="detail-description-container" style="display:none">
                 <div style="display: flex; align-items: flex-start; gap: 6px;">
-                    <svg class="detail-desc-icon" id="detail-desc-icon"
-                         width="16" height="16" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                         style="flex-shrink: 0; margin-top: 2px;">
+                    <svg class="detail-desc-icon" id="detail-desc-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                         <polyline points="14 2 14 8 20 8"/>
                         <line x1="16" y1="13" x2="8" y2="13"/>
@@ -450,9 +446,7 @@ Version: 0.0.0
             <!-- Attendees section (only for event) -->
             <div id="detail-invitees-section" style="display:none;">
                 <div class="attendees-header">
-                    <svg class="detail-attendees-icon" id="detail-attendees-icon"
-                         width="16" height="16" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="detail-attendees-icon" id="detail-attendees-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                         <circle cx="9" cy="7" r="4"/>
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -484,7 +478,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- INVITE MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: INVITE MODAL :::::::::::::::::::::::::: -->
     <div id="invite-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="invite-modal-close">&times;</span>
@@ -495,7 +489,7 @@ Version: 0.0.0
             </div>
             <ul id="invite-list" class="invite-list" style="max-height:160px; overflow-y:auto;"></ul>
             <div id="invite-code-section" style="display:none; margin-top:12px;">
-                <p style="font-size:12px; color:#aaa; margin-bottom:4px;">Not in your friends? Share this code:</p>
+                <p style="font-size:12px; color:#AAA; margin-bottom:4px;">Not in your friends? Share this code:</p>
                 <div style="display:flex; gap:8px; background:#111; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);">
                     <code id="invite-code-text">XXXX-XXXX-XXXX</code>
                     <button id="copy-invite-code-btn" class="icon-btn" title="Copy">📋</button>
@@ -505,7 +499,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- LOCATION MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: LOCATION MODAL :::::::::::::::::::::::::: -->
     <div id="location-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="location-modal-close">&times;</span>
@@ -513,12 +507,12 @@ Version: 0.0.0
             <input type="text" id="location-search-input" class="auth-field" placeholder="Search for a place..." autocomplete="off">
             <ul id="location-suggestions" class="location-suggestions"></ul>
             <div id="location-modal-map" style="height:180px; border-radius:8px; border:1px solid var(--border); margin:12px 0;"></div>
-            <div id="selected-location-info" style="font-size:12px; color:#aaa; text-align:center; margin-bottom:12px;"></div>
+            <div id="selected-location-info" style="font-size:12px; color:#AAA; text-align:center; margin-bottom:12px;"></div>
             <button id="location-done-btn" class="accent-btn">Done</button>
         </div>
     </div>
 
-    <!-- ------------------------- CHECKLIST MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: CHECKLIST MODAL :::::::::::::::::::::::::: -->
     <div id="checklist-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="checklist-modal-close">&times;</span>
@@ -532,7 +526,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- RECURRENCE MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: RECURRENCE MODAL :::::::::::::::::::::::::: -->
     <div id="recurrence-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="recurrence-modal-close">&times;</span>
@@ -574,7 +568,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- LOGOUT CONFIRMATION MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: LOGOUT CONFIRMATION MODAL :::::::::::::::::::::::::: -->
     <div id="logout-confirm-modal" class="modal">
         <div class="modal-content">
             <h3>Are you sure you want to log out?</h3>
@@ -585,10 +579,10 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- CONFIRMATION MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: CONFIRMATION MODAL :::::::::::::::::::::::::: -->
     <div id="confirm-modal" class="modal">
         <div class="modal-content" style="max-width:360px; text-align:center;">
-            <p id="confirm-modal-message" style="margin-bottom:20px; color:#ccc;"></p>
+            <p id="confirm-modal-message" style="margin-bottom:20px; color:#CCC;"></p>
             <div class="confirm-actions">
                 <button id="confirm-modal-yes" class="confirm-btn yes-btn">Yes</button>
                 <button id="confirm-modal-no" class="confirm-btn no-btn">No</button>
@@ -596,7 +590,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- GREGORIAN PICKER POPUP ------------------------- -->
+    <!-- :::::::::::::::::::::::::: GREGORIAN PICKER POPUP :::::::::::::::::::::::::: -->
     <div id="greg-picker-popup" class="picker-popup">
         <div class="picker-popup-inner ltr-direction">
             <div class="picker-header">
@@ -653,7 +647,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- INVITATION RESPONSE MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: INVITATION RESPONSE MODAL :::::::::::::::::::::::::: -->
     <div id="invitation-response-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="invitation-response-close">&times;</span>
@@ -671,7 +665,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- ICON PICKER MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: ICON PICKER MODAL :::::::::::::::::::::::::: -->
     <div id="icon-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="icon-modal-close">&times;</span>
@@ -681,7 +675,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- POSTPONE MODAL ------------------------- -->
+    <!-- :::::::::::::::::::::::::: POSTPONE MODAL :::::::::::::::::::::::::: -->
     <div id="postpone-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="postpone-modal-close">&times;</span>
@@ -704,7 +698,7 @@ Version: 0.0.0
         </div>
     </div>
 
-    <!-- ------------------------- FOOTER ------------------------- -->
+    <!-- :::::::::::::::::::::::::: FOOTER :::::::::::::::::::::::::: -->
     <footer class="footer">
         <div class="footer-signature">
             <a href="https://arminsilatani.com/en/" target="_blank" rel="noopener noreferrer">
@@ -714,7 +708,7 @@ Version: 0.0.0
         </div>
     </footer>
 
-    <!-- =========================== SIDEBAR COMPONENT =========================== -->
+    <!-- :::::::::::::::::::::::::: SIDEBAR COMPONENT :::::::::::::::::::::::::: -->
     <sidebar-component current-app="Ravlo Calendar">
         <!-- Slot for app-specific sidebar content -->
         <div slot="app-content">
@@ -731,7 +725,7 @@ Version: 0.0.0
 
 </div>
 
-<!-- =========================== INITIAL LOADER ============================ -->
+<!-- :::::::::::::::::::::::::: INITIAL LOADER :::::::::::::::::::::::::: -->
 <div id="initial-loader" class="fullpage-loader">
     <div class="lds-grid">
         <div></div><div></div><div></div>

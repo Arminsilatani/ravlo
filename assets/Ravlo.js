@@ -1,11 +1,3 @@
-/*
-Author: Armin Silatani
-Date: 2026-07-03
-Version: 0.0.0
-*/
-
-/* =========================== MAIN CALENDAR APPLICATION ============================ */
-
 /* :::::::::::::::::::::::::: SUPABASE CLIENT :::::::::::::::::::::::::: */
 const SUPABASE_URL = 'https://vzqicidepdmraygulrey.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_kqRWgOmLISOE2EuLL1s8fw_WN6FJRTI';
@@ -32,6 +24,7 @@ let recurrence = {
 
 const ROLE_HIERARCHY = ['recruit', 'sergeant', 'commander', 'general'];
 const APP_MIN_ROLE = 'commander';
+
 function hasMinRole(userRole) {
     const normalized = String(userRole || '').trim().toLowerCase();
     const userIndex = ROLE_HIERARCHY.indexOf(normalized);
@@ -40,52 +33,56 @@ function hasMinRole(userRole) {
 }
 
 function showAccessDenied(message = 'Access denied.') {
-  const overlay = document.createElement('div');
-  overlay.id = 'access-denied-overlay';
-  overlay.style.cssText = `
-    position: fixed; inset: 0; z-index: 10000;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(12px);
-    display: flex; align-items: center; justify-content: center;
-    animation: fadeIn 0.3s ease;
-  `;
-
-  const box = document.createElement('div');
-  box.style.cssText = `
-    background: rgba(20, 20, 20, 0.9);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 16px;
-    padding: 32px 40px;
-    text-align: center;
-    color: #fff;
-    font-family: inherit;
-    font-size: 16px;
-    max-width: 400px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    transform: scale(0.9);
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  `;
-  box.innerHTML = `
-    <div style="margin-bottom:12px; display:flex; justify-content:center;">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:40px; height:40px; color: var(--accent, #ff6f91);">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-      </svg>
-    </div>
-    <p style="margin:0; line-height:1.5;">${message}</p>
-  `;
-
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-
-  if (!document.getElementById('access-denied-styles')) {
-    const style = document.createElement('style');
-    style.id = 'access-denied-styles';
-    style.textContent = `
-      @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-      @keyframes popIn { 0% { transform: scale(0.8); opacity:0; } 100% { transform: scale(1); opacity:1; } }
+    const overlay = document.createElement('div');
+    overlay.id = 'access-denied-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
     `;
-    document.head.appendChild(style);
-  }
+
+    const box = document.createElement('div');
+    box.style.cssText = `
+        background: rgba(20, 20, 20, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 32px 40px;
+        text-align: center;
+        color: #FFFFFF;
+        font-family: inherit;
+        font-size: 16px;
+        max-width: 400px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        transform: scale(0.9);
+        animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    `;
+    box.innerHTML = `
+        <div style="margin-bottom:12px; display:flex; justify-content:center;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:40px; height:40px; color: var(--accent, #FF6F91);">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+        </div>
+        <p style="margin:0; line-height:1.5;">${message}</p>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    if (!document.getElementById('access-denied-styles')) {
+        const style = document.createElement('style');
+        style.id = 'access-denied-styles';
+        style.textContent = `
+            @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+            @keyframes popIn { 0% { transform: scale(0.8); opacity:0; } 100% { transform: scale(1); opacity:1; } }
+        `;
+        document.head.appendChild(style);
+    }
 }
 
 let viewMode = localStorage.getItem('ravlo-view-mode') || 'month';
@@ -95,7 +92,7 @@ if (viewMode === 'week') {
 let currentDate = new Date();
 let events = [];
 let eventType = 'event';
-let selectedTagColor = '#f5f5f5';
+let selectedTagColor = '#F5F5F5';
 let currentChecklistItems = [];
 let selectedIcon = null;
 let titlePickerActive = false;
@@ -154,7 +151,6 @@ const gregMonthPopup = document.getElementById('greg-month-popup');
 const gregYearPopup = document.getElementById('greg-year-popup');
 const gregYearPanel = document.getElementById('greg-year-panel');
 
-// Additional picker state
 var gregState = {
     gy: 2026,
     gm: 0,
@@ -164,56 +160,56 @@ var GREG_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 
 var currentDetailEvent = null;
 
 function isEventActiveOnDate(event, date) {
-  const toLocalDateString = (d) => {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  };
+    const toLocalDateString = (d) => {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
 
-  const hasRecurrence = event.recurrence_type && event.recurrence_type !== 'none';
+    const hasRecurrence = event.recurrence_type && event.recurrence_type !== 'none';
 
-  if (!event.start_date) return false;
+    if (!event.start_date) return false;
 
-  const start = new Date(event.start_date);
+    const start = new Date(event.start_date);
 
-  if (!hasRecurrence || event.recurrence_type === 'smart') {
-    return start.getFullYear() === date.getFullYear() &&
-           start.getMonth() === date.getMonth() &&
-           start.getDate() === date.getDate();
-  }
-
-  const normalizedStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  if (date < normalizedStart) return false;
-
-  const recType = event.recurrence_type.toLowerCase();
-  const interval = event.recurrence_interval || 1;
-  const days = event.recurrence_days || [];
-
-  const diffTime = date.getTime() - normalizedStart.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-  let matchesRule = false;
-
-  if (recType === 'daily') {
-    matchesRule = (diffDays % interval === 0);
-  } else if (recType === 'weekly' || recType === 'custom') {
-    const activeDays = days.length > 0 ? days : [start.getDay()];
-    const dayOfWeek = date.getDay();
-    if (activeDays.includes(dayOfWeek)) {
-      const diffWeeks = Math.floor(diffDays / 7);
-      matchesRule = (diffWeeks % interval === 0);
+    if (!hasRecurrence || event.recurrence_type === 'smart') {
+        return start.getFullYear() === date.getFullYear() &&
+               start.getMonth() === date.getMonth() &&
+               start.getDate() === date.getDate();
     }
-  } else if (recType === 'monthly') {
-    if (start.getDate() === date.getDate()) {
-      const diffMonths = (date.getFullYear() - start.getFullYear()) * 12 + (date.getMonth() - start.getMonth());
-      matchesRule = (diffMonths % interval === 0);
-    }
-  } else if (recType === 'yearly') {
-    if (start.getMonth() === date.getMonth() && start.getDate() === date.getDate()) {
-      const diffYears = date.getFullYear() - start.getFullYear();
-      matchesRule = (diffYears % interval === 0);
-    }
-  }
 
-  return matchesRule;
+    const normalizedStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    if (date < normalizedStart) return false;
+
+    const recType = event.recurrence_type.toLowerCase();
+    const interval = event.recurrence_interval || 1;
+    const days = event.recurrence_days || [];
+
+    const diffTime = date.getTime() - normalizedStart.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    let matchesRule = false;
+
+    if (recType === 'daily') {
+        matchesRule = (diffDays % interval === 0);
+    } else if (recType === 'weekly' || recType === 'custom') {
+        const activeDays = days.length > 0 ? days : [start.getDay()];
+        const dayOfWeek = date.getDay();
+        if (activeDays.includes(dayOfWeek)) {
+            const diffWeeks = Math.floor(diffDays / 7);
+            matchesRule = (diffWeeks % interval === 0);
+        }
+    } else if (recType === 'monthly') {
+        if (start.getDate() === date.getDate()) {
+            const diffMonths = (date.getFullYear() - start.getFullYear()) * 12 + (date.getMonth() - start.getMonth());
+            matchesRule = (diffMonths % interval === 0);
+        }
+    } else if (recType === 'yearly') {
+        if (start.getMonth() === date.getMonth() && start.getDate() === date.getDate()) {
+            const diffYears = date.getFullYear() - start.getFullYear();
+            matchesRule = (diffYears % interval === 0);
+        }
+    }
+
+    return matchesRule;
 }
 
 /* :::::::::::::::::::::::::: LAZY PIN ICON :::::::::::::::::::::::::: */
@@ -226,7 +222,7 @@ function getAccentPinIcon() {
             className: 'custom-pin',
             html: `<svg width="30" height="40" viewBox="0 0 24 36" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 0C5.372 0 0 5.372 0 12c0 7.028 12 24 12 24s12-16.972 12-24C24 5.372 18.628 0 12 0zm0 16a4 4 0 110-8 4 4 0 010 8z"
-                      fill="currentColor" stroke="#fff" stroke-width="1.5"/>
+                      fill="currentColor" stroke="#FFFFFF" stroke-width="1.5"/>
             </svg>`,
             iconSize: [30, 40],
             iconAnchor: [15, 40],
@@ -236,7 +232,7 @@ function getAccentPinIcon() {
     return accentPinIcon;
 }
 
-/* ------------------------- REMOVE NOTIFICATIONS FOR EVENT ------------------------- */
+/* :::::::::::::::::::::::::: REMOVE NOTIFICATIONS FOR EVENT :::::::::::::::::::::::::: */
 async function removeNotificationsForEvent(eventId, userId) {
     try {
         const { error: err1 } = await sb
@@ -262,68 +258,67 @@ async function removeNotificationsForEvent(eventId, userId) {
     }
 }
 
-/* ------------------------- CHECK AND CREATE TODAY NOTIFICATIONS ------------------------- */
+/* :::::::::::::::::::::::::: CHECK AND CREATE TODAY NOTIFICATIONS :::::::::::::::::::::::::: */
 async function syncTodayNotifications() {
-  if (!currentUser) return;
+    if (!currentUser) return;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const { data: existingNotifs } = await sb
-    .from('notifications')
-    .select('id, event_id')
-    .eq('user_id', currentUser.id)
-    .eq('type', 'event');
+    const { data: existingNotifs } = await sb
+        .from('notifications')
+        .select('id, event_id')
+        .eq('user_id', currentUser.id)
+        .eq('type', 'event');
 
-  const activeMap = new Map();
+    const activeMap = new Map();
 
-  for (const n of (existingNotifs || [])) {
-    if (!n.event_id) {
-      await sb.from('notifications').delete().eq('id', n.id);
-      continue;
+    for (const n of (existingNotifs || [])) {
+        if (!n.event_id) {
+            await sb.from('notifications').delete().eq('id', n.id);
+            continue;
+        }
+
+        const ev = events.find(e => e.id === n.event_id);
+        if (!ev) {
+            await sb.from('notifications').delete().eq('id', n.id);
+            continue;
+        }
+
+        if (isEventActiveOnDate(ev, today)) {
+            if (!activeMap.has(n.event_id)) {
+                activeMap.set(n.event_id, n.id);
+            } else {
+                await sb.from('notifications').delete().eq('id', n.id);
+            }
+        } else {
+            await sb.from('notifications').delete().eq('id', n.id);
+        }
+        updateNotificationDot();
     }
 
-    const ev = events.find(e => e.id === n.event_id);
-    if (!ev) {
-      await sb.from('notifications').delete().eq('id', n.id);
-      continue;
-    }
+    for (const ev of events) {
+        if (!ev.start_date) continue;
+        if (ev.type && ev.type !== 'event') continue;
+        if (activeMap.has(ev.id)) continue;
 
-    if (isEventActiveOnDate(ev, today)) {
-      if (!activeMap.has(n.event_id)) {
-        activeMap.set(n.event_id, n.id);
-      } else {
-        await sb.from('notifications').delete().eq('id', n.id);
-      }
-    } else {
-      await sb.from('notifications').delete().eq('id', n.id);
+        if (isEventActiveOnDate(ev, today)) {
+            await sb.from('notifications').insert({
+                user_id: currentUser.id,
+                type: 'event',
+                title: 'Event Today',
+                body: `${ev.title || 'Untitled'} is today!`,
+                link: '#',
+                event_id: ev.id,
+                is_read: false,
+                created_at: new Date().toISOString()
+            });
+            activeMap.set(ev.id, true);
+        }
     }
-    updateNotificationDot();
-  }
-
-  for (const ev of events) {
-    if (!ev.start_date) continue;
-    if (ev.type && ev.type !== 'event') continue;
-    if (activeMap.has(ev.id)) continue;
-
-    if (isEventActiveOnDate(ev, today)) {
-      await sb.from('notifications').insert({
-        user_id: currentUser.id,
-        type: 'event',
-        title: 'Event Today',
-        body: `${ev.title || 'Untitled'} is today!`,
-        link: '#',
-        event_id: ev.id,
-        is_read: false,
-        created_at: new Date().toISOString()
-      });
-      activeMap.set(ev.id, true);
-    }
-  }
 }
 
-/* ------------------------- UTILITY FUNCTIONS ------------------------- */
-
+/* :::::::::::::::::::::::::: UTILITY FUNCTIONS :::::::::::::::::::::::::: */
 const DASHBOARD_URL = 'https://arminsilatani.github.io/dashboard/';
 
 async function addNotificationToUser(userId, type, title, body, link, eventId = null) {
@@ -419,7 +414,7 @@ function showToast(message) {
     toast.innerHTML = `
         <svg width="24" height="24" viewBox="0 0 24 24" class="toast-ring">
             <circle cx="12" cy="12" r="${r}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-            <circle cx="12" cy="12" r="${r}" fill="none" stroke="#fff" stroke-width="2"
+            <circle cx="12" cy="12" r="${r}" fill="none" stroke="#FFFFFF" stroke-width="2"
                     stroke-dasharray="${circumference}" stroke-dashoffset="0"
                     stroke-linecap="round"
                     style="transition: stroke-dashoffset 4s linear;"/>
@@ -452,7 +447,8 @@ function sanitizeHTML(html) {
     });
     return doc.body.innerHTML;
 }
-/* ------------------------- HOLIDAYS ------------------------- */
+
+/* :::::::::::::::::::::::::: HOLIDAYS :::::::::::::::::::::::::: */
 const GREG_HOLIDAYS = {
     '01-01': "New Year's Day",
     '02-14': "Valentine's Day",
@@ -478,9 +474,9 @@ function getGregHoliday(year, month, day) {
     return GREG_HOLIDAYS[pad(month + 1) + '-' + pad(day)] || null;
 }
 
-
-/* ------------------------- ICON OPTIONS ------------------------- */
-const ICON_OPTIONS = [{
+/* :::::::::::::::::::::::::: ICON OPTIONS :::::::::::::::::::::::::: */
+const ICON_OPTIONS = [
+    {
         svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"/></svg>`
     },
     {
@@ -527,14 +523,14 @@ const ICON_OPTIONS = [{
     }
 ];
 
-/* ------------------------- INVITE LIST RENDERING ------------------------- */
+/* :::::::::::::::::::::::::: INVITE LIST RENDERING :::::::::::::::::::::::::: */
 function renderInviteModalList() {
     const list = document.getElementById('invite-list');
     if (!list) return;
     list.innerHTML = currentInvitees.map(name => `<li><span>${name}</span></li>`).join('');
 }
 
-/* ------------------------- CHECKLIST MODAL RENDERING ------------------------- */
+/* :::::::::::::::::::::::::: CHECKLIST MODAL RENDERING :::::::::::::::::::::::::: */
 let tempChecklistItems = [];
 
 function renderChecklistModalItems() {
@@ -568,9 +564,7 @@ function renderChecklistModalItems() {
     });
 }
 
-/* ------------------------- PROFILE & AUTH ------------------------- */
-
-/* ------------------------- PROFILE BUILDER ------------------------- */
+/* :::::::::::::::::::::::::: PROFILE BUILDER :::::::::::::::::::::::::: */
 async function buildCurrentProfile(user) {
     if (!user) return null;
     const { data: profileRow, error } = await sb
@@ -596,7 +590,7 @@ async function buildCurrentProfile(user) {
     };
 }
 
-/* ------------------------- SIDEBAR COMPONENT INTEGRATION ------------------------- */
+/* :::::::::::::::::::::::::: SIDEBAR COMPONENT INTEGRATION :::::::::::::::::::::::::: */
 let sidebarComponent = null;
 
 function getSidebarComponent() {
@@ -712,7 +706,7 @@ function getTodayAndOverdueItems() {
         function buildTitle(event) {
             const base = event.title || 'Untitled';
             if (event.invitation_status === 'pending' && event.parent_event_id) {
-                return base + ' <span style="font-size:10px;font-weight:400;background:#3a3a3a;color:#ccc;padding:1px 4px;border-radius:3px;margin-left:4px;">Invited</span>';
+                return base + ' <span style="font-size:10px;font-weight:400;background:#3A3A3A;color:#CCCCCC;padding:1px 4px;border-radius:3px;margin-left:4px;">Invited</span>';
             }
             return base;
         }
@@ -763,8 +757,7 @@ function getTodayAndOverdueItems() {
     return { todayItems, overdueItems };
 }
 
-/* ------------------------- MODAL HELPERS ------------------------- */
-
+/* :::::::::::::::::::::::::: MODAL HELPERS :::::::::::::::::::::::::: */
 function openModal(modal) {
     if (!modal) return;
     modal.style.display = 'flex';
@@ -776,7 +769,7 @@ function closeModal(modal) {
     document.body.classList.remove('modal-open');
 }
 
-/* ------------------------- LOADER HELPERS ------------------------- */
+/* :::::::::::::::::::::::::: LOADER HELPERS :::::::::::::::::::::::::: */
 function getLoaderHTML(type) {
     switch (type) {
         case 'dots':
@@ -871,8 +864,7 @@ function showConfirmModal(message, onConfirm) {
     });
 }
 
-/* ------------------------- DATABASE HELPERS ------------------------- */
-
+/* :::::::::::::::::::::::::: DATABASE HELPERS :::::::::::::::::::::::::: */
 async function fetchEvents() {
     if (!currentUser) return [];
     const { data, error } = await sb
@@ -881,36 +873,36 @@ async function fetchEvents() {
         .eq('user_id', currentUser.id)
         .order('start_date', { ascending: true });
     if (error) { console.warn('Fetch error:', error.message); return []; }
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     for (const ev of data) {
-        if (ev.type === 'task' && 
-            ev.recurrence_type === 'none' && 
-            ev.status !== 'done' && 
+        if (ev.type === 'task' &&
+            ev.recurrence_type === 'none' &&
+            ev.status !== 'done' &&
             ev.status !== 'completed' &&
             ev.start_date) {
-            
+
             const startDate = new Date(ev.start_date);
             startDate.setHours(0, 0, 0, 0);
-            
+
             if (startDate < today) {
                 const newStart = new Date(today);
                 const oldHour = new Date(ev.start_date).getHours();
                 const oldMinute = new Date(ev.start_date).getMinutes();
                 newStart.setHours(oldHour, oldMinute, 0, 0);
-                
-                await updateEventInDB(ev.id, { 
+
+                await updateEventInDB(ev.id, {
                     start_date: newStart.toISOString()
                 });
-                
+
                 ev.start_date = newStart.toISOString();
                 console.log(`🔄 Task "${ev.title}" moved to today (was before today)`);
             }
         }
     }
-    
+
     return data || [];
 }
 
@@ -952,13 +944,7 @@ async function saveEventToDB(payload) {
     return data?.[0];
 }
 
-/* ------------------------- SMART RECURRENCE HELPERS ------------------------- */
-
-/**
- * Calculate the next date for a smart task
- * @param {Object} ev - the current task
- * @returns {Date|null} suggested next date
- */
+/* :::::::::::::::::::::::::: SMART RECURRENCE HELPERS :::::::::::::::::::::::::: */
 function getNextSmartDate(ev) {
     const interval = ev.recurrence_smart_interval || 'weekly';
     let intervalDays = interval === 'weekly' ? 7 : interval === '10day' ? 10 : 30;
@@ -986,7 +972,7 @@ async function createNextSmartTask(ev, newDate) {
         description: ev.description || '',
         type: ev.type || 'task',
         all_day: ev.all_day || false,
-        color: ev.color || '#f5f5f5',
+        color: ev.color || '#F5F5F5',
         icon: ev.icon || null,
         checklist: ev.checklist || [],
         invitees: [],
@@ -1042,7 +1028,7 @@ async function completeSmartTask(ev) {
     }
 }
 
-/* ------------------------- MOVE OVERDUE TASKS TO TODAY ------------------------- */
+/* :::::::::::::::::::::::::: MOVE OVERDUE TASKS TO TODAY :::::::::::::::::::::::::: */
 async function moveOverdueTasksToToday() {
     if (!currentUser) return;
 
@@ -1092,8 +1078,7 @@ async function moveOverdueTasksToToday() {
     }
 }
 
-/* ------------------------- AUTH FLOW ------------------------- */
-// ----- Sign In Button -----
+/* :::::::::::::::::::::::::: AUTH FLOW :::::::::::::::::::::::::: */
 document.getElementById('auth-signin-btn')?.addEventListener('click', async function() {
     const email = authEmail;
     const password = document.getElementById('auth-password').value;
@@ -1164,8 +1149,7 @@ async function logout() {
     hideGlobalLoader();
 }
 
-/* ------------------------- LEAFLET MAP HELPERS ------------------------- */
-
+/* :::::::::::::::::::::::::: LEAFLET MAP HELPERS :::::::::::::::::::::::::: */
 function isLeafletReady() {
     return typeof L !== 'undefined';
 }
@@ -1223,8 +1207,7 @@ function parseCoordinates(str) {
     return null;
 }
 
-/* ------------------------- RECURRENCE LOGIC ------------------------- */
-
+/* :::::::::::::::::::::::::: RECURRENCE LOGIC :::::::::::::::::::::::::: */
 function updateRecurrencePreview() {
     const preview = document.getElementById('recurrence-preview');
     if (!preview) return;
@@ -1506,8 +1489,7 @@ function getRecurrenceDates(ev, fromDate, toDate) {
     return occurrences;
 }
 
-/* ------------------------- GREGORIAN PICKER ------------------------- */
-
+/* :::::::::::::::::::::::::: GREGORIAN PICKER :::::::::::::::::::::::::: */
 function renderYearPanel(container, selectedYear, fromYear, toYear, persian, onSelect) {
     container.innerHTML = '';
     var now = new Date();
@@ -1704,7 +1686,7 @@ function openGregYearPopup() {
     });
 }
 
-/* ------------------------- RENDER DISPATCHER ------------------------- */
+/* :::::::::::::::::::::::::: RENDER DISPATCHER :::::::::::::::::::::::::: */
 function syncViewTabsUI() {
     viewTabsEl.querySelectorAll('.view-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.view === viewMode));
 }
@@ -1714,14 +1696,14 @@ function renderCalendar() {
     calendarGrid.className = 'calendar-grid';
     calendarGrid.removeAttribute('dir');
     calendarGrid.style.display = '';
-    
+
     if (currentUser) {
         moveOverdueTasksToToday().then(() => {
             renderView();
         });
         return;
     }
-    
+
     renderView();
 }
 
@@ -1744,7 +1726,7 @@ function renderView() {
     syncSidebarComponent();
 }
 
-/* ------------------------- MONTH VIEW ------------------------- */
+/* :::::::::::::::::::::::::: MONTH VIEW :::::::::::::::::::::::::: */
 function renderGregorianMonth() {
     var year = currentDate.getFullYear(),
         month = currentDate.getMonth(),
@@ -1835,7 +1817,7 @@ function makeGregCell(year, month, day, otherMonth, isToday) {
     return cell;
 }
 
-/* ------------------------- DAY VIEW ------------------------- */
+/* :::::::::::::::::::::::::: DAY VIEW :::::::::::::::::::::::::: */
 function renderDayView() {
     var viewDate = new Date(currentDate);
     var vy = viewDate.getFullYear(),
@@ -2077,9 +2059,7 @@ function renderDayView() {
             return getCumulativeHeightUntil(endMin) - getCumulativeHeightUntil(startMin);
         }
 
-        // ============================================================
-        // (connected components)
-        // ============================================================
+        // Group overlapping events into connected components
         const n = eventsWithMinutes.length;
         const adj = Array.from({ length: n }, () => []);
         for (let i = 0; i < n; i++) {
@@ -2437,7 +2417,7 @@ function renderDayView() {
     });
 }
 
-/* ------------------------- YEAR VIEW ------------------------- */
+/* :::::::::::::::::::::::::: YEAR VIEW :::::::::::::::::::::::::: */
 function renderYearView() {
     calendarGrid.className = 'year-grid';
     calendarGrid.innerHTML = '';
@@ -2476,13 +2456,12 @@ function makeYearMonthCard_Greg(year, month, today) {
     return card;
 }
 
-/* ------------------------- EVENT TYPE & TIME ------------------------- */
-
+/* :::::::::::::::::::::::::: EVENT TYPE & TIME :::::::::::::::::::::::::: */
 function setEventType(type) {
     eventType = type;
     const toggle = document.getElementById('event-type-toggle');
     if (!toggle) return;
-    
+
     const labels = toggle.querySelectorAll('.event-type-label');
     const thumb = toggle.querySelector('.event-type-thumb');
     labels.forEach(l => l.classList.toggle('active', l.dataset.type === type));
@@ -2505,7 +2484,7 @@ function setEventType(type) {
 
     const iconBtn = document.getElementById('toggle-icon-btn');
     if (iconBtn) iconBtn.style.display = 'flex';
-    
+
     const colorBtn = document.getElementById('toggle-color-btn');
     if (colorBtn) colorBtn.style.display = 'flex';
 
@@ -2533,7 +2512,7 @@ function setEventType(type) {
     syncTaskTimeVisibility();
 }
 
-/* ------------------------- TIME VALIDATION & SPINNER ------------------------- */
+/* :::::::::::::::::::::::::: TIME VALIDATION & SPINNER :::::::::::::::::::::::::: */
 function getSelectedGregFor(prefix) {
     if (prefix === 'greg') {
         if (gregState.selectedGd === null) return null;
@@ -2583,62 +2562,21 @@ function validateTimeInput(prefix, isEnd = false) {
         }
     }
 
-    function validateTimeInput(prefix, isEnd = false) {
-        const hourEl = document.getElementById(prefix + (isEnd ? '-end-hour' : '-hour'));
-        const minEl = document.getElementById(prefix + (isEnd ? '-end-minute' : '-minute'));
-        if (!hourEl || !minEl) return;
-
-        const g = getSelectedGregFor(prefix);
-        if (!g) return;
-
-        let hour = parseInt(hourEl.value, 10);
-        let minute = parseInt(minEl.value, 10);
-        if (isNaN(hour) || isNaN(minute)) return;
-
-        minute = Math.round(minute / 15) * 15;
-        if (minute === 60) {
-            minute = 0;
-            hour++;
-        }
-
-        if (!isEnd && isToday(g.gy, g.gm, g.gd)) {
-            const now = new Date();
-            const curHour = now.getHours();
-            const curMinute = now.getMinutes();
-            const nowTotal = curHour * 60 + curMinute;
-            const selTotal = hour * 60 + minute;
-            if (selTotal <= nowTotal) {
-                let newMin = Math.ceil((curMinute + 1) / 15) * 15;
-                let newHour = curHour + 1;
-                if (newMin >= 60) {
-                    newMin = 0;
-                    newHour++;
-                }
-                newHour = newHour % 24;
-                hour = newHour;
-                minute = newMin;
-            }
-        }
-
-        if (isEnd) {
-            const startHourEl = document.getElementById(prefix + '-hour');
-            const startMinEl = document.getElementById(prefix + '-minute');
-            if (startHourEl && startMinEl) {
-                const startH = parseInt(startHourEl.value, 10);
-                const startM = parseInt(startMinEl.value, 10);
-                if (!isNaN(startH) && !isNaN(startM)) {
-                    const startTotal = startH * 60 + startM;
-                    const endTotal = hour * 60 + minute;
-                    if (endTotal <= startTotal) {
-                        hour = (startH + 1) % 24;
-                        minute = startM;
-                    }
+    if (isEnd) {
+        const startHourEl = document.getElementById(prefix + '-hour');
+        const startMinEl = document.getElementById(prefix + '-minute');
+        if (startHourEl && startMinEl) {
+            const startH = parseInt(startHourEl.value, 10);
+            const startM = parseInt(startMinEl.value, 10);
+            if (!isNaN(startH) && !isNaN(startM)) {
+                const startTotal = startH * 60 + startM;
+                const endTotal = hour * 60 + minute;
+                if (endTotal <= startTotal) {
+                    hour = (startH + 1) % 24;
+                    minute = startM;
                 }
             }
         }
-
-        hourEl.value = String(hour).padStart(2, '0');
-        minEl.value = String(minute).padStart(2, '0');
     }
 
     hourEl.value = String(hour).padStart(2, '0');
@@ -2665,7 +2603,7 @@ function syncEndTimeOnStartChange(prefix) {
     endMin.value = String(sm).padStart(2, '0');
 }
 
-/* ------------------------- OPEN NEW EVENT AT TIME ------------------------- */
+/* :::::::::::::::::::::::::: OPEN NEW EVENT AT TIME :::::::::::::::::::::::::: */
 function resetEventForm() {
     if (eventTitleInput) eventTitleInput.value = '';
     const descField = document.getElementById('event-description');
@@ -2689,7 +2627,7 @@ function resetEventForm() {
     recurrence = { type: 'none', interval: 1, days: [], smartInterval: 'weekly' };
     updateRecurrencePreview();
 
-    selectedTagColor = '#f5f5f5';
+    selectedTagColor = '#F5F5F5';
     const colorBtn = document.getElementById('toggle-color-btn');
     if (colorBtn) colorBtn.classList.remove('active');
 
@@ -2769,7 +2707,7 @@ function openNewEventAtTime(date) {
     gregPickerTrigger.classList.add('has-value');
 
     eventEndInput.value = '';
-    selectedTagColor = '#f5f5f5';
+    selectedTagColor = '#F5F5F5';
     recurrence = { type: 'none', interval: 1, days: [] };
     updateRecurrencePreview();
     hideInlineChecklist();
@@ -2843,10 +2781,10 @@ async function openEditModal(ev) {
         locBtn.style.display = 'flex';
     }
 
-    selectedTagColor = ev.color || '#f5f5f5';
+    selectedTagColor = ev.color || '#F5F5F5';
     const colorBtn = document.getElementById('toggle-color-btn');
     if (colorBtn) {
-        colorBtn.classList.toggle('active', selectedTagColor !== '#f5f5f5');
+        colorBtn.classList.toggle('active', selectedTagColor !== '#F5F5F5');
     }
 
     const descField = document.getElementById('event-description');
@@ -2924,10 +2862,10 @@ async function openEditModal(ev) {
         gregState.gy = startDate.getFullYear();
         gregState.gm = startDate.getMonth();
         gregState.selectedGd = startDate.getDate();
-        
+
         if (gregHourInput) gregHourInput.value = pad(startDate.getHours());
         if (gregMinuteInput) gregMinuteInput.value = pad(startDate.getMinutes());
-        
+
         if (ev.end_date) {
             const endDate = new Date(ev.end_date);
             document.getElementById('greg-end-hour').value = pad(endDate.getHours());
@@ -2945,7 +2883,7 @@ async function openEditModal(ev) {
 async function openEditModalForInvitee(ev) {
     if (!ev) return;
     await openEditModal(ev);
-    
+
     if (saveEventBtn) {
         saveEventBtn.textContent = 'Send Edit Request';
         saveEventBtn.onclick = async function() {
@@ -2968,19 +2906,18 @@ async function openEditModalForInvitee(ev) {
                 recurrence_days: recurrence.days,
                 recurrence_smart_interval: recurrence.smartInterval
             };
-            
+
             await requestEditEvent(ev, newPayload);
         };
     }
 }
 
-/* ------------------------- EVENT SAVE & EDIT ------------------------- */
+/* :::::::::::::::::::::::::: EVENT SAVE & EDIT :::::::::::::::::::::::::: */
 async function saveEvent() {
     if (isSaving) return;
     isSaving = true;
     if (saveEventBtn) saveEventBtn.disabled = true;
     try {
-        // 1. Get form values
         var title = '';
         if (eventTitleInput) title = eventTitleInput.value.trim();
 
@@ -3004,7 +2941,6 @@ async function saveEvent() {
         var descEl = document.getElementById('event-description');
         if (descEl) desc = descEl.value.trim();
 
-        // 2. Build main payload
         var payload = {
             title: title,
             start_date: new Date(start).toISOString(),
@@ -3023,7 +2959,6 @@ async function saveEvent() {
             checklist: eventType === 'task' ? currentChecklistItems : []
         };
 
-        // 3. Location (event only)
         if (eventType === 'event' && (currentLocationCoords || currentLocationName)) {
             payload.location = {
                 lat: currentLocationCoords?.lat || null,
@@ -3035,26 +2970,21 @@ async function saveEvent() {
             payload.location = null;
         }
 
-        // 4. Completed occurrences
         if (!editingEventId) {
             payload.completed_occurrences = [];
             payload.completed_timestamps = {};
         }
 
-        // 5. Invitee IDs
         payload.invitee_ids = currentInvitees.map(inv => inv.id);
 
-        // 6. Save to database
         showGlobalLoader();
 
         if (editingEventId) {
-            // Update existing event
             await updateEventInDB(editingEventId, payload);
             var idx = events.findIndex(function(ev) {
                 return ev.id == editingEventId;
             });
             if (idx !== -1) {
-                // Keep existing completed_occurrences and completed_timestamps
                 if (events[idx].completed_occurrences) {
                     payload.completed_occurrences = events[idx].completed_occurrences;
                 }
@@ -3065,12 +2995,10 @@ async function saveEvent() {
             }
             editingEventId = null;
         } else {
-            // Create new event
             var saved = await saveEventToDB(payload);
             if (saved) {
                 events.push(saved);
 
-                // 7. Create invitee rows (if any)
                 if (currentInvitees.length > 0) {
                     for (const invitee of currentInvitees) {
                         const invitePayload = {
@@ -3097,7 +3025,6 @@ async function saveEvent() {
                     }
                 }
 
-                // 8. Send notifications
                 const eventTitle = title || 'Untitled event';
                 currentInvitees.forEach(inv => {
                     addNotificationToUser(
@@ -3112,59 +3039,54 @@ async function saveEvent() {
             }
         }
 
-        // Update invitee events (if editing)
-        if (editingEventId || (saved && saved.id)) {
-            const eventId = editingEventId || saved.id;
+        const eventId = editingEventId || saved.id;
 
-            // Only fields an invitee should see
-            const inviteeUpdatePayload = {
-                title: payload.title,
-                description: payload.description,
-                start_date: payload.start_date,
-                end_date: payload.end_date,
-                all_day: payload.all_day,
-                location: payload.location,
-                color: payload.color,
-                icon: payload.icon,
-                recurrence_type: payload.recurrence_type,
-                recurrence_interval: payload.recurrence_interval,
-                recurrence_days: payload.recurrence_days,
-                recurrence_smart_interval: payload.recurrence_smart_interval,
-                checklist: payload.checklist
-            };
+        const inviteeUpdatePayload = {
+            title: payload.title,
+            description: payload.description,
+            start_date: payload.start_date,
+            end_date: payload.end_date,
+            all_day: payload.all_day,
+            location: payload.location,
+            color: payload.color,
+            icon: payload.icon,
+            recurrence_type: payload.recurrence_type,
+            recurrence_interval: payload.recurrence_interval,
+            recurrence_days: payload.recurrence_days,
+            recurrence_smart_interval: payload.recurrence_smart_interval,
+            checklist: payload.checklist
+        };
 
-            const { error: updateInviteesError } = await sb
+        const { error: updateInviteesError } = await sb
+            .from('ravlo')
+            .update(inviteeUpdatePayload)
+            .eq('parent_event_id', eventId);
+
+        if (updateInviteesError) {
+            console.warn('Failed to update invitee events:', updateInviteesError);
+        } else {
+            console.log('✅ Invitee events updated successfully');
+
+            const { data: inviteeRows } = await sb
                 .from('ravlo')
-                .update(inviteeUpdatePayload)
+                .select('user_id, id')
                 .eq('parent_event_id', eventId);
 
-            if (updateInviteesError) {
-                console.warn('Failed to update invitee events:', updateInviteesError);
-            } else {
-                console.log('✅ Invitee events updated successfully');
+            if (inviteeRows) {
+                const eventTitle = payload.title || 'Untitled event';
+                const editorName = [currentProfile?.first_name, currentProfile?.last_name]
+                    .filter(Boolean).join(' ') || 'Someone';
 
-                // Notify invitees about update
-                const { data: inviteeRows } = await sb
-                    .from('ravlo')
-                    .select('user_id, id')
-                    .eq('parent_event_id', eventId);
-
-                if (inviteeRows) {
-                    const eventTitle = payload.title || 'Untitled event';
-                    const editorName = [currentProfile?.first_name, currentProfile?.last_name]
-                        .filter(Boolean).join(' ') || 'Someone';
-
-                    inviteeRows.forEach(invitee => {
-                        addNotificationToUser(
-                            invitee.user_id,
-                            'event',
-                            'Event Updated',
-                            `${editorName} updated "${eventTitle}"`,
-                            '#',
-                            invitee.id
-                        );
-                    });
-                }
+                inviteeRows.forEach(invitee => {
+                    addNotificationToUser(
+                        invitee.user_id,
+                        'event',
+                        'Event Updated',
+                        `${editorName} updated "${eventTitle}"`,
+                        '#',
+                        invitee.id
+                    );
+                });
             }
         }
 
@@ -3190,7 +3112,6 @@ async function saveEvent() {
             }
         }
 
-        // 9. Clean up UI
         hideGlobalLoader();
         closeModal(eventModal);
 
@@ -3214,7 +3135,7 @@ async function saveEvent() {
         currentInvitees = [];
         document.getElementById('toggle-invite-btn')?.classList.remove('active');
 
-        selectedTagColor = '#f5f5f5';
+        selectedTagColor = '#F5F5F5';
         document.getElementById('toggle-color-btn')?.classList.remove('active');
 
         selectedIcon = null;
@@ -3247,7 +3168,8 @@ async function saveEvent() {
     }
 }
 
-/* ------------------------- EDIT REQUEST FLOW ------------------------- */
+/* :::::::::::::::::::::::::: EDIT REQUEST FLOW :::::::::::::::::::::::::: */
+
 async function requestEditEvent(ev, newPayload) {
     if (!currentUser || !ev.parent_event_id) {
         showToast('Only invited guests can request edits.');
@@ -3402,7 +3324,8 @@ async function rejectEditRequest(eventId, reason) {
     }
 }
 
-/* ------------------------- EVENT DETAIL MODAL ------------------------- */
+/* :::::::::::::::::::::::::: EVENT DETAIL MODAL :::::::::::::::::::::::::: */
+
 async function openEventDetail(ev, occurrenceDate) {
     if (ev.invitation_status === 'pending' && ev.parent_event_id) {
         openInvitationResponse(ev);
@@ -3414,7 +3337,7 @@ async function openEventDetail(ev, occurrenceDate) {
 
     document.getElementById('event-detail-title').textContent = ev.title || 'Untitled';
     const colorDot = document.getElementById('detail-color-dot');
-    colorDot.style.backgroundColor = ev.color || '#f5f5f5';
+    colorDot.style.backgroundColor = ev.color || '#F5F5F5';
 
     const detailHeader = document.querySelector('#event-detail-modal .detail-header');
     let iconSpan = document.getElementById('detail-icon');
@@ -3550,7 +3473,7 @@ async function openEventDetail(ev, occurrenceDate) {
                 });
                 if (error || !parentData) {
                     console.error('Failed to get parent event:', error);
-                    attendeesList.innerHTML = '<div style="color:#ff6b6b;">Could not load attendees.</div>';
+                    attendeesList.innerHTML = '<div style="color:#FF6B6B;">Could not load attendees.</div>';
                     return;
                 }
                 ownerId = parentData.user_id;
@@ -3614,16 +3537,16 @@ async function openEventDetail(ev, occurrenceDate) {
                 allPeople.push({ name, photoUrl, status, isOwner: false });
             });
 
-            const colors = ['#f97316','#e11d48','#8b5cf6','#06b6d4','#10b981'];
+            const colors = ['#F97316','#E11D48','#8B5CF6','#06B6D4','#10B981'];
             allPeople.forEach((person, i) => {
                 const initials = person.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) || person.name[0].toUpperCase();
                 const avatarHtml = person.photoUrl
                     ? `<img src="${person.photoUrl}" alt="${person.name}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
                     : `<div class="attendee-avatar" style="background-color:${colors[i % colors.length]};flex-shrink:0;">${initials}</div>`;
                 const badge = person.isOwner
-                    ? ' <span style="background:#2ecc71;color:#fff;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Organizer</span>'
+                    ? ' <span style="background:#2ECC71;color:#FFF;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Organizer</span>'
                     : (person.status === 'pending'
-                        ? ' <span style="background:#ffc107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>'
+                        ? ' <span style="background:#FFC107;color:#000;font-size:10px;font-weight:400;padding:1px 4px;border-radius:4px;margin-left:4px;">Pending</span>'
                         : '');
                 const row = document.createElement('div');
                 row.className = 'attendee-item';
@@ -3906,13 +3829,13 @@ async function openEventDetail(ev, occurrenceDate) {
         const reqName = requester ? [requester.first_name, requester.last_name].filter(Boolean).join(' ') : 'A guest';
         
         editReqContainer.innerHTML = `
-            <p style="color:#ffc107; margin-bottom:8px;">✏️ <strong>${reqName}</strong> requested to edit this event.</p>
+            <p style="color:#FFC107; margin-bottom:8px;">✏️ <strong>${reqName}</strong> requested to edit this event.</p>
             <div style="display:flex; gap:8px;">
                 <button id="approve-edit-btn" class="accent-btn" style="width:auto; padding:6px 14px; font-size:13px;">Approve</button>
                 <button id="reject-edit-btn" class="ghost-btn" style="width:auto; padding:6px 14px; font-size:13px;">Reject</button>
             </div>
             <div id="reject-reason-row" style="display:none; margin-top:8px;">
-                <textarea id="reject-reason-input" placeholder="Reason for rejection..." style="width:100%; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; font-family:inherit; font-size:12px;"></textarea>
+                <textarea id="reject-reason-input" placeholder="Reason for rejection..." style="width:100%; background:#111; color:#FFF; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; font-family:inherit; font-size:12px;"></textarea>
                 <button id="confirm-reject-btn" class="accent-btn" style="width:auto; padding:6px 14px; font-size:13px; margin-top:6px;">Confirm Reject</button>
             </div>
         `;
@@ -3952,7 +3875,8 @@ async function openEventDetail(ev, occurrenceDate) {
     openModal(eventDetailModal);
 }
 
-/* ------------------------- DELETE & LEAVE HANDLERS ------------------------- */
+/* :::::::::::::::::::::::::: DELETE & LEAVE HANDLERS :::::::::::::::::::::::::: */
+
 async function leaveInvitedEvent(ev) {
     if (!currentUser || !ev.parent_event_id) return;
     
@@ -4028,47 +3952,47 @@ async function deleteEventById(id) {
 }
 
 async function deleteEventCascade(eventId) {
-  showGlobalLoader();
-  try {
-    const { data: mainEvent, error: fetchError } = await sb
-      .from('ravlo')
-      .select('invitee_ids, title, invitees')
-      .eq('id', eventId)
-      .single();
+    showGlobalLoader();
+    try {
+        const { data: mainEvent, error: fetchError } = await sb
+            .from('ravlo')
+            .select('invitee_ids, title, invitees')
+            .eq('id', eventId)
+            .single();
 
-    if (fetchError) throw fetchError;
+        if (fetchError) throw fetchError;
 
-    await sb.from('ravlo').delete().eq('parent_event_id', eventId);
+        await sb.from('ravlo').delete().eq('parent_event_id', eventId);
 
-    await sb.from('ravlo').delete().eq('id', eventId);
+        await sb.from('ravlo').delete().eq('id', eventId);
 
-    events = events.filter(e => e.id !== eventId && e.parent_event_id !== eventId);
+        events = events.filter(e => e.id !== eventId && e.parent_event_id !== eventId);
 
-    if (mainEvent.invitee_ids && mainEvent.invitee_ids.length > 0) {
-      const ownerName = [currentProfile?.first_name, currentProfile?.last_name]
-        .filter(Boolean).join(' ') || 'Someone';
-      const title = mainEvent.title || 'Untitled';
-      for (const uid of mainEvent.invitee_ids) {
-        await addNotificationToUser(
-          uid,
-          'event',
-          'Event Deleted',
-          `${ownerName} deleted the event "${title}"`,
-          '#',
-          null
-        );
-      }
+        if (mainEvent.invitee_ids && mainEvent.invitee_ids.length > 0) {
+            const ownerName = [currentProfile?.first_name, currentProfile?.last_name]
+                .filter(Boolean).join(' ') || 'Someone';
+            const title = mainEvent.title || 'Untitled';
+            for (const uid of mainEvent.invitee_ids) {
+                await addNotificationToUser(
+                    uid,
+                    'event',
+                    'Event Deleted',
+                    `${ownerName} deleted the event "${title}"`,
+                    '#',
+                    null
+                );
+            }
+        }
+
+        showToast('Event deleted successfully.');
+    } catch (err) {
+        console.error('Delete cascade error:', err);
+        showToast('Error deleting event: ' + err.message);
+    } finally {
+        hideGlobalLoader();
+        renderCalendar();
+        updateNotificationDot();
     }
-
-    showToast('Event deleted successfully.');
-  } catch (err) {
-    console.error('Delete cascade error:', err);
-    showToast('Error deleting event: ' + err.message);
-  } finally {
-    hideGlobalLoader();
-    renderCalendar();
-    updateNotificationDot();
-  }
 }
 
 function showDeleteConfirmation(eventId) {
@@ -4095,7 +4019,8 @@ function hideDeleteConfirmation() {
     }
 }
 
-/* ------------------------- CHECKLIST IN DETAIL ------------------------- */
+/* :::::::::::::::::::::::::: CHECKLIST IN DETAIL :::::::::::::::::::::::::: */
+
 function renderChecklistInDetail(ev) {
     const container = document.getElementById('detail-checklist-container');
     if (!container) return;
@@ -4257,7 +4182,8 @@ function markTaskDone(ev) {
         .catch(() => showToast('Error marking task as done.'));
 }
 
-/* ------------------------- CALENDAR NAVIGATION ------------------------- */
+/* :::::::::::::::::::::::::: CALENDAR NAVIGATION :::::::::::::::::::::::::: */
+
 function navigatePrev() {
     if (viewMode === 'year') {
         currentDate.setFullYear(currentDate.getFullYear() - 1);
@@ -4289,7 +4215,8 @@ function handleTodayClick() {
     renderCalendar();
 }
 
-/* ------------------------- GSAP ANIMATIONS ------------------------- */
+/* :::::::::::::::::::::::::: GSAP ANIMATIONS :::::::::::::::::::::::::: */
+
 function animateTabIndicator() {
     const activeTab = viewTabsEl.querySelector('.view-tab.active');
     if (!activeTab || !tabIndicator) return;
@@ -4303,9 +4230,10 @@ function animateTabIndicator() {
     });
 }
 
-/* =========================== EVENT LISTENERS ============================ */
+/* :::::::::::::::::::::::::: EVENT LISTENERS :::::::::::::::::::::::::: */
 
-/* ------------------------- AUTH & SESSION ------------------------- */
+/* :::::::::::::::::::::::::: AUTH & SESSION :::::::::::::::::::::::::: */
+
 document.getElementById('sidebar-logout')?.addEventListener('click', () => {
     openModal(document.getElementById('logout-confirm-modal'));
 });
@@ -4353,6 +4281,7 @@ document.getElementById('auth-continue-btn')?.addEventListener('click', async fu
             showStep('step-2-login');
         } else {
             showStep('step-2-register');
+            document.getElementById('register-email-display').value = email;
             document.getElementById('reg-form-fields').style.display = '';
             document.getElementById('reg-success').style.display = 'none';
         }
@@ -4363,6 +4292,10 @@ document.getElementById('auth-continue-btn')?.addEventListener('click', async fu
     } finally {
         hideGlobalLoader();
     }
+});
+
+document.getElementById('auth-back-to-email-2')?.addEventListener('click', () => {
+    showStep('step-1');
 });
 
 document.getElementById('auth-forgot-link')?.addEventListener('click', function(e) {
@@ -4467,7 +4400,8 @@ document.querySelectorAll('.toggle-password-btn').forEach(btn => {
     });
 });
 
-/* ------------------------- RECURRENCE MODAL ------------------------- */
+/* :::::::::::::::::::::::::: RECURRENCE MODAL :::::::::::::::::::::::::: */
+
 document.getElementById('recurrence-select')?.addEventListener('change', function() {
     recurrence.type = this.value;
     if (recurrence.type === 'smart' && eventType !== 'task') {
@@ -4540,11 +4474,12 @@ document.getElementById('recurrence-modal')?.addEventListener('click', function(
 });
 document.getElementById('open-recurrence-btn')?.addEventListener('click', openRecurrenceModal);
 
-/* ------------------------- TAG (COLOR) MODAL ------------------------- */
+/* :::::::::::::::::::::::::: TAG (COLOR) MODAL :::::::::::::::::::::::::: */
+
 document.getElementById('tag-done-btn')?.addEventListener('click', () => {
     const colorBtn = document.getElementById('toggle-color-btn');
     if (colorBtn) {
-        colorBtn.classList.toggle('active', selectedTagColor !== '#f5f5f5');
+        colorBtn.classList.toggle('active', selectedTagColor !== '#F5F5F5');
     }
     closeModal(document.getElementById('tag-modal'));
 });
@@ -4567,7 +4502,7 @@ document.querySelector('.tag-colors-grid')?.addEventListener('click', function(e
 document.getElementById('toggle-color-btn')?.addEventListener('click', function() {
     const btn = this;
     if (btn.classList.contains('active')) {
-        selectedTagColor = '#f5f5f5';
+        selectedTagColor = '#F5F5F5';
         btn.classList.remove('active');
     } else {
         openModal(document.getElementById('tag-modal'));
@@ -4577,7 +4512,8 @@ document.getElementById('toggle-color-btn')?.addEventListener('click', function(
     }
 });
 
-/* ------------------------- GREGORIAN PICKER ------------------------- */
+/* :::::::::::::::::::::::::: GREGORIAN PICKER :::::::::::::::::::::::::: */
+
 if (gregPrevBtn) gregPrevBtn.addEventListener('click', function() {
     gregState.gm--;
     if (gregState.gm < 0) {
@@ -4647,18 +4583,21 @@ if (gregPickerTrigger) gregPickerTrigger.addEventListener('click', function() {
     } else openGregPicker();
 });
 
-/* ------------------------- EVENT TYPE TOGGLE ------------------------- */
+/* :::::::::::::::::::::::::: EVENT TYPE TOGGLE :::::::::::::::::::::::::: */
+
 document.getElementById('event-type-toggle')?.addEventListener('click', e => {
     const label = e.target.closest('.event-type-label');
     if (label) setEventType(label.dataset.type);
 });
 
-/* ------------------------- NAVIGATION BUTTONS ------------------------- */
+/* :::::::::::::::::::::::::: NAVIGATION BUTTONS :::::::::::::::::::::::::: */
+
 prevMonthBtn?.addEventListener('click', navigatePrev);
 nextMonthBtn?.addEventListener('click', navigateNext);
 currentMonthYearBtn?.addEventListener('click', openTitlePicker);
 
-/* ------------------------- ADD EVENT BUTTON ------------------------- */
+/* :::::::::::::::::::::::::: ADD EVENT BUTTON :::::::::::::::::::::::::: */
+
 if (addEventBtn) addEventBtn.addEventListener('click', () => {
     if (!currentUser) {
         openModal(authOverlay);
@@ -4671,7 +4610,8 @@ if (addEventBtn) addEventBtn.addEventListener('click', () => {
 
 if (saveEventBtn) saveEventBtn.onclick = saveEvent;
 
-/* ------------------------- MODAL CLOSE BUTTONS ------------------------- */
+/* :::::::::::::::::::::::::: MODAL CLOSE BUTTONS :::::::::::::::::::::::::: */
+
 closeModalBtns.forEach(btn => btn.addEventListener('click', () => closeModal(eventModal)));
 eventDetailModal.addEventListener('click', e => {
     if (e.target === eventDetailModal) closeModal(eventDetailModal);
@@ -4680,7 +4620,8 @@ eventDetailModal.addEventListener('click', e => {
     if (e.target === m) closeModal(m);
 }));
 
-/* ------------------------- VIEW TABS ------------------------- */
+/* :::::::::::::::::::::::::: VIEW TABS :::::::::::::::::::::::::: */
+
 viewTabsEl.querySelectorAll('.view-tab').forEach(btn => btn.addEventListener('click', () => {
     viewMode = btn.dataset.view;
     localStorage.setItem('ravlo-view-mode', viewMode);
@@ -4688,7 +4629,8 @@ viewTabsEl.querySelectorAll('.view-tab').forEach(btn => btn.addEventListener('cl
     animateTabIndicator();
 }));
 
-/* ------------------------- MONTH/YEAR POPUP ------------------------- */
+/* :::::::::::::::::::::::::: MONTH/YEAR POPUP :::::::::::::::::::::::::: */
+
 if (gregMonthBtn) gregMonthBtn.addEventListener('click', e => {
     e.stopPropagation();
     openGregMonthPopup();
@@ -4698,7 +4640,8 @@ if (gregYearBtn) gregYearBtn.addEventListener('click', e => {
     openGregYearPopup();
 });
 
-/* ------------------------- DELETE CONFIRMATION ------------------------- */
+/* :::::::::::::::::::::::::: DELETE CONFIRMATION :::::::::::::::::::::::::: */
+
 if (confirmYesBtn) confirmYesBtn.addEventListener('click', async () => {
     var id = eventDetailConfirm.dataset.eventId;
     if (id) await deleteEventById(id);
@@ -4707,7 +4650,8 @@ if (confirmYesBtn) confirmYesBtn.addEventListener('click', async () => {
 });
 if (confirmNoBtn) confirmNoBtn.addEventListener('click', hideDeleteConfirmation);
 
-/* ------------------------- TIME SPINNERS ------------------------- */
+/* :::::::::::::::::::::::::: TIME SPINNERS :::::::::::::::::::::::::: */
+
 document.addEventListener('click', function(e) {
     const arrow = e.target.closest('.time-arrow');
     if (!arrow) return;
@@ -4816,13 +4760,15 @@ document.addEventListener('click', function(e) {
     }
 });
 
-/* ------------------------- ALL-DAY TOGGLE ------------------------- */
+/* :::::::::::::::::::::::::: ALL-DAY TOGGLE :::::::::::::::::::::::::: */
+
 document.getElementById('event-all-day-greg')?.addEventListener('change', function() {
     const timeRow = document.querySelector('#greg-picker-popup .picker-time-row');
     if (timeRow) timeRow.style.display = this.checked ? 'none' : '';
 });
 
-/* ------------------------- ICON PICKER ------------------------- */
+/* :::::::::::::::::::::::::: ICON PICKER :::::::::::::::::::::::::: */
+
 function updateIconButton() {
     const btn = document.getElementById('toggle-icon-btn');
     if (!btn) return;
@@ -4887,7 +4833,8 @@ document.getElementById('icon-modal')?.addEventListener('click', function(e) {
     if (e.target === this) closeModal(this);
 });
 
-/* ------------------------- INVITE MODAL ------------------------- */
+/* :::::::::::::::::::::::::: INVITE MODAL :::::::::::::::::::::::::: */
+
 document.getElementById('toggle-invite-btn')?.addEventListener('click', () => {
     const btn = document.getElementById('toggle-invite-btn');
     if (!currentUser) {
@@ -4920,12 +4867,12 @@ function rebuildInviteModal() {
     content.innerHTML = `
         ${closeBtn}
         <h3 class="modal-heading">Invite People</h3>
-        <p style="font-size:12px; color:#aaa; margin-bottom:8px;">Only users with English names are searchable.</p>
+        <p style="font-size:12px; color:#AAA; margin-bottom:8px;">Only users with English names are searchable.</p>
         <input type="text" id="invite-search-input" class="auth-field" placeholder="Search by English name..." autocomplete="off">
         <div id="invite-search-results" class="invite-results"></div>
         <div id="invite-selected-list" class="invite-selected-list"></div>
         <div id="invite-link-section" style="display:none; margin-top:12px;">
-            <p style="font-size:12px; color:#aaa; margin-bottom:4px;">Share this link to connect first:</p>
+            <p style="font-size:12px; color:#AAA; margin-bottom:4px;">Share this link to connect first:</p>
             <div style="display:flex; gap:8px; background:#111; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);">
                 <code id="invite-link-text" style="word-break:break-all;">XXXX</code>
                 <button id="copy-invite-link-btn" class="icon-btn" title="Copy">📋</button>
@@ -4956,7 +4903,7 @@ function rebuildInviteModal() {
 
 async function searchInviteUsers(query) {
     const resultsDiv = document.getElementById('invite-search-results');
-    resultsDiv.innerHTML = '<div style="color:#aaa;">Searching...</div>';
+    resultsDiv.innerHTML = '<div style="color:#AAA;">Searching...</div>';
 
     try {
         let { data: users, error } = await sb
@@ -4996,7 +4943,7 @@ async function searchInviteUsers(query) {
         const userIds = users.map(u => u.id).filter(id => id !== myId);
 
         if (userIds.length === 0) {
-            resultsDiv.innerHTML = '<div style="color:#aaa;">No users found.</div>';
+            resultsDiv.innerHTML = '<div style="color:#AAA;">No users found.</div>';
             return;
         }
 
@@ -5067,7 +5014,7 @@ async function searchInviteUsers(query) {
         });
 
     } catch (e) {
-        resultsDiv.innerHTML = `<div style="color:#f88;">Error: ${e.message}</div>`;
+        resultsDiv.innerHTML = `<div style="color:#F88;">Error: ${e.message}</div>`;
     }
 }
 
@@ -5144,7 +5091,8 @@ function escHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/* ------------------------- LOCATION MODAL ------------------------- */
+/* :::::::::::::::::::::::::: LOCATION MODAL :::::::::::::::::::::::::: */
+
 let locationSearchTimer = null;
 
 document.getElementById('toggle-location-btn')?.addEventListener('click', function() {
@@ -5230,7 +5178,7 @@ document.getElementById('location-search-input')?.addEventListener('input', func
                 const country = props.country || '';
                 let shortAddress = [city, country].filter(Boolean).join(', ');
 
-                li.innerHTML = `<span style="font-weight:600; color:#fff;">${mainName}</span>` +
+                li.innerHTML = `<span style="font-weight:600; color:#FFF;">${mainName}</span>` +
                     (shortAddress ? `<br><span style="font-size:11px; color:#888;">${shortAddress}</span>` : '');
 
                 const [lng, lat] = place.geometry.coordinates;
@@ -5262,7 +5210,7 @@ document.getElementById('location-search-input')?.addEventListener('input', func
             } else {
                 errorMsg += err.message;
             }
-            suggestionsList.innerHTML = `<li style="color:#ff6b6b;">⚠️ ${errorMsg}</li>`;
+            suggestionsList.innerHTML = `<li style="color:#FF6B6B;">⚠️ ${errorMsg}</li>`;
             suggestionsList.style.display = 'block';
         }
     }, 300);
@@ -5322,7 +5270,8 @@ document.getElementById('location-coords-input')?.addEventListener('input', func
     }
 });
 
-/* ------------------------- INLINE CHECKLIST EDITOR ------------------------- */
+/* :::::::::::::::::::::::::: INLINE CHECKLIST EDITOR :::::::::::::::::::::::::: */
+
 function renderInlineChecklistItems(items) {
     const container = document.getElementById('checklist-inline-items');
     if (!container) return;
@@ -5441,7 +5390,8 @@ if (newItemInput && addItemBtn) {
     });
 }
 
-/* ------------------------- SIDEBAR OPEN/CLOSE ------------------------- */
+/* :::::::::::::::::::::::::: SIDEBAR OPEN/CLOSE :::::::::::::::::::::::::: */
+
 (function() {
     const toggleBtn = document.getElementById('menu-toggle-btn');
     const sidebar = document.getElementById('sidebar');
@@ -5498,7 +5448,8 @@ if (newItemInput && addItemBtn) {
     });
 })();
 
-/* ------------------------- CLEANUP & MAINTENANCE ------------------------- */
+/* :::::::::::::::::::::::::: CLEANUP & MAINTENANCE :::::::::::::::::::::::::: */
+
 async function cleanupOldCompletions() {
     if (!currentUser) return;
     const now = new Date();
@@ -5624,7 +5575,8 @@ function fallbackCopy(text) {
     document.body.removeChild(textarea);
 }
 
-/* ------------------------- INVITATION RESPONSE ------------------------- */
+/* :::::::::::::::::::::::::: INVITATION RESPONSE :::::::::::::::::::::::::: */
+
 function openInvitationResponse(ev) {
     document.getElementById('invitation-response-title').textContent = 'Event Invitation';
     
@@ -5651,11 +5603,11 @@ function openInvitationResponse(ev) {
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                             ${inviterAvatar 
                                 ? `<img src="${inviterAvatar}" alt="${inviterName}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
-                                : `<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:400;font-size:16px;">${inviterInitial}</div>`
+                                : `<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:#FFF;display:flex;align-items:center;justify-content:center;font-weight:400;font-size:16px;">${inviterInitial}</div>`
                             }
-                            <span style="color:#fff;font-weight:400;font-size:16px;">${inviterName}</span>
+                            <span style="color:#FFF;font-weight:400;font-size:16px;">${inviterName}</span>
                         </div>
-                        <span style="color:#aaa;">invited you to this event</span>
+                        <span style="color:#AAA;">invited you to this event</span>
                     `;
                 }
             });
@@ -5787,7 +5739,8 @@ function openInvitationResponse(ev) {
     };
 }
 
-/* ------------------------- POSTPONE ------------------------- */
+/* :::::::::::::::::::::::::: POSTPONE :::::::::::::::::::::::::: */
+
 function openPostponeModal() {
     if (!currentDetailEvent) return;
     document.getElementById('postpone-event-title').textContent =
@@ -5850,7 +5803,8 @@ document.getElementById('postpone-modal-close').addEventListener('click', () => 
     closeModal(document.getElementById('postpone-modal'));
 });
 
-/* ------------------------- GLOBAL WINDOW EXPORTS ------------------------- */
+/* :::::::::::::::::::::::::: GLOBAL WINDOW EXPORTS :::::::::::::::::::::::::: */
+
 window.ravloOpenEvent = function(eventId, dateStr) {
     const ev = events.find(e => e.id == eventId);
     if (ev) {
@@ -5869,7 +5823,8 @@ window.ravloCloseSidebar = function() {
     }
 };
 
-/* ------------------------- INITIALIZATION ------------------------- */
+/* :::::::::::::::::::::::::: INITIALIZATION :::::::::::::::::::::::::: */
+
 async function initCalendar() {
     if (currentUser) {
         events = await fetchEvents();
